@@ -15,8 +15,8 @@ namespace Continuum {
 
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
 			const c_float k = index_to_momentum(u_idx);
-			const c_float lower_bound = k - omega_debye > 0 ? k - omega_debye : 0;
-			const c_float upper_bound = k + omega_debye;
+			const c_float lower_bound = k*k - omega_debye > 0 ? k*k - omega_debye : 0;
+			const c_float upper_bound = k*k + omega_debye;
 
 			auto integrand = [this](c_float k) -> c_complex {
 				return k * k * sc_expectation_value(k);

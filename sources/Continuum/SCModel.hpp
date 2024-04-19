@@ -44,7 +44,7 @@ namespace Continuum {
 			return -std::tanh(E / (2 * temperature)) * interpolate_delta(k) / (2 * E);
 		};
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
-		std::string info() const {
+		inline std::string info() const {
 			return "SCModel // [T U omega_D] = [" + std::to_string(temperature) 
 				+ " " + std::to_string(U) + " " + std::to_string(omega_debye) + "]";
 		}

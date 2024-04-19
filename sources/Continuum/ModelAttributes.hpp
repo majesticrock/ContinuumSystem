@@ -2,6 +2,7 @@
 #include "../../../Utility/sources/IsComplex.hpp"
 #include "GlobalDefinitions.hpp"
 #include <vector>
+#include <complex>
 
 namespace Continuum {
 	enum ComplexAttributePolicy { Magnitude, SeperateRealAndImaginary };
@@ -31,14 +32,14 @@ namespace Continuum {
 			if (complexAttributePolicy == Magnitude) {
 				for (size_t i = 0U; i < selfconsistency_values.size(); ++i)
 				{
-					selfconsistency_values[i] = abs(other.selfconsistency_values[i]);
+					selfconsistency_values[i] = std::abs(other.selfconsistency_values[i]);
 				}
 			}
 			else if (complexAttributePolicy == SeperateRealAndImaginary) {
-				for (size_t i = 0; i < other.selfconsistency_values.size(); i++)
+				for (size_t i = 0U; i < other.selfconsistency_values.size(); ++i)
 				{
-					selfconsistency_values[i] = real(other.selfconsistency_values[i]);
-					selfconsistency_values[i + other.selfconsistency_values.size()] = imag(other.selfconsistency_values[i]);
+					selfconsistency_values[i] = std::real(other.selfconsistency_values[i]);
+					selfconsistency_values[i + other.selfconsistency_values.size()] = std::imag(other.selfconsistency_values[i]);
 				}
 			}
 			else {
@@ -109,97 +110,108 @@ namespace Continuum {
 			return !is_zero(this->selfconsistency_values[i]);
 		}
 
-		// TODO check if DataType is real
 		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> real() const {
 			if constexpr (Utility::is_complex<DataType>()) {
-				ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> ret(*this, SeperateRealAndImaginary);
-				ret.selfconsistency_values.erase(ret.selfconsistency_values.begin() + (ret.selfconsistency_values.size() / 2), ret.selfconsistency_values.end());
+				ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> ret;
+				ret.converged = this->converged;
+				ret.selfconsistency_values.resize(this->size());
+				for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
+				{
+					ret.selfconsistency_values[i] = std::real(this->selfconsistency_values[i]);
+				}
 				return ret;
+			} 
 			else {
 				return *this;
 			}
-			};
-			inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> imag() const {
-				if constexpr (Utility::is_complex<DataType>()) {
-					ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> ret(*this, SeperateRealAndImaginary);
-					ret.selfconsistency_values.erase(ret.selfconsistency_values.begin(), ret.selfconsistency_values.begin() + (ret.selfconsistency_values.size() / 2));
-					return ret;
-				}
-				else {
-					ModelAttributes<DataType> ret;
-					ret.converged = this->converged;
-					return ret;
-				}
-			};
-			inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> abs() const {
-				return ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>>(*this, Magnitude);
-			};
-
-			/*
-			* Arithmetric operators
-			*/
-
-			inline ModelAttributes& operator+=(const ModelAttributes & rhs) {
+		};
+		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> imag() const {
+			if constexpr (Utility::is_complex<DataType>()) {
+				ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> ret;
+				ret.converged = this->converged;
+				ret.selfconsistency_values.resize(this->size());
 				for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
 				{
-					this->selfconsistency_values[i] += rhs.selfconsistency_values[i];
+					ret.selfconsistency_values[i] = std::imag(this->selfconsistency_values[i]);
 				}
-				return *this;
-			};
-			inline ModelAttributes& operator-=(const ModelAttributes & rhs) {
-				for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
-				{
-					this->selfconsistency_values[i] -= rhs.selfconsistency_values[i];
-				}
-				return *this;
-			};
-			template <class RealType>
-			inline ModelAttributes& operator*=(const RealType rhs) {
-				for (auto& value : this->selfconsistency_values)
-				{
-					value *= rhs;
-				}
-				return *this;
-			};
-			template <class RealType>
-			inline ModelAttributes& operator/=(const RealType rhs) {
-				for (auto& value : this->selfconsistency_values)
-				{
-					value /= rhs;
-				}
-				return *this;
-			};
-		};
-
-		template <typename DataType>
-		inline ModelAttributes<DataType> operator+(ModelAttributes<DataType> lhs, const ModelAttributes<DataType>& rhs) {
-			return lhs += rhs;
-		};
-		template <typename DataType>
-		inline ModelAttributes<DataType> operator-(ModelAttributes<DataType> lhs, const ModelAttributes<DataType>& rhs) {
-			return lhs -= rhs;
-		};
-
-		template <typename DataType, class RealType>
-		inline ModelAttributes<DataType> operator*(ModelAttributes<DataType> lhs, RealType rhs) {
-			return lhs *= rhs;
-		};
-
-		template <typename DataType, class RealType>
-		inline ModelAttributes<DataType> operator*(RealType lhs, ModelAttributes<DataType> rhs) {
-			return rhs *= lhs;
-		};
-
-		template <typename DataType, class RealType>
-		inline ModelAttributes<DataType> operator/(ModelAttributes<DataType> lhs, RealType rhs) {
-			return lhs /= rhs;
-		};
-
-		template <typename DataType>
-		inline std::ostream& operator<<(std::ostream& os, ModelAttributes<DataType> const& attributes) {
-			for (const auto& value : attributes) {
-				os << value << "  ";
+				return ret;
 			}
-			return os;
+			else {
+				ModelAttributes<DataType> ret(*this);
+				ret.converged = this->converged;
+				ret.selfconsistency_values.resize(this->size());
+				return ret;
+			}
 		};
-	}
+		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> abs() const {
+			return ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>>(*this, Magnitude);
+		};
+
+		/*
+		* Arithmetric operators
+		*/
+
+		inline ModelAttributes& operator+=(const ModelAttributes & rhs) {
+			for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
+			{
+				this->selfconsistency_values[i] += rhs.selfconsistency_values[i];
+			}
+			return *this;
+		};
+		inline ModelAttributes& operator-=(const ModelAttributes & rhs) {
+			for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
+			{
+				this->selfconsistency_values[i] -= rhs.selfconsistency_values[i];
+			}
+			return *this;
+		};
+		template <class RealType>
+		inline ModelAttributes& operator*=(const RealType rhs) {
+			for (auto& value : this->selfconsistency_values)
+			{
+				value *= rhs;
+			}
+			return *this;
+		};
+		template <class RealType>
+		inline ModelAttributes& operator/=(const RealType rhs) {
+			for (auto& value : this->selfconsistency_values)
+			{
+				value /= rhs;
+			}
+			return *this;
+		};
+	};
+
+	template <typename DataType>
+	inline ModelAttributes<DataType> operator+(ModelAttributes<DataType> lhs, const ModelAttributes<DataType>& rhs) {
+		return lhs += rhs;
+	};
+	template <typename DataType>
+	inline ModelAttributes<DataType> operator-(ModelAttributes<DataType> lhs, const ModelAttributes<DataType>& rhs) {
+		return lhs -= rhs;
+	};
+
+	template <typename DataType, class RealType>
+	inline ModelAttributes<DataType> operator*(ModelAttributes<DataType> lhs, RealType rhs) {
+		return lhs *= rhs;
+	};
+
+	template <typename DataType, class RealType>
+	inline ModelAttributes<DataType> operator*(RealType lhs, ModelAttributes<DataType> rhs) {
+		return rhs *= lhs;
+	};
+
+	template <typename DataType, class RealType>
+	inline ModelAttributes<DataType> operator/(ModelAttributes<DataType> lhs, RealType rhs) {
+		return lhs /= rhs;
+	};
+
+	template <typename DataType>
+	inline std::ostream& operator<<(std::ostream& os, ModelAttributes<DataType> const& attributes) {
+		for (const auto& value : attributes) {
+			os << value << "  ";
+		}
+		return os;
+	};
+}

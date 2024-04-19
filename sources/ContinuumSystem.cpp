@@ -3,7 +3,7 @@
 using namespace Continuum;
 
 int main(int argc, char** argv) {
-	SCModel model({ 0, 3, 10 });
+	SCModel model({ 0, 0.1, 10 });
 
 	Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
 	std::cout << solver.computePhases().real() << std::endl;
