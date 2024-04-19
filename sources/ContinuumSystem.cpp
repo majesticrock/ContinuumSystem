@@ -1,8 +1,12 @@
 #include "Continuum/SCModel.hpp"
 #include "../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
+using namespace Continuum;
 
 int main(int argc, char** argv) {
-	Continuum::SCModel model({ 0, -3, 30 });
+	SCModel model({ 0, 3, 10 });
+
+	Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
+	std::cout << solver.computePhases().real() << std::endl;
 
 	return 0;
 }

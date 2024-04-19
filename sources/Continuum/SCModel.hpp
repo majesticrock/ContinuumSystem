@@ -24,10 +24,10 @@ namespace Continuum {
 
 		inline c_complex interpolate_delta(c_float k) const {
 			const int index = momentum_to_index(k);
-			if (index + 1 == DISCRETIZATION)
-				return Delta[index]; // Assuming Delta(k) = const for k -> infinity
-			const c_float k_lower = k - index_to_momentum(index);
+			if (index + 1 >= DISCRETIZATION)
+				return Delta[index]; // Assuming Delta(k) = const for k -> infinity	
 			const c_float k_upper = index_to_momentum(index + 1) - k;
+			const c_float k_lower = k - index_to_momentum(index);
 			// k_lower + k_upper = k_n+1 - k_n
 			return (Delta[index] * k_upper + Delta[index + 1] * k_lower) / (k_upper + k_lower);
 		};
@@ -39,11 +39,15 @@ namespace Continuum {
 			const c_float E = energy(k);
 			if (is_zero(E)) return 0;
 			if (is_zero(temperature)) {
-				return interpolate_delta(k) / (2 * E);
+				return -interpolate_delta(k) / (2 * E);
 			}
-			return std::tanh(E / (2 * temperature)) * interpolate_delta(k) / (2 * E);
+			return -std::tanh(E / (2 * temperature)) * interpolate_delta(k) / (2 * E);
 		};
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
+		std::string info() const {
+			return "SCModel // [T U omega_D] = [" + std::to_string(temperature) 
+				+ " " + std::to_string(U) + " " + std::to_string(omega_debye) + "]";
+		}
 
 		SCModel(ModelInitializer const& parameters);
 	};

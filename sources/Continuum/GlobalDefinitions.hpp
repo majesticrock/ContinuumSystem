@@ -17,7 +17,7 @@ namespace Continuum {
 
 	template<class RealType>
 	constexpr RealType PRECISION = 1e2 * std::numeric_limits<RealType>::epsilon();
-	template<> constexpr float PRECISION<float> = 1e1 * std::numeric_limits<float>::epsilon();
+	template<> constexpr float PRECISION<float> = 1e1f * std::numeric_limits<float>::epsilon();
 
 	template<class NumberType>
 	constexpr bool is_zero(const NumberType& number) {
@@ -25,7 +25,7 @@ namespace Continuum {
 	}
 
 	constexpr c_float U_MAX = 1;
-	constexpr int DISCRETIZATION = 10000;
+	constexpr int DISCRETIZATION = 1000;
 	constexpr c_float STEP = U_MAX / DISCRETIZATION;
 
 	constexpr c_float index_to_momentum(int u) {
