@@ -1,6 +1,7 @@
 #pragma once
 #include "../../../Utility/sources/IsComplex.hpp"
 #include "GlobalDefinitions.hpp"
+#include <vector>
 
 namespace Continuum {
 	enum ComplexAttributePolicy { Magnitude, SeperateRealAndImaginary };
@@ -93,7 +94,7 @@ namespace Continuum {
 			return selfconsistency_values.back();
 		}
 		template<class Vector>
-		inline void fill_with(const Vector& vector){
+		inline void fill_with(const Vector& vector) {
 			this->selfconsistency_values.resize(vector.size());
 			std::copy(vector.begin(), vector.end(), this->selfconsistency_values.begin());
 		}
