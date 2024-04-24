@@ -13,6 +13,8 @@ namespace Continuum {
 		std::vector<DataType> selfconsistency_values;
 		bool converged{};
 
+		using value_type = DataType;
+
 		~ModelAttributes() = default;
 		ModelAttributes() = default;
 		ModelAttributes(std::initializer_list<DataType> i_list) : selfconsistency_values(i_list) {};

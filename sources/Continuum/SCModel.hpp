@@ -5,11 +5,19 @@
 #include <limits>
 #include <boost/math/special_functions/pow.hpp>
 
+#include "../../../Utility/sources/InputFileReader.hpp"
+
 namespace Continuum {
 	struct ModelInitializer {
 		c_float temperature;
 		c_float U;
 		c_float omega_debye;
+		c_float chemical_potential;
+
+		ModelInitializer(Utility::InputFileReader& input) 
+			: temperature{ input.getDouble("T") }, U{ input.getDouble("U") },
+			omega_debye{ input.getDouble("omega_debye") }, chemical_potential{ input.getDouble("chemical_potential") }
+		{ };
 	};
 
 	class SCModel {
@@ -19,6 +27,7 @@ namespace Continuum {
 		c_float temperature{};
 		c_float U{};
 		c_float omega_debye{};
+		c_float chemical_potential{};
 
 		static constexpr c_float CUT_OFF = std::numeric_limits<c_float>::epsilon();
 
@@ -31,9 +40,11 @@ namespace Continuum {
 			// k_lower + k_upper = k_n+1 - k_n
 			return (Delta[index] * k_upper + Delta[index + 1] * k_lower) / (k_upper + k_lower);
 		};
-
+		constexpr static c_float bare_dispersion(c_float k) {
+			return k * k;
+		};
 		inline c_float energy(c_float k) const {
-			return sqrt(boost::math::pow<4>(k) + std::norm(interpolate_delta(k)));
+			return sqrt(boost::math::pow<2>(bare_dispersion(k) + chemical_potential) + std::norm(interpolate_delta(k)));
 		};
 		inline c_complex sc_expectation_value(c_float k) const {
 			const c_float E = energy(k);
@@ -45,8 +56,9 @@ namespace Continuum {
 		};
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
 		inline std::string info() const {
-			return "SCModel // [T U omega_D] = [" + std::to_string(temperature) 
-				+ " " + std::to_string(U) + " " + std::to_string(omega_debye) + "]";
+			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature) 
+				+ " " + std::to_string(U) + " " + std::to_string(omega_debye) 
+				+ " " + std::to_string(chemical_potential) + "]";
 		}
 
 		SCModel(ModelInitializer const& parameters);

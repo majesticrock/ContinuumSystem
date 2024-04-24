@@ -25,7 +25,7 @@ namespace Continuum {
 	}
 
 	constexpr c_float U_MAX = 1;
-	constexpr int DISCRETIZATION = 1000;
+	constexpr int DISCRETIZATION = 500;
 	constexpr c_float STEP = U_MAX / DISCRETIZATION;
 
 	constexpr c_float index_to_momentum(int u) {

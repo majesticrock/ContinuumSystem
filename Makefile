@@ -13,7 +13,7 @@ WARNINGS = -Wall -Wno-sign-compare
 OPT = -march=native -O3# -ffast-math
 
 #COMMUTE_SRCS=Coefficient.cpp IndexWrapper.cpp Momentum.cpp Operator.cpp Term.cpp WickCleaner.cpp WickOperator.cpp WickOperatorTemplate.cpp WickTerm.cpp 
-#UTIL_SRCS=Utility/InputFileReader.cpp
+UTIL_SRCS=Utility/InputFileReader.cpp
 
 CONT_SRCS=SCModel.cpp
 PART_SRCS=ContinuumSystem.cpp
