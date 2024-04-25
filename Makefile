@@ -4,7 +4,7 @@ CXX = mpicxx
 # the compilation of the eigen library (I cant fix them anyways)
 INCLUDEFLAGS = -isystem ~/usr/local/include
 
-CXXFLAGS = $(WARNINGS) -std=gnu++17 $(OPT) -fopenmp
+CXXFLAGS = $(WARNINGS) -std=c++20 $(OPT) -fopenmp
 
 LDLIBS = -L/sw/gcc/5.3.0/rtf/lib64 -L/home/joshua/usr/local/include/boost_lib/ -lboost_serialization -lboost_iostreams -lz
 

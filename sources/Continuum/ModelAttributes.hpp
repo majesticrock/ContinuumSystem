@@ -148,6 +148,9 @@ namespace Continuum {
 		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> abs() const {
 			return ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>>(*this, Magnitude);
 		};
+		inline const std::vector<DataType>& as_vector() const {
+			return this->selfconsistency_values;
+		};
 
 		/*
 		* Arithmetric operators

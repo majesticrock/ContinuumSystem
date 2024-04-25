@@ -1,3 +1,6 @@
+if [ "$1" = "-n" ]; then
+    make clean
+fi
 make -j
 n_mpi=1
 n_omp=$(($(nproc)/(2*$n_mpi)))
