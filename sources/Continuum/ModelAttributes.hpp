@@ -122,7 +122,7 @@ namespace Continuum {
 					ret.selfconsistency_values[i] = std::real(this->selfconsistency_values[i]);
 				}
 				return ret;
-			} 
+			}
 			else {
 				return *this;
 			}
@@ -156,14 +156,14 @@ namespace Continuum {
 		* Arithmetric operators
 		*/
 
-		inline ModelAttributes& operator+=(const ModelAttributes & rhs) {
+		inline ModelAttributes& operator+=(const ModelAttributes& rhs) {
 			for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
 			{
 				this->selfconsistency_values[i] += rhs.selfconsistency_values[i];
 			}
 			return *this;
 		};
-		inline ModelAttributes& operator-=(const ModelAttributes & rhs) {
+		inline ModelAttributes& operator-=(const ModelAttributes& rhs) {
 			for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
 			{
 				this->selfconsistency_values[i] -= rhs.selfconsistency_values[i];

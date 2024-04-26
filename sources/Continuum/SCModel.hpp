@@ -14,7 +14,7 @@ namespace Continuum {
 		c_float omega_debye;
 		c_float chemical_potential;
 
-		ModelInitializer(Utility::InputFileReader& input) 
+		ModelInitializer(Utility::InputFileReader& input)
 			: temperature{ PhysicalConstants::k_B * input.getDouble("T") }, U{ input.getDouble("U") },
 			omega_debye{ input.getDouble("omega_debye") }, chemical_potential{ input.getDouble("chemical_potential") }
 		{ };
@@ -34,7 +34,7 @@ namespace Continuum {
 		inline c_complex interpolate_delta(c_float k) const {
 			const int index = momentum_to_index(k);
 			if (index + 1 >= DISCRETIZATION)
-				return Delta[index]; // Assuming Delta(k) = const for k -> infinity	
+				return Delta[index]; // Assuming Delta(k) = const for k -> infinity
 			const c_float k_upper = index_to_momentum(index + 1) - k;
 			const c_float k_lower = k - index_to_momentum(index);
 			// k_lower + k_upper = k_n+1 - k_n
@@ -60,7 +60,7 @@ namespace Continuum {
 		};
 		inline c_float occupation(c_float k) const {
 			const auto DELTA = interpolate_delta(k);
-			if(is_zero(DELTA)){
+			if (is_zero(DELTA)) {
 				if (is_zero(temperature)) {
 					return (bare_dispersion_to_fermi_level(k) < 0 ? 1 : 0);
 				}
@@ -74,8 +74,8 @@ namespace Continuum {
 		};
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
 		inline std::string info() const {
-			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature) 
-				+ " " + std::to_string(U) + " " + std::to_string(omega_debye) 
+			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature)
+				+ " " + std::to_string(U) + " " + std::to_string(omega_debye)
 				+ " " + std::to_string(chemical_potential) + "]";
 		}
 

@@ -32,11 +32,11 @@ namespace Continuum {
 		return abs(number) < PRECISION<Utility::UnderlyingFloatingPoint_t<NumberType>>;
 	}
 
-	constexpr c_float U_MAX = 
+	constexpr c_float U_MAX =
 #ifdef _equal_disc
-	250;
+		250;
 #else
-	1;
+		1;
 #endif
 	constexpr int DISCRETIZATION = 1000;
 	constexpr c_float STEP = U_MAX / DISCRETIZATION;
@@ -58,7 +58,7 @@ namespace Continuum {
 	inline std::vector<c_float> get_k_points() {
 		std::vector<c_float> ks;
 		ks.resize(DISCRETIZATION);
-		for(int i = 0; i < DISCRETIZATION; ++i){
+		for (int i = 0; i < DISCRETIZATION; ++i) {
 			ks[i] = index_to_momentum(i);
 		}
 		return ks;

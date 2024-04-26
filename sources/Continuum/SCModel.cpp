@@ -6,9 +6,9 @@
 
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
-		: Delta(DISCRETIZATION, parameters.U),  temperature{ parameters.temperature }, U{ parameters.U }, 
+		: Delta(DISCRETIZATION, parameters.U), temperature{ parameters.temperature }, U{ parameters.U },
 		omega_debye{ parameters.omega_debye }, chemical_potential{ parameters.chemical_potential }
-	{ 
+	{
 	}
 
 	void SCModel::iterationStep(const ParameterVector& initial_values, ParameterVector& result) {
@@ -22,7 +22,7 @@ namespace Continuum {
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - 0.5*l^2)theta(omega - 0.5*k^2)
 			if (bare_dispersion(k) - chemical_potential > omega_debye)
-				continue;	
+				continue;
 			const c_float lower_bound = 0;
 			const c_float upper_bound = sqrt(2 * omega_debye);
 #else
