@@ -24,8 +24,11 @@ namespace Continuum {
 	}
 
 	template<class RealType>
-	constexpr RealType PRECISION = 1e2 * std::numeric_limits<RealType>::epsilon();
-	template<> constexpr float PRECISION<float> = 1e1f * std::numeric_limits<float>::epsilon();
+	constexpr RealType SQRT_PRECISION = 1e1 * 1.4901174450357931e-8; // 10 * sqrt(epsilon)
+	template<> constexpr float SQRT_PRECISION<float> = 1.09182874e-3f; // sqrt(10 * epsilon)
+
+	template<class RealType>
+	constexpr RealType PRECISION = SQRT_PRECISION<RealType> * SQRT_PRECISION<RealType>;
 
 	template<class NumberType>
 	constexpr bool is_zero(const NumberType& number) {
