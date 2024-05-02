@@ -1,30 +1,35 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
+#include "../../../../FermionCommute/sources/TermLoader.hpp"
 #include "../../../FermionCommute/sources/WickTerm.hpp"
 #include "../../../Utility/sources/better_to_string.hpp"
+#include "../../../Utility/sources/Numerics/iEoM/GeneralResolvent.hpp"
+#include "SCModel.hpp"
+#include <memory>
 
 namespace Continuum {
-	class MatrixIsNegativeException : public std::runtime_error {
-	public:
-		c_float negative_eigenvalue{};
-		MatrixIsNegativeException(const c_float& _negative_eigenvalue)
-			: std::runtime_error("The matrix M is negative! Most negative eigenvalue = " + Utility::better_to_string(_negative_eigenvalue, std::chars_format::scientific, 6)),
-			negative_eigenvalue(_negative_eigenvalue)
-		{};
-	};
-
-	template <class EigenMatrixType>
-	inline EigenMatrixType removeNoise(EigenMatrixType const& matrix) {
-		return matrix.unaryExpr([](typename EigenMatrixType::Scalar const& val) {
-			return (abs(val) < PRECISION<Utility::UnderlyingFloatingPoint_t<EigenMatrixType::Scalar>> ? typename EigenMatrixType::Scalar{} : val);
-			});
-	};
-
-	class ModeHelper
+	class ModeHelper : public Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_float>
 	{
+		friend class Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_float>;
+		using _parent = Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_float>;
 	protected:
-		std::vector<SymbolicOperators::WickTermCollector> wicks_M{}, wicks_N{};
-
+		SymbolicOperators::TermLoader wicks;
 		size_t TOTAL_BASIS{};
+
+		std::unique_ptr<SCModel> model;
+
+		int number_of_basis_terms{};
+		int start_basis_at{};
+
+		void createStartingStates();
+		void fillMatrices();
+		void fill_M();
+
+		void fill_block_M(int i, int j);
+		void fill_block_N(int i, int j);
+
+		c_complex computeTerm(const SymbolicOperators::WickTerm&, c_float k, c_float l);
+	public:
+		ModeHelper(Utility::InputFileReader& input);
 	};
 }

@@ -4,7 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <boost/math/special_functions/pow.hpp>
-
+#include "../../../FermionCommute/sources/WickTerm.hpp"
 #include "../../../Utility/sources/InputFileReader.hpp"
 
 namespace Continuum {
@@ -21,7 +21,7 @@ namespace Continuum {
 	};
 
 	class SCModel {
-	public:
+	protected:
 		ModelAttributes<c_complex> Delta;
 
 		c_float temperature{};
@@ -49,35 +49,19 @@ namespace Continuum {
 		inline c_float energy(c_float k) const {
 			return sqrt(boost::math::pow<2>(bare_dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
 		};
-		inline c_complex sc_expectation_value(c_float k) const {
-			const auto DELTA = interpolate_delta(k);
-			const c_float E = energy(k);
-			if (is_zero(DELTA)) return 0;
-			if (is_zero(temperature)) {
-				return -DELTA / (2 * E);
-			}
-			return -std::tanh(E / (2 * temperature)) * DELTA / (2 * E);
-		};
-		inline c_float occupation(c_float k) const {
-			const auto DELTA = interpolate_delta(k);
-			if (is_zero(DELTA)) {
-				if (is_zero(temperature)) {
-					return (bare_dispersion_to_fermi_level(k) < 0 ? 1 : 0);
-				}
-				return 1. / (1 + std::exp(bare_dispersion_to_fermi_level(k) / temperature));
-			}
-			const c_float E = energy(k);
-			if (is_zero(temperature)) {
-				return bare_dispersion_to_fermi_level(k) / (2 * E);
-			}
-			return bare_dispersion_to_fermi_level(k) * std::tanh(E / (2 * temperature)) / (2 * E);
-		};
+		c_complex sc_expectation_value(c_float k) const;
+		c_float occupation(c_float k) const;
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
+
+	public:
 		inline std::string info() const {
 			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature)
 				+ " " + std::to_string(U) + " " + std::to_string(omega_debye)
 				+ " " + std::to_string(chemical_potential) + "]";
 		}
+
+		c_float computeCoefficient(SymbolicOperators::WickTerm const& term, c_float k, c_float l) const;
+		c_complex computeTerm(SymbolicOperators::WickTerm const& term, c_float k, c_float l) const;
 
 		SCModel(ModelInitializer const& parameters);
 	};
