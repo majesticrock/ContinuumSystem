@@ -6,6 +6,7 @@
 #include <boost/math/special_functions/pow.hpp>
 #include "../../../FermionCommute/sources/WickTerm.hpp"
 #include "../../../Utility/sources/InputFileReader.hpp"
+#include "../../../Utility/sources/Numerics/Interpolation.hpp"
 
 namespace Continuum {
 	struct ModelInitializer {
@@ -21,9 +22,9 @@ namespace Continuum {
 	};
 
 	class SCModel {
-	protected:
+	public:
 		ModelAttributes<c_complex> Delta;
-
+	protected:
 		c_float temperature{};
 		c_float U{};
 		c_float omega_debye{};
@@ -35,11 +36,9 @@ namespace Continuum {
 			const int index = momentum_to_index(k);
 			if (index + 1 >= DISCRETIZATION)
 				return Delta[index]; // Assuming Delta(k) = const for k -> infinity
-			const c_float k_upper = index_to_momentum(index + 1) - k;
-			const c_float k_lower = k - index_to_momentum(index);
-			// k_lower + k_upper = k_n+1 - k_n
-			return (Delta[index] * k_upper + Delta[index + 1] * k_lower) / (k_upper + k_lower);
+			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), Delta[index], Delta[index + 1]);
 		};
+
 		constexpr static c_float bare_dispersion(c_float k) {
 			return 0.5 * k * k;
 		};
@@ -54,14 +53,20 @@ namespace Continuum {
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
 
 	public:
+		inline c_float u_lower_bound(c_float k) const {
+			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
+		}
+		inline c_float u_upper_bound(c_float k) const {
+			return sqrt(k * k + 2 * omega_debye);
+		}
+
 		inline std::string info() const {
 			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature)
 				+ " " + std::to_string(U) + " " + std::to_string(omega_debye)
 				+ " " + std::to_string(chemical_potential) + "]";
 		}
 
-		c_float computeCoefficient(SymbolicOperators::WickTerm const& term, c_float k, c_float l) const;
-		c_complex computeTerm(SymbolicOperators::WickTerm const& term, c_float k, c_float l) const;
+		c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second = c_float{}) const;
 
 		SCModel(ModelInitializer const& parameters);
 	};

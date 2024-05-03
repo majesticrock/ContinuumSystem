@@ -51,7 +51,7 @@ namespace Continuum {
 		return STEP * u / (1 - STEP * u);
 #endif
 	}
-	inline int momentum_to_index(c_float k) {
+	constexpr int momentum_to_index(c_float k) {
 #ifdef _equal_disc
 		return static_cast<int>(k / STEP);
 #else
