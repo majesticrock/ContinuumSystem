@@ -12,10 +12,10 @@ WARNINGS = -Wall -Wno-sign-compare
 
 OPT = -march=native -O3# -ffast-math
 
-#COMMUTE_SRCS=Coefficient.cpp IndexWrapper.cpp Momentum.cpp Operator.cpp Term.cpp WickCleaner.cpp WickOperator.cpp WickOperatorTemplate.cpp WickTerm.cpp 
+COMMUTE_SRCS=TermLoader.cpp Coefficient.cpp IndexWrapper.cpp Momentum.cpp MomentumList.cpp Operator.cpp Term.cpp WickCleaner.cpp WickOperator.cpp WickOperatorTemplate.cpp WickTerm.cpp 
 UTIL_SRCS=Utility/InputFileReader.cpp
 
-CONT_SRCS=SCModel.cpp
+CONT_SRCS=SCModel.cpp ModeHelper.cpp
 PART_SRCS=ContinuumSystem.cpp
 SRCS=$(addprefix SymbolicOperators/, $(COMMUTE_SRCS)) $(addprefix Continuum/, $(CONT_SRCS)) $(PART_SRCS) $(UTIL_SRCS)
 
