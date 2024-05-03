@@ -37,6 +37,9 @@ namespace Continuum {
 
 		c_complex computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
 	public:
+		const SCModel& getModel() const {
+			return *model;
+		}
 		ModeHelper(Utility::InputFileReader& input);
 	};
 }

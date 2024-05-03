@@ -3,6 +3,7 @@
 #include <cassert>
 #include "../../../Utility/sources/Numerics/Interpolation.hpp"
 #include "../../../Utility/sources/Numerics/TrapezoidalRule.hpp"
+#include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
 
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
@@ -21,6 +22,7 @@ namespace Continuum {
 			throw std::runtime_error("Momentum not recognized! " + momentum.momentum_list.front().second);
 		}
 	}
+	
 	c_complex ModeHelper::get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const
 	{
 		const int index = momentum_to_index(momentum);
@@ -138,6 +140,7 @@ namespace Continuum {
 			for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
 				value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
 			}
+			return value;
 			};
 
 		return term.multiplicity * this->model->computeCoefficient(term.coefficients.front(), c_float{}) *
@@ -150,6 +153,11 @@ namespace Continuum {
 	{
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		TOTAL_BASIS = DISCRETIZATION * this->number_of_basis_terms;
-		wicks.load("../commutators/continuum", true, this->number_of_basis_terms, start_basis_at);
+		wicks.load("../commutators/continuum/", true, this->number_of_basis_terms, start_basis_at);
+
+		Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
+		solver.computePhases();
+
+		this->expectation_values = model->get_expectation_values();
 	}
 }

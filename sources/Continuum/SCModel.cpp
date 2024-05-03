@@ -88,4 +88,19 @@ namespace Continuum {
 			throw std::invalid_argument("Coefficient not recognized! " + coeff.name);
 		}
 	}
+
+	std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> SCModel::get_expectation_values() const
+	{
+		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> ret;
+		ret.emplace(SymbolicOperators::Number_Type, std::vector<c_complex>(DISCRETIZATION));
+		ret.emplace(SymbolicOperators::SC_Type, std::vector<c_complex>(DISCRETIZATION));
+
+		for (int k = 0; k < DISCRETIZATION; ++k) {
+			const c_float momentum = index_to_momentum(k);
+			ret.at(SymbolicOperators::Number_Type)[k] = this->occupation(momentum);
+			ret.at(SymbolicOperators::SC_Type)[k] = this->sc_expectation_value(momentum);
+		}
+
+		return ret;
+	}
 }

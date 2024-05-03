@@ -3,6 +3,7 @@
 #include "ModelAttributes.hpp"
 #include <cmath>
 #include <limits>
+#include <map>
 #include <boost/math/special_functions/pow.hpp>
 #include "../../../FermionCommute/sources/WickTerm.hpp"
 #include "../../../Utility/sources/InputFileReader.hpp"
@@ -50,23 +51,23 @@ namespace Continuum {
 		};
 		c_complex sc_expectation_value(c_float k) const;
 		c_float occupation(c_float k) const;
-		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
 
 	public:
+		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
+		c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second = c_float{}) const;
+		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> get_expectation_values() const;
+
 		inline c_float u_lower_bound(c_float k) const {
 			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
 		}
 		inline c_float u_upper_bound(c_float k) const {
 			return sqrt(k * k + 2 * omega_debye);
 		}
-
 		inline std::string info() const {
 			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature)
 				+ " " + std::to_string(U) + " " + std::to_string(omega_debye)
 				+ " " + std::to_string(chemical_potential) + "]";
 		}
-
-		c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second = c_float{}) const;
 
 		SCModel(ModelInitializer const& parameters);
 	};
