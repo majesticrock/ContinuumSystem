@@ -4,16 +4,17 @@
 #include "../../../FermionCommute/sources/WickTerm.hpp"
 #include "../../../Utility/sources/better_to_string.hpp"
 #include "../../../Utility/sources/Numerics/iEoM/GeneralResolvent.hpp"
+#include "../../../Utility/sources/Numerics/iEoM/XPResolvent.hpp"
 #include "SCModel.hpp"
 #include <memory>
 #include <map>
 
 namespace Continuum {
-	class ModeHelper : public Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_float>
+	class ModeHelper : public Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>
 	{
 	private:
-		friend class Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_float>;
-		using _parent = Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_float>;
+		friend struct Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>;
+		using _parent = Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>;
 
 		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> expectation_values;
 
@@ -21,12 +22,15 @@ namespace Continuum {
 		c_complex get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const;
 	protected:
 		SymbolicOperators::TermLoader wicks;
-		size_t TOTAL_BASIS{};
+		//size_t TOTAL_BASIS{};
+		constexpr static int hermitian_size = 3;
+		constexpr static int antihermitian_size = 1;
+		constexpr static int number_of_basis_terms = hermitian_size + antihermitian_size;
+
+		constexpr static int hermitian_discretization = DISCRETIZATION * hermitian_size;
+		constexpr static int antihermitian_discretization = DISCRETIZATION * antihermitian_size;
 
 		std::unique_ptr<SCModel> model;
-
-		int number_of_basis_terms{};
-		int start_basis_at{};
 
 		void createStartingStates();
 		void fillMatrices();
@@ -39,7 +43,7 @@ namespace Continuum {
 	public:
 		const SCModel& getModel() const {
 			return *model;
-		}
+		};
 		ModeHelper(Utility::InputFileReader& input);
 	};
 }

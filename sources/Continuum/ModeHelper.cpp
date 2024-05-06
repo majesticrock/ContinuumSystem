@@ -5,6 +5,8 @@
 #include "../../../Utility/sources/Numerics/TrapezoidalRule.hpp"
 #include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
 
+#define ieom_norm_factor(k, l) 2. * M_PI * M_PI * k * l
+
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
 	{
@@ -26,41 +28,57 @@ namespace Continuum {
 	c_complex ModeHelper::get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const
 	{
 		const int index = momentum_to_index(momentum);
+		if (index + 1 >= DISCRETIZATION) {
+			// Assuming that <O> = const for k > k_max
+			return expectation_values.at(op.type).back();
+		}
 		return Utility::Numerics::linearly_interpolate(momentum, index_to_momentum(index), index_to_momentum(index + 1),
 			expectation_values.at(op.type)[index], expectation_values.at(op.type)[index + 1]);
 	}
 
 	void ModeHelper::createStartingStates()
 	{
-		starting_states.resize(2, _parent::Vector::Zero(TOTAL_BASIS));
-		std::fill(starting_states[0].begin(), starting_states[0].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
-		std::fill(starting_states[1].begin() + 3 * DISCRETIZATION, starting_states[1].end(), 1. / sqrt(DISCRETIZATION));
+		starting_states.resize(2, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization) });
+		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
+		std::fill(starting_states[1][1].begin(), starting_states[1][1].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
 	}
 
 	void ModeHelper::fillMatrices()
 	{
-		M = _parent::Matrix::Zero(TOTAL_BASIS, TOTAL_BASIS);
-		N = _parent::Matrix::Zero(TOTAL_BASIS, TOTAL_BASIS);
+		K_plus.setZero(hermitian_discretization, hermitian_discretization);
+		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
+		L.setZero(hermitian_discretization, antihermitian_discretization);
 
 		for (int i = 0; i < number_of_basis_terms; ++i)
 		{
 			for (int j = 0; j < number_of_basis_terms; ++j)
 			{
-				fill_block_N(i, j);
-				fill_block_M(i, j);
+				// Ignore the offdiagonal blocks as they are 0
+				if ((i < hermitian_size && j < hermitian_size) || (j >= hermitian_size && i >= hermitian_size)) {
+					fill_block_M(i, j);
+				}
+				// N only contains offdiagonal blocks
+				else if (i < hermitian_size && j >= hermitian_size) {
+					fill_block_N(i, j);
+				}
 			}
 		}
+		//std::cout << K_plus.diagonal().head(10) << std::endl;
 	}
 
 	void ModeHelper::fill_M()
 	{
-		M = _parent::Matrix::Zero(TOTAL_BASIS, TOTAL_BASIS);
+		K_plus = _parent::Matrix::Zero(hermitian_discretization, hermitian_discretization);
+		K_minus = _parent::Matrix::Zero(antihermitian_discretization, antihermitian_discretization);
 
 		for (int i = 0; i < number_of_basis_terms; ++i)
 		{
 			for (int j = 0; j < number_of_basis_terms; ++j)
 			{
-				fill_block_M(i, j);
+				// Ignore the offdiagonal blocks as they are 0
+				if ((i < hermitian_size && j < hermitian_size) || (j >= hermitian_size && i >= hermitian_size)) {
+					fill_block_M(i, j);
+				}
 			}
 		}
 	}
@@ -70,13 +88,30 @@ namespace Continuum {
 		for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
 			for (int k = 0; k < DISCRETIZATION; ++k) {
 				if (!term.delta_momenta.empty()) {
+					if (i == j && i == 0 && !term.sums.momenta.empty()) {
+						if(k < 20)
+							std::cout << "k=" <<k <<"\t\t" << term << " = " << computeTerm(term, k, k).real() << std::endl;
+					}
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
-					M(i + k * number_of_basis_terms, j + k * number_of_basis_terms) += computeTerm(term, k, k).real();
+					if (i < hermitian_size) {
+						K_plus(i * DISCRETIZATION + k, j * DISCRETIZATION + k)
+							+= ieom_norm_factor(k, k) * computeTerm(term, k, k).real();
+					}
+					else {
+						K_minus((i - hermitian_size) * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + k)
+							+= ieom_norm_factor(k, k) * computeTerm(term, k, k).real();
+					}
 				}
 				else {
 					for (int l = 0; l < DISCRETIZATION; ++l) {
-						M(i + k * number_of_basis_terms, j + l * number_of_basis_terms)
-							+= computeTerm(term, k, l).real();
+						if (i < hermitian_size) {
+							K_plus(i * DISCRETIZATION + k, j * DISCRETIZATION + l)
+								+= ieom_norm_factor(k, l) * computeTerm(term, k, l).real();
+						}
+						else {
+							K_minus((i - hermitian_size) * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + l)
+								+= ieom_norm_factor(k, l) * computeTerm(term, k, l).real();
+						}
 					}
 				}
 			}
@@ -89,12 +124,13 @@ namespace Continuum {
 			for (int k = 0; k < DISCRETIZATION; ++k) {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
-					M(i + k * number_of_basis_terms, j + k * number_of_basis_terms) += computeTerm(term, k, k).real();
+					L(i * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + k)
+						+= ieom_norm_factor(k, k) * computeTerm(term, k, k).real();
 				}
 				else {
 					for (int l = 0; l < DISCRETIZATION; ++l) {
-						M(i + k * number_of_basis_terms, j + l * number_of_basis_terms)
-							+= computeTerm(term, k, l).real();
+						L(i * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + l)
+							+= ieom_norm_factor(k, l) * computeTerm(term, k, l).real();
 					}
 				}
 			}
@@ -106,7 +142,7 @@ namespace Continuum {
 		if (term.sums.momenta.empty()) {
 			c_complex value;
 			if (term.coefficients.empty()) {
-				value = term.multiplicity;
+				value = static_cast<c_float>(term.multiplicity);
 			}
 			else {
 				const SymbolicOperators::Coefficient* coeff_ptr = &term.coefficients.front();
@@ -140,20 +176,20 @@ namespace Continuum {
 			for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
 				value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
 			}
-			return value;
+			return q * q * value;
 			};
-
-		return term.multiplicity * this->model->computeCoefficient(term.coefficients.front(), c_float{}) *
+#ifdef approximate_theta
+		if (k >= this->model->u_upper_bound(k)) return 0;
+#endif
+		return (4.0 * M_PI * term.multiplicity) * this->model->computeCoefficient(term.coefficients.front(), c_float{}) *
 			Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
 	}
 
 	ModeHelper::ModeHelper(Utility::InputFileReader& input)
-		: _parent(this, SQRT_PRECISION<c_float>),
-		number_of_basis_terms{ input.getInt("number_of_basis_terms") }, start_basis_at{ input.getInt("start_basis_at") }
+		: _parent(this, SQRT_PRECISION<c_float>)
 	{
 		model = std::make_unique<SCModel>(ModelInitializer(input));
-		TOTAL_BASIS = DISCRETIZATION * this->number_of_basis_terms;
-		wicks.load("../commutators/continuum/", true, this->number_of_basis_terms, start_basis_at);
+		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
 		Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
 		solver.computePhases();

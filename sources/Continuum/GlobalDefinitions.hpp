@@ -7,6 +7,7 @@
 #include "../../../Utility/sources/UnderlyingFloatingPoint.hpp"
 
 #define _equal_disc
+#define approximate_theta
 
 namespace Continuum {
 	using c_float = double;

@@ -36,7 +36,7 @@ namespace Continuum {
 		inline c_complex interpolate_delta(c_float k) const {
 			const int index = momentum_to_index(k);
 			if (index + 1 >= DISCRETIZATION)
-				return Delta[index]; // Assuming Delta(k) = const for k -> infinity
+				return Delta.back(); // Assuming Delta(k) = const for k -> infinity
 			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), Delta[index], Delta[index + 1]);
 		};
 
@@ -58,10 +58,18 @@ namespace Continuum {
 		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> get_expectation_values() const;
 
 		inline c_float u_lower_bound(c_float k) const {
+#ifdef approximate_theta
+			return 0;
+#else
 			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
+#endif
 		}
 		inline c_float u_upper_bound(c_float k) const {
+#ifdef approximate_theta
+			return sqrt(2 * omega_debye);
+#else
 			return sqrt(k * k + 2 * omega_debye);
+#endif
 		}
 		inline std::string info() const {
 			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature)

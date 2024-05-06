@@ -2,8 +2,6 @@
 #include "../../../Utility/sources/Numerics/TrapezoidalRule.hpp"
 #include <algorithm>
 
-//#define approximate_theta
-
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(DISCRETIZATION, parameters.U), temperature{ parameters.temperature }, U{ parameters.U },
@@ -21,18 +19,20 @@ namespace Continuum {
 	}
 
 	c_float SCModel::occupation(c_float k) const {
-		const auto DELTA = interpolate_delta(k);
+		const auto DELTA = std::norm(interpolate_delta(k));
+		const auto eps_mu = bare_dispersion_to_fermi_level(k);
 		if (is_zero(DELTA)) {
 			if (is_zero(temperature)) {
-				return (bare_dispersion_to_fermi_level(k) < 0 ? 1 : 0);
+				if (is_zero(eps_mu)) return 0.5;
+				return (eps_mu < 0 ? 1 : 0);
 			}
-			return 1. / (1 + std::exp(bare_dispersion_to_fermi_level(k) / temperature));
+			return 1. / (1 + std::exp(eps_mu / temperature));
 		}
-		const c_float E = energy(k);
+		const c_float E = sqrt(eps_mu * eps_mu + DELTA);
 		if (is_zero(temperature)) {
-			return bare_dispersion_to_fermi_level(k) / (2 * E);
+			return 0.5 * (1 - (eps_mu / E));
 		}
-		return bare_dispersion_to_fermi_level(k) * std::tanh(E / (2 * temperature)) / (2 * E);
+		return 0.5 * (1 - (eps_mu / E) * std::tanh(E / (2 * temperature)));
 	}
 
 	void SCModel::iterationStep(const ParameterVector& initial_values, ParameterVector& result) {
@@ -47,8 +47,6 @@ namespace Continuum {
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - 0.5*l^2)theta(omega - 0.5*k^2)
 			if (bare_dispersion(k) - chemical_potential > omega_debye)
 				continue;
-			const c_float lower_bound = 0;
-			const c_float upper_bound = sqrt(2 * omega_debye);
 #endif
 
 			auto integrand = [this](c_float x) -> c_complex {
@@ -56,8 +54,8 @@ namespace Continuum {
 				};
 			result(u_idx) = Utility::Numerics::Integration::trapezoidal_rule(integrand, u_lower_bound(k), u_upper_bound(k), N_L);
 		}
-		constexpr double prefactor = -1. / (2. * M_PI * M_PI);
-		result *= static_cast<c_float>(prefactor * U);
+		constexpr c_float prefactor = -4 * M_PI;//1. / (2. * M_PI * M_PI);
+		result *= prefactor * U;
 		this->Delta.fill_with(result);
 		result -= initial_values;
 	}
@@ -72,11 +70,15 @@ namespace Continuum {
 		{
 			if(coeff.momenta[0] == coeff.momenta[1])
 			{
-				return this->U;
-			} 
-			if (omega_debye - abs(bare_dispersion(first) - bare_dispersion(second)) > 0)
+				return -this->U;
+			}
+#ifdef approximate_theta
+			if(omega_debye > bare_dispersion_to_fermi_level(first) && omega_debye > bare_dispersion_to_fermi_level(second))
+#else
+			if (omega_debye > abs(bare_dispersion(first) - bare_dispersion(second)))
+#endif
 			{
-				return this->U;
+				return -this->U;
 			}
 			else 
 			{
