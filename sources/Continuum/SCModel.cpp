@@ -6,7 +6,9 @@ namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(DISCRETIZATION, parameters.U), temperature{ parameters.temperature }, U{ parameters.U },
 		omega_debye{ parameters.omega_debye }, chemical_potential{ parameters.chemical_potential }
-	{ }
+	{
+		//Delta = decltype(Delta)::Random(DISCRETIZATION);
+	}
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {
 		const auto DELTA = interpolate_delta(k);
@@ -45,7 +47,7 @@ namespace Continuum {
 			const c_float k = index_to_momentum(u_idx);
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - 0.5*l^2)theta(omega - 0.5*k^2)
-			if (bare_dispersion(k) - chemical_potential > omega_debye)
+			if (bare_dispersion(k) > omega_debye)
 				continue;
 #endif
 
@@ -70,15 +72,15 @@ namespace Continuum {
 		{
 			if(coeff.momenta[0] == coeff.momenta[1])
 			{
-				return -this->U;
+				return this->U;
 			}
 #ifdef approximate_theta
-			if(omega_debye > bare_dispersion_to_fermi_level(first) && omega_debye > bare_dispersion_to_fermi_level(second))
+			if(omega_debye > bare_dispersion(first) && omega_debye > bare_dispersion(second))
 #else
 			if (omega_debye > abs(bare_dispersion(first) - bare_dispersion(second)))
 #endif
 			{
-				return -this->U;
+				return this->U;
 			}
 			else 
 			{

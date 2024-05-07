@@ -5,7 +5,8 @@
 #include "../../../Utility/sources/Numerics/TrapezoidalRule.hpp"
 #include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
 
-#define ieom_norm_factor(k, l) 2. * M_PI * M_PI * k * l
+#define ieom_diag(k) 4. * M_PI * k * k
+#define ieom_offdiag(k, l) ieom_diag(k) * ieom_diag(l)
 
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
@@ -88,29 +89,29 @@ namespace Continuum {
 		for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
 			for (int k = 0; k < DISCRETIZATION; ++k) {
 				if (!term.delta_momenta.empty()) {
-					if (i == j && i == 0 && !term.sums.momenta.empty()) {
-						if(k < 20)
-							std::cout << "k=" <<k <<"\t\t" << term << " = " << computeTerm(term, k, k).real() << std::endl;
-					}
+					//if (i == j && i == 0 && !term.sums.momenta.empty()) {
+					//	if(k < 20)
+					//		std::cout << "k=" <<k <<"\t\t" << term << " = " << computeTerm(term, k, k).real() << std::endl;
+					//}
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
 					if (i < hermitian_size) {
 						K_plus(i * DISCRETIZATION + k, j * DISCRETIZATION + k)
-							+= ieom_norm_factor(k, k) * computeTerm(term, k, k).real();
+							+= ieom_diag(k) * computeTerm(term, k, k).real();
 					}
 					else {
 						K_minus((i - hermitian_size) * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + k)
-							+= ieom_norm_factor(k, k) * computeTerm(term, k, k).real();
+							+= ieom_diag(k) * computeTerm(term, k, k).real();
 					}
 				}
 				else {
 					for (int l = 0; l < DISCRETIZATION; ++l) {
 						if (i < hermitian_size) {
 							K_plus(i * DISCRETIZATION + k, j * DISCRETIZATION + l)
-								+= ieom_norm_factor(k, l) * computeTerm(term, k, l).real();
+								+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
 						}
 						else {
 							K_minus((i - hermitian_size) * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + l)
-								+= ieom_norm_factor(k, l) * computeTerm(term, k, l).real();
+								+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
 						}
 					}
 				}
@@ -125,12 +126,12 @@ namespace Continuum {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
 					L(i * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + k)
-						+= ieom_norm_factor(k, k) * computeTerm(term, k, k).real();
+						+= ieom_diag(k) * computeTerm(term, k, k).real();
 				}
 				else {
 					for (int l = 0; l < DISCRETIZATION; ++l) {
 						L(i * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + l)
-							+= ieom_norm_factor(k, l) * computeTerm(term, k, l).real();
+							+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
 					}
 				}
 			}

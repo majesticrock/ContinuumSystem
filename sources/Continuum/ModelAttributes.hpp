@@ -3,6 +3,7 @@
 #include "GlobalDefinitions.hpp"
 #include <vector>
 #include <complex>
+#include <random>
 
 namespace Continuum {
 	enum ComplexAttributePolicy { Magnitude, SeperateRealAndImaginary };
@@ -22,6 +23,23 @@ namespace Continuum {
 		ModelAttributes(const ModelAttributes& other) = default;
 		ModelAttributes& operator=(const ModelAttributes& other) = default;
 		ModelAttributes& operator=(ModelAttributes&& other) = default;
+
+		inline static ModelAttributes Random(size_t size)
+		{
+			ModelAttributes<DataType> ret;
+			ret.selfconsistency_values.resize(size);
+			std::random_device dev;
+			std::mt19937 rng(dev());
+			std::uniform_real_distribution<> dis(0.0, 2.0 * 3.1415926);
+			for(auto& value : ret){
+				if constexpr (Utility::is_complex<DataType>()) {
+					value = std::polar(dis(rng), dis(rng));
+				} else {
+					value = dis(rng);
+				}
+			}
+			return ret;
+		}
 
 		// Using this constructor constructs the attribute vector with a fixed value, default is 0
 		explicit ModelAttributes(const size_t number_of_attributes, const DataType& default_value = DataType{})
