@@ -28,20 +28,20 @@ namespace Continuum {
 	
 	c_complex ModeHelper::get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const
 	{
-		const int index = momentum_to_index(momentum);
+		const int index = model->momentum_to_index(momentum);
 		if (index + 1 >= DISCRETIZATION) {
 			// Assuming that <O> = const for k > k_max
 			return expectation_values.at(op.type).back();
 		}
-		return Utility::Numerics::linearly_interpolate(momentum, index_to_momentum(index), index_to_momentum(index + 1),
+		return Utility::Numerics::linearly_interpolate(momentum, model->index_to_momentum(index), model->index_to_momentum(index + 1),
 			expectation_values.at(op.type)[index], expectation_values.at(op.type)[index + 1]);
 	}
 
 	void ModeHelper::createStartingStates()
 	{
-		starting_states.resize(2, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization) });
+		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization) });
 		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
-		std::fill(starting_states[1][1].begin(), starting_states[1][1].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
+		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
 	}
 
 	void ModeHelper::fillMatrices()

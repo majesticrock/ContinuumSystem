@@ -1,12 +1,19 @@
 #include "SCModel.hpp"
 #include "../../../Utility/sources/Numerics/TrapezoidalRule.hpp"
 #include <algorithm>
+#include <numeric>
 
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(DISCRETIZATION, parameters.U), temperature{ parameters.temperature }, U{ parameters.U },
-		omega_debye{ parameters.omega_debye }, chemical_potential{ parameters.chemical_potential }
+		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy }, 
+		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) }, U_MAX{0.1 * fermi_wavevector},
+		STEP{ 2 * U_MAX / DISCRETIZATION }
 	{
+		auto ks = this->get_k_points();
+		for (const auto& k : ks) {
+			std::cout << k << "\t" << this->bare_dispersion_to_fermi_level(k) << std::endl;
+		}
 		//Delta = decltype(Delta)::Random(DISCRETIZATION);
 	}
 
@@ -46,8 +53,8 @@ namespace Continuum {
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
 			const c_float k = index_to_momentum(u_idx);
 #ifdef approximate_theta
-			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - 0.5*l^2)theta(omega - 0.5*k^2)
-			if (bare_dispersion(k) > omega_debye)
+			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
+			if (abs(bare_dispersion_to_fermi_level(k)) > omega_debye)
 				continue;
 #endif
 
@@ -56,7 +63,7 @@ namespace Continuum {
 				};
 			result(u_idx) = Utility::Numerics::Integration::trapezoidal_rule(integrand, u_lower_bound(k), u_upper_bound(k), N_L);
 		}
-		constexpr c_float prefactor = -4 * M_PI;//1. / (2. * M_PI * M_PI);
+		constexpr c_float prefactor = -1. / (2. * M_PI * M_PI);
 		result *= prefactor * U;
 		this->Delta.fill_with(result);
 		result -= initial_values;
@@ -66,7 +73,7 @@ namespace Continuum {
 	{
 		if (coeff.name == "\\epsilon_0") 
 		{
-			return bare_dispersion_to_fermi_level(first);
+			return bare_dispersion_to_fermi_level(first) + 0.5 * U;
 		} 
 		else if (coeff.name == "U")
 		{
@@ -75,7 +82,7 @@ namespace Continuum {
 				return this->U;
 			}
 #ifdef approximate_theta
-			if(omega_debye > bare_dispersion(first) && omega_debye > bare_dispersion(second))
+			if(omega_debye > bare_dispersion_to_fermi_level(first) && omega_debye > bare_dispersion_to_fermi_level(second))
 #else
 			if (omega_debye > abs(bare_dispersion(first) - bare_dispersion(second)))
 #endif
@@ -104,6 +111,9 @@ namespace Continuum {
 			ret.at(SymbolicOperators::Number_Type)[k] = this->occupation(momentum);
 			ret.at(SymbolicOperators::SC_Type)[k] = this->sc_expectation_value(momentum);
 		}
+
+		std::cout << INV_N * Utility::Numerics::Integration::trapezoidal_rule(ret.at(SymbolicOperators::Number_Type), STEP)
+			<< std::endl;
 
 		return ret;
 	}

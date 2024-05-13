@@ -6,7 +6,6 @@
 #include <type_traits>
 #include "../../../Utility/sources/UnderlyingFloatingPoint.hpp"
 
-#define _equal_disc
 #define approximate_theta
 
 namespace Continuum {
@@ -36,35 +35,6 @@ namespace Continuum {
 		return abs(number) < PRECISION<Utility::UnderlyingFloatingPoint_t<NumberType>>;
 	}
 
-	constexpr c_float U_MAX =
-#ifdef _equal_disc
-		250;
-#else
-		1;
-#endif
 	constexpr int DISCRETIZATION = 1000;
-	constexpr c_float STEP = U_MAX / DISCRETIZATION;
-
-	constexpr c_float index_to_momentum(int u) {
-#ifdef _equal_disc
-		return STEP * u;
-#else
-		return STEP * u / (1 - STEP * u);
-#endif
-	}
-	constexpr int momentum_to_index(c_float k) {
-#ifdef _equal_disc
-		return static_cast<int>(k / STEP);
-#else
-		return static_cast<int>(k / (STEP * (k + 1)));
-#endif
-	}
-	inline std::vector<c_float> get_k_points() {
-		std::vector<c_float> ks;
-		ks.resize(DISCRETIZATION);
-		for (int i = 0; i < DISCRETIZATION; ++i) {
-			ks[i] = index_to_momentum(i);
-		}
-		return ks;
-	}
+	constexpr c_float INV_N = 1. / DISCRETIZATION;
 }

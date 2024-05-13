@@ -14,22 +14,41 @@ namespace Continuum {
 		c_float temperature;
 		c_float U;
 		c_float omega_debye;
-		c_float chemical_potential;
+		c_float fermi_energy;
 
 		ModelInitializer(Utility::InputFileReader& input)
 			: temperature{ PhysicalConstants::k_B * input.getDouble("T") }, U{ input.getDouble("U") },
-			omega_debye{ input.getDouble("omega_debye") }, chemical_potential{ input.getDouble("chemical_potential") }
+			omega_debye{ input.getDouble("omega_debye") }, fermi_energy{ input.getDouble("fermi_energy") }
 		{ };
 	};
 
 	class SCModel {
 	public:
 		ModelAttributes<c_complex> Delta;
+
+		inline c_float index_to_momentum(int u) const {
+			return fermi_wavevector - U_MAX + STEP * u;
+		}
+		inline int momentum_to_index(c_float k) const {
+			return static_cast<int>((k - fermi_wavevector + U_MAX) / STEP);
+		}
+		inline std::vector<c_float> get_k_points() const {
+			std::vector<c_float> ks;
+			ks.resize(DISCRETIZATION);
+			for (int i = 0; i < DISCRETIZATION; ++i) {
+				ks[i] = index_to_momentum(i);
+			}
+			return ks;
+		}
 	protected:
 		c_float temperature{};
 		c_float U{};
 		c_float omega_debye{};
-		c_float chemical_potential{};
+		c_float fermi_energy{};
+		c_float fermi_wavevector{};
+
+		c_float U_MAX;
+		c_float STEP;
 
 		static constexpr c_float CUT_OFF = std::numeric_limits<c_float>::epsilon();
 
@@ -44,7 +63,7 @@ namespace Continuum {
 			return 0.5 * k * k;
 		};
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
-			return bare_dispersion(k) - chemical_potential;
+			return bare_dispersion(k) - fermi_energy;
 		};
 		inline c_float energy(c_float k) const {
 			return sqrt(boost::math::pow<2>(bare_dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
@@ -59,14 +78,14 @@ namespace Continuum {
 
 		inline c_float u_lower_bound(c_float k) const {
 #ifdef approximate_theta
-			return 0;
+			return fermi_wavevector - sqrt(2 * omega_debye);
 #else
 			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
 #endif
 		}
 		inline c_float u_upper_bound(c_float k) const {
 #ifdef approximate_theta
-			return sqrt(2 * omega_debye);
+			return fermi_wavevector + sqrt(2 * omega_debye);
 #else
 			return sqrt(k * k + 2 * omega_debye);
 #endif
@@ -74,7 +93,7 @@ namespace Continuum {
 		inline std::string info() const {
 			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature)
 				+ " " + std::to_string(U) + " " + std::to_string(omega_debye)
-				+ " " + std::to_string(chemical_potential) + "]";
+				+ " " + std::to_string(fermi_energy) + "]";
 		}
 
 		SCModel(ModelInitializer const& parameters);
