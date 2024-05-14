@@ -64,7 +64,12 @@ namespace Continuum {
 				}
 			}
 		}
-		//std::cout << K_plus.diagonal().head(10) << std::endl;
+		const Eigen::VectorXd x = K_plus.diagonal().real();
+		for(int i = 0; i < x.size(); ++i){
+			if(x(i) < -PRECISION<c_float>){
+				std::cout << i << ": " << x(i) << "\n";
+			}
+		}
 	}
 
 	void ModeHelper::fill_M()
@@ -87,30 +92,32 @@ namespace Continuum {
 	void ModeHelper::fill_block_M(int i, int j)
 	{
 		for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
-			for (int k = 0; k < DISCRETIZATION; ++k) {
+			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
+				const c_float k = this->model->index_to_momentum(k_idx);
 				if (!term.delta_momenta.empty()) {
-					//if (i == j && i == 0 && !term.sums.momenta.empty()) {
-					//	if(k < 20)
+					//if (i == j && i == 0) {
+					//	if(k_idx < 20)
 					//		std::cout << "k=" <<k <<"\t\t" << term << " = " << computeTerm(term, k, k).real() << std::endl;
 					//}
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
 					if (i < hermitian_size) {
-						K_plus(i * DISCRETIZATION + k, j * DISCRETIZATION + k)
+						K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
 							+= ieom_diag(k) * computeTerm(term, k, k).real();
 					}
 					else {
-						K_minus((i - hermitian_size) * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + k)
+						K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + k_idx)
 							+= ieom_diag(k) * computeTerm(term, k, k).real();
 					}
 				}
 				else {
-					for (int l = 0; l < DISCRETIZATION; ++l) {
+					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
+						const c_float l = this->model->index_to_momentum(l_idx);
 						if (i < hermitian_size) {
-							K_plus(i * DISCRETIZATION + k, j * DISCRETIZATION + l)
+							K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
 								+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
 						}
 						else {
-							K_minus((i - hermitian_size) * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + l)
+							K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
 								+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
 						}
 					}
@@ -122,15 +129,17 @@ namespace Continuum {
 	void ModeHelper::fill_block_N(int i, int j)
 	{
 		for (const auto& term : wicks.N[number_of_basis_terms * j + i]) {
-			for (int k = 0; k < DISCRETIZATION; ++k) {
+			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
+				const c_float k = this->model->index_to_momentum(k_idx);
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
-					L(i * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + k)
+					L(i * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + k_idx)
 						+= ieom_diag(k) * computeTerm(term, k, k).real();
 				}
 				else {
-					for (int l = 0; l < DISCRETIZATION; ++l) {
-						L(i * DISCRETIZATION + k, (j - hermitian_size) * DISCRETIZATION + l)
+					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
+						const c_float l = this->model->index_to_momentum(l_idx);
+						L(i * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
 							+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
 					}
 				}

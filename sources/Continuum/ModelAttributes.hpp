@@ -103,6 +103,9 @@ namespace Continuum {
 		inline auto back() const {
 			return selfconsistency_values.back();
 		}
+		inline auto front() const {
+			return selfconsistency_values.front();
+		}
 		template<class Vector>
 		inline void fill_with(const Vector& vector) {
 			this->selfconsistency_values.resize(vector.size());

@@ -7,13 +7,10 @@ namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(DISCRETIZATION, parameters.U), temperature{ parameters.temperature }, U{ parameters.U },
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy }, 
-		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) }, U_MAX{0.1 * fermi_wavevector},
+		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) }, U_MAX{2 * sqrt(omega_debye)},
 		STEP{ 2 * U_MAX / DISCRETIZATION }
 	{
-		auto ks = this->get_k_points();
-		for (const auto& k : ks) {
-			std::cout << k << "\t" << this->bare_dispersion_to_fermi_level(k) << std::endl;
-		}
+		assert(index_to_momentum(0) >= 0);
 		//Delta = decltype(Delta)::Random(DISCRETIZATION);
 	}
 
@@ -57,7 +54,6 @@ namespace Continuum {
 			if (abs(bare_dispersion_to_fermi_level(k)) > omega_debye)
 				continue;
 #endif
-
 			auto integrand = [this](c_float x) -> c_complex {
 				return x * x * sc_expectation_value(x);
 				};
@@ -73,7 +69,7 @@ namespace Continuum {
 	{
 		if (coeff.name == "\\epsilon_0") 
 		{
-			return bare_dispersion_to_fermi_level(first) + 0.5 * U;
+			return bare_dispersion_to_fermi_level(first);
 		} 
 		else if (coeff.name == "U")
 		{
@@ -82,7 +78,8 @@ namespace Continuum {
 				return this->U;
 			}
 #ifdef approximate_theta
-			if(omega_debye > bare_dispersion_to_fermi_level(first) && omega_debye > bare_dispersion_to_fermi_level(second))
+			if(omega_debye > abs(bare_dispersion_to_fermi_level(first)) 
+				&& omega_debye > abs(bare_dispersion_to_fermi_level(second)))
 #else
 			if (omega_debye > abs(bare_dispersion(first) - bare_dispersion(second)))
 #endif
