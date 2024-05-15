@@ -7,10 +7,13 @@ namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(DISCRETIZATION, parameters.U), temperature{ parameters.temperature }, U{ parameters.U },
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy }, 
-		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) }, U_MAX{2 * sqrt(omega_debye)},
-		STEP{ 2 * U_MAX / DISCRETIZATION }
+		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) }, 
+		U_MAX{ sqrt(2 * (fermi_energy + omega_debye)) - fermi_wavevector },
+		U_MIN{ fermi_energy > omega_debye ? sqrt(2 * (fermi_energy - omega_debye)) - fermi_wavevector : -fermi_wavevector }, 
+		STEP{ (U_MAX - U_MIN) / DISCRETIZATION }
 	{
 		assert(index_to_momentum(0) >= 0);
+		std::cout << bare_dispersion_to_fermi_level(index_to_momentum(0)) << std::endl;
 		//Delta = decltype(Delta)::Random(DISCRETIZATION);
 	}
 
@@ -59,7 +62,7 @@ namespace Continuum {
 				};
 			result(u_idx) = Utility::Numerics::Integration::trapezoidal_rule(integrand, u_lower_bound(k), u_upper_bound(k), N_L);
 		}
-		constexpr c_float prefactor = -1. / (2. * M_PI * M_PI);
+		constexpr c_float prefactor = -4. * M_PI;//-1. / (2. * M_PI * M_PI);
 		result *= prefactor * U;
 		this->Delta.fill_with(result);
 		result -= initial_values;
@@ -108,9 +111,6 @@ namespace Continuum {
 			ret.at(SymbolicOperators::Number_Type)[k] = this->occupation(momentum);
 			ret.at(SymbolicOperators::SC_Type)[k] = this->sc_expectation_value(momentum);
 		}
-
-		std::cout << INV_N * Utility::Numerics::Integration::trapezoidal_rule(ret.at(SymbolicOperators::Number_Type), STEP)
-			<< std::endl;
 
 		return ret;
 	}

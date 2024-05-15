@@ -27,12 +27,12 @@ namespace Continuum {
 		ModelAttributes<c_complex> Delta;
 
 		inline c_float index_to_momentum(int u) const {
-			assert(fermi_wavevector - U_MAX + STEP * u >= 0);
-			return fermi_wavevector - U_MAX + STEP * u;
+			assert(fermi_wavevector + U_MIN + STEP * u >= 0);
+			return fermi_wavevector + U_MIN + STEP * u;
 		}
 		inline int momentum_to_index(c_float k) const {
 			assert(k >= 0);
-			return static_cast<int>(std::lround((k - fermi_wavevector + U_MAX) / STEP));
+			return static_cast<int>(std::lround((k - fermi_wavevector - U_MIN) / STEP));
 		}
 		inline std::vector<c_float> get_k_points() const {
 			std::vector<c_float> ks;
@@ -49,8 +49,9 @@ namespace Continuum {
 		c_float fermi_energy{};
 		c_float fermi_wavevector{};
 
-		c_float U_MAX;
-		c_float STEP;
+		c_float U_MAX{};
+		c_float U_MIN{};
+		c_float STEP{};
 
 		static constexpr c_float CUT_OFF = std::numeric_limits<c_float>::epsilon();
 
@@ -82,7 +83,7 @@ namespace Continuum {
 
 		inline c_float u_lower_bound(c_float k) const {
 #ifdef approximate_theta
-			return (fermi_wavevector - sqrt(2 * omega_debye) > 0 ? fermi_wavevector - sqrt(2 * omega_debye) : 0);
+			return std::max(fermi_wavevector - sqrt(2 * omega_debye), c_float{});
 #else
 			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
 #endif

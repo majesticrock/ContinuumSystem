@@ -8,6 +8,10 @@ using namespace Continuum;
 
 const std::string BASE_FOLDER = "../../data/continuum/";
 
+int Continuum::DISCRETIZATION = 500;
+c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
+
+
 int main(int argc, char** argv) {
 	Utility::InputFileReader input("params/test.config");
 

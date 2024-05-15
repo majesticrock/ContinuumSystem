@@ -35,6 +35,6 @@ namespace Continuum {
 		return abs(number) < PRECISION<Utility::UnderlyingFloatingPoint_t<NumberType>>;
 	}
 
-	constexpr int DISCRETIZATION = 1000;
-	constexpr c_float INV_N = 1. / DISCRETIZATION;
+	extern int DISCRETIZATION;
+	extern c_float INV_N;
 }

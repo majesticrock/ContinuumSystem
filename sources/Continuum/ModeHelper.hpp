@@ -27,8 +27,8 @@ namespace Continuum {
 		constexpr static int antihermitian_size = 1;
 		constexpr static int number_of_basis_terms = hermitian_size + antihermitian_size;
 
-		constexpr static int hermitian_discretization = DISCRETIZATION * hermitian_size;
-		constexpr static int antihermitian_discretization = DISCRETIZATION * antihermitian_size;
+		static int hermitian_discretization;
+		static int antihermitian_discretization;
 
 		std::unique_ptr<SCModel> model;
 

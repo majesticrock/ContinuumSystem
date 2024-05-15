@@ -64,10 +64,14 @@ namespace Continuum {
 				}
 			}
 		}
-		const Eigen::VectorXd x = K_plus.diagonal().real();
-		for(int i = 0; i < x.size(); ++i){
-			if(x(i) < -PRECISION<c_float>){
-				std::cout << i << ": " << x(i) << "\n";
+		for(int i = 0; i < K_plus.diagonal().real().size(); ++i){
+			if(K_plus.diagonal().real()(i) < -PRECISION<c_float>){
+				std::cout << i << "+: " << K_plus.diagonal().real()(i) << "\n";
+			}
+		}
+		for(int i = 0; i < K_minus.diagonal().real().size(); ++i){
+			if(K_minus.diagonal().real()(i) < -PRECISION<c_float>){
+				std::cout << i << "-: " << K_minus.diagonal().real()(i) << "\n";
 			}
 		}
 	}
@@ -195,9 +199,15 @@ namespace Continuum {
 			Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
 	}
 
+	int ModeHelper::hermitian_discretization = 0;
+	int ModeHelper::antihermitian_discretization = 0;
+
 	ModeHelper::ModeHelper(Utility::InputFileReader& input)
 		: _parent(this, SQRT_PRECISION<c_float>)
 	{
+		hermitian_discretization = DISCRETIZATION * hermitian_size;
+		antihermitian_discretization = DISCRETIZATION * antihermitian_size;
+
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
