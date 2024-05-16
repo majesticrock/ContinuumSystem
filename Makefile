@@ -26,7 +26,7 @@ all: sources/SymbolicOperators sources/Utility build build/main
 debug: CXXFLAGS += -g -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 debug: build build/main
 
-build/main: $(OBJS) | build 
+build/main: $(OBJS) | build
 	$(CXX) $(INCLUDEFLAGS) -o build/main $(OBJS) $(CXXFLAGS) $(LDLIBS)
 
 build/%.o: sources/%.cpp# sources/%.hpp
@@ -46,3 +46,9 @@ build:
 
 clean:
 	rm -rf build
+
+halfclean:
+	rm -rf build/Continuum
+	rm -f build/ContinuumSystem.o
+	rm -f build/main
+	mkdir -p build/Continuum

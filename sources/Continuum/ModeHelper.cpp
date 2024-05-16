@@ -6,7 +6,7 @@
 #include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
 
 #define ieom_diag(k) 4. * M_PI * k * k
-#define ieom_offdiag(k, l) ieom_diag(k) * ieom_diag(l)
+#define ieom_offdiag(k, l) (2. / M_PI) * k * k * l * l / DISCRETIZATION
 
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
@@ -104,6 +104,11 @@ namespace Continuum {
 					//		std::cout << "k=" <<k <<"\t\t" << term << " = " << computeTerm(term, k, k).real() << std::endl;
 					//}
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
+
+					if (term.sums.momenta.empty() && term.coefficients.front().name == "U"){
+						// These kinds of terms scale as 1/N -> 0
+						continue;
+					}
 					if (i < hermitian_size) {
 						K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
 							+= ieom_diag(k) * computeTerm(term, k, k).real();
@@ -195,15 +200,16 @@ namespace Continuum {
 #ifdef approximate_theta
 		if (k >= this->model->u_upper_bound(k)) return 0;
 #endif
-		return (4.0 * M_PI * term.multiplicity) * this->model->computeCoefficient(term.coefficients.front(), c_float{}) *
-			Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
+		return (term.multiplicity / (2 * M_PI * M_PI)) * this->model->computeCoefficient(term.coefficients.front(), c_float{})
+			* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
+			
 	}
 
 	int ModeHelper::hermitian_discretization = 0;
 	int ModeHelper::antihermitian_discretization = 0;
 
 	ModeHelper::ModeHelper(Utility::InputFileReader& input)
-		: _parent(this, SQRT_PRECISION<c_float>)
+		: _parent(this, SQRT_PRECISION<c_float>, false)
 	{
 		hermitian_discretization = DISCRETIZATION * hermitian_size;
 		antihermitian_discretization = DISCRETIZATION * antihermitian_size;
@@ -212,7 +218,7 @@ namespace Continuum {
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
 		Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
-		solver.computePhases();
+		solver.compute(true);
 
 		this->expectation_values = model->get_expectation_values();
 	}

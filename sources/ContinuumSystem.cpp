@@ -4,6 +4,7 @@
 #include "Continuum/ModeHelper.hpp"
 
 #include <filesystem>
+#include <algorithm>
 using namespace Continuum;
 
 const std::string BASE_FOLDER = "../../data/continuum/";
@@ -14,13 +15,17 @@ c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
 
 int main(int argc, char** argv) {
 	Utility::InputFileReader input("params/test.config");
+	Continuum::set_discretization(input.getInt("discretization_points"));
 
 	ModeHelper modes(input);
 
-	std::cout << modes.getModel().info() << std::endl;
 	auto delta_result = modes.getModel().Delta.abs().as_vector();
 	std::filesystem::create_directories(BASE_FOLDER + "test/");
 	Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + "test/gap.dat.gz");
+	std::cout << "Gap data have been saved!" << std::endl;
+	std::cout << "Delta_max = " << *std::max_element(delta_result.begin(), delta_result.end()) << std::endl;
+
+	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + "test/continuum.dat.gz");
 
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {
