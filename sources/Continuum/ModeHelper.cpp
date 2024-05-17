@@ -2,11 +2,11 @@
 #include <memory>
 #include <cassert>
 #include "../../../Utility/sources/Numerics/Interpolation.hpp"
-#include "../../../Utility/sources/Numerics/TrapezoidalRule.hpp"
+#include "../../../Utility/sources/Numerics/Integration/TrapezoidalRule.hpp"
 #include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
 
 #define ieom_diag(k) 4. * M_PI * k * k
-#define ieom_offdiag(k, l) (2. / M_PI) * k * k * l * l / DISCRETIZATION
+#define ieom_offdiag(k, l) (2. / M_PI) * k * k * l * l * model->STEP
 
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
@@ -25,7 +25,7 @@ namespace Continuum {
 			throw std::runtime_error("Momentum not recognized! " + momentum.momentum_list.front().second);
 		}
 	}
-	
+
 	c_complex ModeHelper::get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const
 	{
 		const int index = model->momentum_to_index(momentum);
@@ -64,16 +64,20 @@ namespace Continuum {
 				}
 			}
 		}
-		for(int i = 0; i < K_plus.diagonal().real().size(); ++i){
-			if(K_plus.diagonal().real()(i) < -PRECISION<c_float>){
+		for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
+			if (K_plus.diagonal().real()(i) < -PRECISION<c_float>) {
 				std::cout << i << "+: " << K_plus.diagonal().real()(i) << "\n";
 			}
 		}
-		for(int i = 0; i < K_minus.diagonal().real().size(); ++i){
-			if(K_minus.diagonal().real()(i) < -PRECISION<c_float>){
+		for (int i = 0; i < K_minus.diagonal().real().size(); ++i) {
+			if (K_minus.diagonal().real()(i) < -PRECISION<c_float>) {
 				std::cout << i << "-: " << K_minus.diagonal().real()(i) << "\n";
 			}
 		}
+
+		std::cout << K_plus.cwiseAbs().maxCoeff() << std::endl;
+		std::cout << K_minus.cwiseAbs().maxCoeff() << std::endl;
+		std::cout << L.cwiseAbs().maxCoeff() << std::endl;
 	}
 
 	void ModeHelper::fill_M()
@@ -105,7 +109,7 @@ namespace Continuum {
 					//}
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
 
-					if (term.sums.momenta.empty() && term.coefficients.front().name == "U"){
+					if (term.sums.momenta.empty() && term.coefficients.front().name == "U") {
 						// These kinds of terms scale as 1/N -> 0
 						continue;
 					}
@@ -189,9 +193,9 @@ namespace Continuum {
 		assert(term.coefficients.size() == 1U && term.coefficients.front().name == "U");
 
 		auto integrand = [&](c_float q) {
-			c_complex value{ this->get_expectation_value(term.operators.front(), 
-				this->compute_momentum(term.operators.front().momentum, k, l, q))};
-			
+			c_complex value{ this->get_expectation_value(term.operators.front(),
+				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
+
 			for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
 				value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
 			}
@@ -202,7 +206,6 @@ namespace Continuum {
 #endif
 		return (term.multiplicity / (2 * M_PI * M_PI)) * this->model->computeCoefficient(term.coefficients.front(), c_float{})
 			* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
-			
 	}
 
 	int ModeHelper::hermitian_discretization = 0;

@@ -38,7 +38,7 @@ namespace Continuum {
 	extern int DISCRETIZATION;
 	extern c_float INV_N;
 
-	inline void set_discretization(int N){
+	inline void set_discretization(int N) {
 		DISCRETIZATION = N;
 		INV_N = 1.0 / N;
 	}

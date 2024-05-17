@@ -1,6 +1,7 @@
 #include "SCModel.hpp"
-#include "../../../Utility/sources/Numerics/TrapezoidalRule.hpp"
+#include "../../../Utility/sources/Numerics/Integration/TrapezoidalRule.hpp"
 #include "../../../Utility/sources/ConstexprPower.hpp"
+#include "../../../Utility/sources/Numerics/Minimization/Bisection.hpp"
 #include <algorithm>
 #include <numeric>
 
@@ -8,17 +9,28 @@ using Utility::constexprPower;
 
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
-		: Delta(DISCRETIZATION, parameters.U * parameters.omega_debye), temperature{ parameters.temperature }, 
-		U{ parameters.U },omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy }, 
-		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) }, V_OVER_N{ 3. * M_PI * M_PI / (constexprPower<3>(fermi_wavevector)) },
+		: Delta(DISCRETIZATION, parameters.U* parameters.omega_debye), temperature{ parameters.temperature },
+		U{ parameters.U }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
+		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) },
+		V_OVER_N{ fermi_wavevector > 0 ? 3. * M_PI * M_PI / (constexprPower<3>(fermi_wavevector)) : 1 },
 		U_MAX{ sqrt(2 * (fermi_energy + omega_debye)) - fermi_wavevector },
-		U_MIN{ fermi_energy > omega_debye ? sqrt(2 * (fermi_energy - omega_debye)) - fermi_wavevector : -fermi_wavevector }, 
-		STEP{ (U_MAX - U_MIN) / DISCRETIZATION }
+		U_MIN{ fermi_energy > omega_debye ? sqrt(2 * (fermi_energy - omega_debye)) - fermi_wavevector : -fermi_wavevector },
+		STEP{ (U_MAX - U_MIN) / (DISCRETIZATION - 1) }
 	{
 		omega_debye += SQRT_PRECISION<c_float>;
 		assert(index_to_momentum(0) >= 0);
 		//std::cout << std::abs(bare_dispersion_to_fermi_level(index_to_momentum(0))) << std::endl;
 		//Delta = decltype(Delta)::Random(DISCRETIZATION);
+	}
+
+	std::vector<c_float> SCModel::continuum_boundaries() const
+	{
+		return {
+			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
+				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION<c_float>, 100)),
+			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
+				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION<c_float>, 100))
+		};
 	}
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {
@@ -75,18 +87,18 @@ namespace Continuum {
 
 	c_float SCModel::computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second /*=c_float{}*/) const
 	{
-		if (coeff.name == "\\epsilon_0") 
+		if (coeff.name == "\\epsilon_0")
 		{
 			return bare_dispersion_to_fermi_level(first);
-		} 
+		}
 		else if (coeff.name == "U")
 		{
-			if(coeff.momenta[0] == coeff.momenta[1])
+			if (coeff.momenta[0] == coeff.momenta[1])
 			{
 				return this->U * this->V_OVER_N;
 			}
 #ifdef approximate_theta
-			if(omega_debye > std::abs(bare_dispersion_to_fermi_level(first)) 
+			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first))
 				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second)))
 #else
 			if (omega_debye > std::abs(bare_dispersion(first) - bare_dispersion(second)))
@@ -94,12 +106,12 @@ namespace Continuum {
 			{
 				return this->U * this->V_OVER_N;
 			}
-			else 
+			else
 			{
 				return c_float{};
 			}
-		} 
-		else 
+		}
+		else
 		{
 			throw std::invalid_argument("Coefficient not recognized! " + coeff.name);
 		}

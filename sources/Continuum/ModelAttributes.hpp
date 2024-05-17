@@ -31,10 +31,11 @@ namespace Continuum {
 			std::random_device dev;
 			std::mt19937 rng(dev());
 			std::uniform_real_distribution<> dis(0.0, 2.0 * 3.1415926);
-			for(auto& value : ret){
+			for (auto& value : ret) {
 				if constexpr (Utility::is_complex<DataType>()) {
 					value = std::polar(dis(rng), dis(rng));
-				} else {
+				}
+				else {
 					value = dis(rng);
 				}
 			}

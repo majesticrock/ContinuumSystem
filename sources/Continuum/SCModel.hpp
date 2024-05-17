@@ -42,21 +42,15 @@ namespace Continuum {
 			}
 			return ks;
 		}
-		inline std::vector<c_float> continuum_boundaries() const {
-			return { 2 * energy(fermi_wavevector), 2 * energy(index_to_momentum(DISCRETIZATION - 1)) };
-		}
+		std::vector<c_float> continuum_boundaries() const;
 	protected:
 		c_float temperature{};
 		c_float U{};
 		c_float omega_debye{};
 		c_float fermi_energy{};
 		c_float fermi_wavevector{};
-		
-		c_float V_OVER_N{};
 
-		c_float U_MAX{};
-		c_float U_MIN{};
-		c_float STEP{};
+		c_float V_OVER_N{};
 
 		static constexpr c_float CUT_OFF = std::numeric_limits<c_float>::epsilon();
 
@@ -88,7 +82,7 @@ namespace Continuum {
 
 		inline c_float u_lower_bound(c_float k) const {
 #ifdef approximate_theta
-			return sqrt(std::max( (2. * (fermi_energy - omega_debye)), c_float{} ));
+			return sqrt(std::max((2. * (fermi_energy - omega_debye)), c_float{}));
 #else
 			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
 #endif
@@ -107,5 +101,9 @@ namespace Continuum {
 		}
 
 		SCModel(ModelInitializer const& parameters);
+
+		c_float U_MAX{};
+		c_float U_MIN{};
+		c_float STEP{};
 	};
 }
