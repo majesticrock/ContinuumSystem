@@ -64,6 +64,19 @@ namespace Continuum {
 				}
 			}
 		}
+
+		//decltype(K_plus) diff = K_plus - K_plus.adjoint();
+		//for(int i = 0; i < diff.rows();  ++i){
+		//	for(int j = i + 1; j < diff.rows(); ++j){
+		//		if (!is_zero(diff(i, j))){
+		//			std::cout << "i: " << i % DISCRETIZATION << "\t" << i / DISCRETIZATION << "  ||  ";
+		//			std::cout << "j: " << j % DISCRETIZATION << "\t" << j / DISCRETIZATION << std::endl;
+		//		}
+		//	}
+		//}
+		//std::cout << "||K_+||" << (K_plus - K_plus.adjoint()).norm() << std::endl;
+		//std::cout << "||K_-||" << (K_minus - K_minus.adjoint()).norm() << std::endl;
+
 		for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
 			if (K_plus.diagonal().real()(i) < -PRECISION<c_float>) {
 				std::cout << i << "+: " << K_plus.diagonal().real()(i) << "\n";
@@ -202,7 +215,7 @@ namespace Continuum {
 			return q * q * value;
 			};
 #ifdef approximate_theta
-		if (k >= this->model->u_upper_bound(k)) return 0;
+		if (k > this->model->u_upper_bound(k)) return 0;
 #endif
 		return (term.multiplicity / (2 * M_PI * M_PI)) * this->model->computeCoefficient(term.coefficients.front(), c_float{})
 			* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);

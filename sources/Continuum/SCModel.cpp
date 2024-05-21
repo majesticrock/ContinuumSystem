@@ -44,7 +44,7 @@ namespace Continuum {
 	}
 
 	c_float SCModel::occupation(c_float k) const {
-		const auto DELTA = std::norm(interpolate_delta(k));
+		const auto DELTA = std::abs(interpolate_delta(k));
 		const auto eps_mu = bare_dispersion_to_fermi_level(k);
 		if (is_zero(DELTA)) {
 			if (is_zero(temperature)) {
@@ -53,7 +53,7 @@ namespace Continuum {
 			}
 			return 1. / (1 + std::exp(eps_mu / temperature));
 		}
-		const c_float E = sqrt(eps_mu * eps_mu + DELTA);
+		const c_float E = sqrt(eps_mu * eps_mu + DELTA * DELTA);
 		if (is_zero(temperature)) {
 			return 0.5 * (1 - (eps_mu / E));
 		}
