@@ -48,9 +48,6 @@ namespace Continuum {
 		c_float U{};
 		c_float omega_debye{};
 		c_float fermi_energy{};
-		c_float fermi_wavevector{};
-
-		c_float V_OVER_N{};
 
 		static constexpr c_float CUT_OFF = std::numeric_limits<c_float>::epsilon();
 
@@ -66,18 +63,23 @@ namespace Continuum {
 		constexpr static c_float bare_dispersion(c_float k) {
 			return 0.5 * k * k;
 		};
+		c_complex sc_expectation_value(c_float k) const;
+		c_float occupation(c_float k) const;
+
+	public:
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
 			return bare_dispersion(k) - fermi_energy;
 		};
 		inline c_float energy(c_float k) const {
 			return sqrt(boost::math::pow<2>(bare_dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
 		};
-		c_complex sc_expectation_value(c_float k) const;
-		c_float occupation(c_float k) const;
 
-	public:
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
-		c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second = c_float{}) const;
+		c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const;
+		inline c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first) const
+		{
+			return computeCoefficient(coeff, first, fermi_wavevector);
+		};
 		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> get_expectation_values() const;
 
 		inline c_float u_lower_bound(c_float k) const {
@@ -101,6 +103,9 @@ namespace Continuum {
 		}
 
 		SCModel(ModelInitializer const& parameters);
+
+		c_float fermi_wavevector{};
+		c_float V_OVER_N{};
 
 		c_float U_MAX{};
 		c_float U_MIN{};

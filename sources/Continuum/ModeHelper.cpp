@@ -5,6 +5,8 @@
 #include "../../../Utility/sources/Numerics/Integration/TrapezoidalRule.hpp"
 #include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
 
+#include <boost/math/quadrature/gauss_kronrod.hpp>
+
 #define ieom_diag(k) 4. * M_PI * k * k
 #define ieom_offdiag(k, l) (2. / M_PI) * k * k * l * l * model->STEP
 
@@ -46,6 +48,17 @@ namespace Continuum {
 
 	void ModeHelper::fillMatrices()
 	{
+		SymbolicOperators::WickTerm first("-4 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:n{k;up} o:f{q;}");
+		SymbolicOperators::WickTerm second("2 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:f{q;}");
+		SymbolicOperators::WickTerm third("4 c:\\epsilon_0{k;} delta:momentum{k,l} o:f{k;}");
+		for(int k = 0; k < 1; ++k){
+			c_float k_float = model->index_to_momentum(k);
+			std::cout << computeTerm(first, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
+				+ computeTerm(second, model->index_to_momentum(k_float), model->index_to_momentum(k_float))
+				- computeTerm(third, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
+				<< std::endl;
+		}
+
 		K_plus.setZero(hermitian_discretization, hermitian_discretization);
 		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
 		L.setZero(hermitian_discretization, antihermitian_discretization);
@@ -74,8 +87,10 @@ namespace Continuum {
 		//		}
 		//	}
 		//}
-		//std::cout << "||K_+||" << (K_plus - K_plus.adjoint()).norm() << std::endl;
-		//std::cout << "||K_-||" << (K_minus - K_minus.adjoint()).norm() << std::endl;
+		std::cout << "||K_+ - K_+^+||" << (K_plus - K_plus.adjoint()).norm() << std::endl;
+		std::cout << "||K_- - K_-^+||" << (K_minus - K_minus.adjoint()).norm() << std::endl;
+
+		K_plus.adjointInPlace();
 
 		for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
 			if (K_plus.diagonal().real()(i) < -PRECISION<c_float>) {
@@ -88,9 +103,12 @@ namespace Continuum {
 			}
 		}
 
-		std::cout << K_plus.cwiseAbs().maxCoeff() << std::endl;
-		std::cout << K_minus.cwiseAbs().maxCoeff() << std::endl;
-		std::cout << L.cwiseAbs().maxCoeff() << std::endl;
+		//Eigen::SelfAdjointEigenSolver<decltype(K_plus)> test_solver(K_plus.block(0, 0, DISCRETIZATION, DISCRETIZATION));
+		//for(int i = 0; i < test_solver.eigenvalues().rows(); ++i){
+		//	if(test_solver.eigenvalues()(i) < -1e-10){
+		//		std::cerr << "test: " << test_solver.eigenvalues()(i) << std::endl;
+		//	}
+		//}
 	}
 
 	void ModeHelper::fill_M()
@@ -217,8 +235,10 @@ namespace Continuum {
 #ifdef approximate_theta
 		if (k > this->model->u_upper_bound(k)) return 0;
 #endif
-		return (term.multiplicity / (2 * M_PI * M_PI)) * this->model->computeCoefficient(term.coefficients.front(), c_float{})
-			* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
+		double error;
+		return (term.multiplicity / (2.0 * M_PI * M_PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
+			//* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
+			* boost::math::quadrature::gauss_kronrod<double, 61>::integrate(integrand, model->u_lower_bound(k), model->u_upper_bound(k), 6, 1e-14, &error);
 	}
 
 	int ModeHelper::hermitian_discretization = 0;

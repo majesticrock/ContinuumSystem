@@ -9,6 +9,8 @@
 #include <algorithm>
 using namespace Continuum;
 
+#include "../../FermionCommute/sources/WickOperator.hpp"
+
 const std::string BASE_FOLDER = "../../data/continuum/";
 
 int Continuum::DISCRETIZATION = 500;
@@ -49,6 +51,23 @@ int main(int argc, char** argv) {
 	std::cout << "Delta_max = " << *std::max_element(delta_result.begin(), delta_result.end()) << std::endl;
 
 	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + "test/continuum.dat.gz");
+
+	if (true) {
+		auto expecs = modes.getModel().get_expectation_values();
+		auto ks = modes.getModel().get_k_points();
+
+		std::vector<double> occupations, pairs;
+		occupations.reserve(ks.size());
+		pairs.reserve(ks.size());
+		for(const auto& x : expecs[SymbolicOperators::Number_Type]){
+			occupations.push_back(x.real());
+		}
+		for(const auto& x : expecs[SymbolicOperators::SC_Type]){
+			pairs.push_back(x.real());
+		}
+
+		Utility::saveData(std::vector<std::vector<double>>{ks, occupations, pairs}, BASE_FOLDER + "test/expecs.dat.gz");
+	}
 
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {

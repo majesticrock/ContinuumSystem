@@ -85,7 +85,7 @@ namespace Continuum {
 		result -= initial_values;
 	}
 
-	c_float SCModel::computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second /*=c_float{}*/) const
+	c_float SCModel::computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const
 	{
 		if (coeff.name == "\\epsilon_0")
 		{
@@ -93,14 +93,14 @@ namespace Continuum {
 		}
 		else if (coeff.name == "U")
 		{
-			if (coeff.momenta[0] == coeff.momenta[1])
-			{
-				return this->U * this->V_OVER_N;
-			}
 #ifdef approximate_theta
 			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first))
 				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second)))
 #else
+			if (coeff.momenta[0] == coeff.momenta[1])
+			{
+				return this->U * this->V_OVER_N;
+			}
 			if (omega_debye > std::abs(bare_dispersion(first) - bare_dispersion(second)))
 #endif
 			{
