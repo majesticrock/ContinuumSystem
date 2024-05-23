@@ -10,12 +10,14 @@
 
 namespace Continuum {
 	using c_float = double;
-	using c_complex = std::complex<c_float>;
+	using c_complex = c_float; //std::complex<c_float>;
+
+	constexpr c_float PI = static_cast<c_float>(M_PIl);
 
 	using SpinorMatrix = Eigen::Matrix<c_complex, Eigen::Dynamic, Eigen::Dynamic>;
 	using ParameterVector = Eigen::Vector<c_complex, Eigen::Dynamic>;
 
-	constexpr c_complex I = { 0, 1 };
+	//constexpr c_complex I = { 0, 1 };
 
 	namespace PhysicalConstants {
 		constexpr c_float k_B = 8.617333262e-2; // meV / K

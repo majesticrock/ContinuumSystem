@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <numeric>
 
+#include <boost/math/quadrature/gauss_kronrod.hpp>
+
 using Utility::constexprPower;
 
 namespace Continuum {
@@ -12,7 +14,7 @@ namespace Continuum {
 		: Delta(DISCRETIZATION, parameters.U* parameters.omega_debye), temperature{ parameters.temperature },
 		U{ parameters.U }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) },
-		V_OVER_N{ fermi_wavevector > 0 ? 3. * M_PI * M_PI / (constexprPower<3>(fermi_wavevector)) : 1 },
+		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
 		U_MAX{ sqrt(2 * (fermi_energy + omega_debye)) - fermi_wavevector },
 		U_MIN{ fermi_energy > omega_debye ? sqrt(2 * (fermi_energy - omega_debye)) - fermi_wavevector : -fermi_wavevector },
 		STEP{ (U_MAX - U_MIN) / (DISCRETIZATION - 1) }
@@ -60,26 +62,68 @@ namespace Continuum {
 		return 0.5 * (1 - (eps_mu / E) * std::tanh(E / (2 * temperature)));
 	}
 
+	c_complex SCModel::sc_from_epsilon(c_float epsilon) const
+	{
+		const auto DELTA = std::abs(interpolate_delta(sqrt(2.0 * (epsilon + fermi_energy))));
+		const c_float E = sqrt(epsilon * epsilon + DELTA * DELTA);//energy(k);
+		if (is_zero(DELTA)) return 0;
+		if (is_zero(temperature)) {
+			return -DELTA / (2 * E);
+		}
+		return -std::tanh(E / (2 * temperature)) * DELTA / (2 * E);
+	}
+
+	c_float SCModel::n_from_epsilon(c_float epsilon) const
+	{
+		const auto DELTA = std::abs(interpolate_delta(sqrt(2.0 * (epsilon + fermi_energy))));
+		if (is_zero(DELTA)) {
+			if (is_zero(temperature)) {
+				if (is_zero(epsilon)) return 0.5;
+				return (epsilon < 0 ? 1 : 0);
+			}
+			return 1. / (1 + std::exp(epsilon / temperature));
+		}
+		const c_float E = sqrt(epsilon * epsilon + DELTA * DELTA);
+		if (is_zero(temperature)) {
+			return 0.5 * (1 - (epsilon / E));
+		}
+		return 0.5 * (1 - (epsilon / E) * std::tanh(E / (2 * temperature)));
+	}
+
 	void SCModel::iterationStep(const ParameterVector& initial_values, ParameterVector& result) {
 		result.setZero();
 		this->Delta.fill_with(initial_values);
 
-		constexpr int N_L = 1000;
+#ifndef _use_epsilon_integration
+		auto integrand = [this](c_float x) -> c_complex {
+			return x * x * sc_expectation_value(x);
+			};
 
-		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
-			const c_float k = index_to_momentum(u_idx);
-#ifdef approximate_theta
-			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
-			if (std::abs(bare_dispersion_to_fermi_level(k)) > omega_debye) {
-				continue;
-			}
+		//result.fill(Utility::Numerics::Integration::trapezoidal_rule_kahan(integrand, u_lower_bound(0), u_upper_bound(0), DISCRETIZATION));
+		c_float error;
+		result.fill(boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, u_lower_bound(0), u_upper_bound(0), 8, 1e-14, &error));
+#else
+		auto integrand = [this](c_float eps) -> c_complex {
+			return sqrt(2 * (eps + this->fermi_energy)) * sc_from_epsilon(eps);
+			};
+		c_float error;
+		result.fill(boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, -omega_debye, omega_debye, 8, 1e-14, &error));
 #endif
-			auto integrand = [this](c_float x) -> c_complex {
-				return x * x * sc_expectation_value(x);
-				};
-			result(u_idx) = Utility::Numerics::Integration::trapezoidal_rule(integrand, u_lower_bound(k), u_upper_bound(k), N_L);
-		}
-		const c_float prefactor = -V_OVER_N / (2. * M_PI * M_PI);
+
+//		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
+//			const c_float k = index_to_momentum(u_idx);
+//#ifdef approximate_theta
+//			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
+//			if (std::abs(bare_dispersion_to_fermi_level(k)) > omega_debye) {
+//				continue;
+//			}
+//#endif
+//			double error;
+//			result(u_idx) = boost::math::quadrature::gauss_kronrod<double, 61>::integrate(integrand, u_lower_bound(k), u_upper_bound(k), 8, 1e-16, &error);
+//			//result(u_idx) = Utility::Numerics::Integration::trapezoidal_rule(integrand, u_lower_bound(k), u_upper_bound(k), 1000);
+//		}
+
+		const c_float prefactor = -V_OVER_N / (2. * PI * PI);
 		result *= prefactor * U;
 		this->Delta.fill_with(result);
 		result -= initial_values;

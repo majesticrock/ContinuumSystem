@@ -63,10 +63,13 @@ namespace Continuum {
 		constexpr static c_float bare_dispersion(c_float k) {
 			return 0.5 * k * k;
 		};
+	
+		c_complex sc_from_epsilon(c_float epsilon) const;
+		c_float n_from_epsilon(c_float epsilon) const;
+	public:
 		c_complex sc_expectation_value(c_float k) const;
 		c_float occupation(c_float k) const;
-
-	public:
+		
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
 			return bare_dispersion(k) - fermi_energy;
 		};
@@ -84,14 +87,14 @@ namespace Continuum {
 
 		inline c_float u_lower_bound(c_float k) const {
 #ifdef approximate_theta
-			return sqrt(std::max((2. * (fermi_energy - omega_debye)), c_float{}));
+			return sqrt(std::max((static_cast<c_float>(2) * (fermi_energy - omega_debye)), c_float{}));
 #else
 			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
 #endif
 		}
 		inline c_float u_upper_bound(c_float k) const {
 #ifdef approximate_theta
-			return sqrt(2. * (fermi_energy + omega_debye));
+			return sqrt(static_cast<c_float>(2) * (fermi_energy + omega_debye));
 #else
 			return sqrt(k * k + 2 * omega_debye);
 #endif

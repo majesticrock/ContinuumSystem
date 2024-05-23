@@ -3,6 +3,7 @@
 #include "../../Utility/sources/OutputConvenience.hpp"
 #include "Continuum/ModeHelper.hpp"
 
+#include <iomanip>
 #include <omp.h>
 
 #include <filesystem>
@@ -21,16 +22,16 @@ int main(int argc, char** argv) {
 	Continuum::set_discretization(input.getInt("discretization_points"));
 	std::filesystem::create_directories(BASE_FOLDER + "test/");
 
-	if (false) { // compute gap in a range for small U
+	if constexpr (false) { // compute gap in a range for small U
 		constexpr int N_points = 200;
-		constexpr double step = 0.5;
-		constexpr double begin = 150;
+		constexpr c_float step = 1;
+		constexpr c_float begin = 152;
 		std::vector<std::vector<c_float>> gap_data(N_points);
 		
 #pragma omp parallel for
 		for (int U = 0; U < N_points; ++U) {
 			ModelInitializer init(input);
-			double entry = begin + step * U;
+			c_float entry = begin + step * U;
 			init.U = entry;
 			SCModel model(init);
 			Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
@@ -48,25 +49,26 @@ int main(int argc, char** argv) {
 	auto delta_result = modes.getModel().Delta.abs().as_vector();
 	Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + "test/gap.dat.gz");
 	std::cout << "Gap data have been saved!" << std::endl;
-	std::cout << "Delta_max = " << *std::max_element(delta_result.begin(), delta_result.end()) << std::endl;
+	std::cout << "Delta_max = " << std::scientific << std::setprecision(14)
+		<< *std::max_element(delta_result.begin(), delta_result.end()) << std::endl;
 
 	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + "test/continuum.dat.gz");
 
-	if (true) {
+	if constexpr (false) { // compute and save the expectation values
 		auto expecs = modes.getModel().get_expectation_values();
 		auto ks = modes.getModel().get_k_points();
 
-		std::vector<double> occupations, pairs;
+		std::vector<c_float> occupations, pairs;
 		occupations.reserve(ks.size());
 		pairs.reserve(ks.size());
 		for(const auto& x : expecs[SymbolicOperators::Number_Type]){
-			occupations.push_back(x.real());
+			occupations.push_back(std::real(x));
 		}
 		for(const auto& x : expecs[SymbolicOperators::SC_Type]){
-			pairs.push_back(x.real());
+			pairs.push_back(std::real(x));
 		}
 
-		Utility::saveData(std::vector<std::vector<double>>{ks, occupations, pairs}, BASE_FOLDER + "test/expecs.dat.gz");
+		Utility::saveData(std::vector<std::vector<c_float>>{ks, occupations, pairs}, BASE_FOLDER + "test/expecs.dat.gz");
 	}
 
 	auto mode_result = modes.computeCollectiveModes(150);

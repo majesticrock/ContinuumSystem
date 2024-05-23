@@ -168,7 +168,15 @@ namespace Continuum {
 			}
 		};
 		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> abs() const {
-			return ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>>(*this, Magnitude);
+			if constexpr(Utility::is_complex<DataType>()){
+				return ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>>(*this, Magnitude);
+			} else {
+				ModelAttributes<DataType> ret(*this);
+				for(auto& val : ret){
+					val = std::abs(val);
+				}
+				return ret;
+			}
 		};
 		inline const std::vector<DataType>& as_vector() const {
 			return this->selfconsistency_values;

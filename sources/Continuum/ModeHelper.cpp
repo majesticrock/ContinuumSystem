@@ -3,12 +3,14 @@
 #include <cassert>
 #include "../../../Utility/sources/Numerics/Interpolation.hpp"
 #include "../../../Utility/sources/Numerics/Integration/TrapezoidalRule.hpp"
+
 #include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
+#include "../../../Utility/sources/Selfconsistency/BroydenSolver.hpp"
 
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 
-#define ieom_diag(k) 4. * M_PI * k * k
-#define ieom_offdiag(k, l) (2. / M_PI) * k * k * l * l * model->STEP
+#define ieom_diag(k) 4. * PI * k * k
+#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->STEP
 
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
@@ -30,13 +32,12 @@ namespace Continuum {
 
 	c_complex ModeHelper::get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const
 	{
-		const int index = model->momentum_to_index(momentum);
-		if (index + 1 >= DISCRETIZATION) {
-			// Assuming that <O> = const for k > k_max
-			return expectation_values.at(op.type).back();
+		if(op.type == SymbolicOperators::Number_Type){
+			return model->occupation(momentum);
+		} else if (op.type == SymbolicOperators::SC_Type){
+			return model->sc_expectation_value(momentum);
 		}
-		return Utility::Numerics::linearly_interpolate(momentum, model->index_to_momentum(index), model->index_to_momentum(index + 1),
-			expectation_values.at(op.type)[index], expectation_values.at(op.type)[index + 1]);
+		assert(false && "Expectation value not recognized!");
 	}
 
 	void ModeHelper::createStartingStates()
@@ -48,16 +49,16 @@ namespace Continuum {
 
 	void ModeHelper::fillMatrices()
 	{
-		SymbolicOperators::WickTerm first("-4 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:n{k;up} o:f{q;}");
-		SymbolicOperators::WickTerm second("2 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:f{q;}");
-		SymbolicOperators::WickTerm third("4 c:\\epsilon_0{k;} delta:momentum{k,l} o:f{k;}");
-		for(int k = 0; k < 1; ++k){
-			c_float k_float = model->index_to_momentum(k);
-			std::cout << computeTerm(first, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
-				+ computeTerm(second, model->index_to_momentum(k_float), model->index_to_momentum(k_float))
-				- computeTerm(third, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
-				<< std::endl;
-		}
+		//SymbolicOperators::WickTerm first("-4 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:n{k;up} o:f{q;}");
+		//SymbolicOperators::WickTerm second("2 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:f{q;}");
+		//SymbolicOperators::WickTerm third("4 c:\\epsilon_0{k;} delta:momentum{k,l} o:f{k;}");
+		//for(int k = 0; k < 1; ++k){
+		//	c_float k_float = model->index_to_momentum(k);
+		//	std::cout << computeTerm(first, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
+		//		+ computeTerm(second, model->index_to_momentum(k_float), model->index_to_momentum(k_float))
+		//		- computeTerm(third, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
+		//		<< std::endl;
+		//}
 
 		K_plus.setZero(hermitian_discretization, hermitian_discretization);
 		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
@@ -87,10 +88,8 @@ namespace Continuum {
 		//		}
 		//	}
 		//}
-		std::cout << "||K_+ - K_+^+||" << (K_plus - K_plus.adjoint()).norm() << std::endl;
-		std::cout << "||K_- - K_-^+||" << (K_minus - K_minus.adjoint()).norm() << std::endl;
-
-		K_plus.adjointInPlace();
+		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm()   << " && ||K_+|| = " << K_plus.norm() << std::endl;
+		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << " && ||K_-|| = " << K_minus.norm() << std::endl;
 
 		for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
 			if (K_plus.diagonal().real()(i) < -PRECISION<c_float>) {
@@ -103,12 +102,14 @@ namespace Continuum {
 			}
 		}
 
-		//Eigen::SelfAdjointEigenSolver<decltype(K_plus)> test_solver(K_plus.block(0, 0, DISCRETIZATION, DISCRETIZATION));
-		//for(int i = 0; i < test_solver.eigenvalues().rows(); ++i){
-		//	if(test_solver.eigenvalues()(i) < -1e-10){
-		//		std::cerr << "test: " << test_solver.eigenvalues()(i) << std::endl;
-		//	}
-		//}
+		Eigen::SelfAdjointEigenSolver<decltype(K_plus)> test_solver(K_plus.block(0, 0, DISCRETIZATION, DISCRETIZATION));
+		for(int i = 0; i < test_solver.eigenvalues().rows(); ++i){
+			if(test_solver.eigenvalues()(i) < -1e-10){
+				std::cerr << "test: " << test_solver.eigenvalues()(i) << std::endl;
+
+				//std::cerr << test_solver.eigenvectors().col(i) << std::endl;
+			}
+		}
 	}
 
 	void ModeHelper::fill_M()
@@ -146,11 +147,11 @@ namespace Continuum {
 					}
 					if (i < hermitian_size) {
 						K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
-							+= ieom_diag(k) * computeTerm(term, k, k).real();
+							+= ieom_diag(k) * std::real(computeTerm(term, k, k));
 					}
 					else {
 						K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + k_idx)
-							+= ieom_diag(k) * computeTerm(term, k, k).real();
+							+= ieom_diag(k) * std::real(computeTerm(term, k, k));
 					}
 				}
 				else {
@@ -158,11 +159,11 @@ namespace Continuum {
 						const c_float l = this->model->index_to_momentum(l_idx);
 						if (i < hermitian_size) {
 							K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
-								+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
+								+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
 						}
 						else {
 							K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
-								+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
+								+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
 						}
 					}
 				}
@@ -178,13 +179,13 @@ namespace Continuum {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
 					L(i * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + k_idx)
-						+= ieom_diag(k) * computeTerm(term, k, k).real();
+						+= ieom_diag(k) * std::real(computeTerm(term, k, k));
 				}
 				else {
 					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
 						const c_float l = this->model->index_to_momentum(l_idx);
 						L(i * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
-							+= ieom_offdiag(k, l) * computeTerm(term, k, l).real();
+							+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
 					}
 				}
 			}
@@ -232,13 +233,14 @@ namespace Continuum {
 			}
 			return q * q * value;
 			};
+
 #ifdef approximate_theta
 		if (k > this->model->u_upper_bound(k)) return 0;
 #endif
-		double error;
-		return (term.multiplicity / (2.0 * M_PI * M_PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
+		c_float error;
+		return (term.multiplicity / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
 			//* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
-			* boost::math::quadrature::gauss_kronrod<double, 61>::integrate(integrand, model->u_lower_bound(k), model->u_upper_bound(k), 6, 1e-14, &error);
+			* boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, model->u_lower_bound(k), model->u_upper_bound(k), 8, 1e-14, &error);
 	}
 
 	int ModeHelper::hermitian_discretization = 0;
@@ -253,7 +255,8 @@ namespace Continuum {
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
-		Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
+		//Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
+		Utility::Selfconsistency::BroydenSolver<c_float, SCModel, ModelAttributes<c_float>> solver(model.get(), &model->Delta, 100U);
 		solver.compute(true);
 
 		this->expectation_values = model->get_expectation_values();
