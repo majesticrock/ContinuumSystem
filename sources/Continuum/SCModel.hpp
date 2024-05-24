@@ -12,12 +12,12 @@
 namespace Continuum {
 	struct ModelInitializer {
 		c_float temperature;
-		c_float U;
+		c_float phonon_coupling;
 		c_float omega_debye;
 		c_float fermi_energy;
 
 		ModelInitializer(Utility::InputFileReader& input)
-			: temperature{ PhysicalConstants::k_B * input.getDouble("T") }, U{ input.getDouble("U") },
+			: temperature{ PhysicalConstants::k_B * input.getDouble("T") }, phonon_coupling{ input.getDouble("phonon_coupling") },
 			omega_debye{ input.getDouble("omega_debye") }, fermi_energy{ input.getDouble("fermi_energy") }
 		{ };
 	};
@@ -26,13 +26,13 @@ namespace Continuum {
 	public:
 		ModelAttributes<c_complex> Delta;
 
-		inline c_float index_to_momentum(int u) const {
-			assert(fermi_wavevector + U_MIN + STEP * u >= 0);
-			return fermi_wavevector + U_MIN + STEP * u;
+		inline c_float index_to_momentum(int k_idx) const {
+			assert(fermi_wavevector + K_MIN + STEP * k_idx >= 0);
+			return fermi_wavevector + K_MIN + STEP * k_idx;
 		}
 		inline int momentum_to_index(c_float k) const {
 			assert(k >= 0);
-			return static_cast<int>(std::lround((k - fermi_wavevector - U_MIN) / STEP));
+			return static_cast<int>(std::lround((k - fermi_wavevector - K_MIN) / STEP));
 		}
 		inline std::vector<c_float> get_k_points() const {
 			std::vector<c_float> ks;
@@ -45,7 +45,7 @@ namespace Continuum {
 		std::vector<c_float> continuum_boundaries() const;
 	protected:
 		c_float temperature{};
-		c_float U{};
+		c_float phonon_coupling{};
 		c_float omega_debye{};
 		c_float fermi_energy{};
 
@@ -85,14 +85,14 @@ namespace Continuum {
 		};
 		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> get_expectation_values() const;
 
-		inline c_float u_lower_bound(c_float k) const {
+		inline c_float g_lower_bound(c_float k) const {
 #ifdef approximate_theta
 			return sqrt(std::max((static_cast<c_float>(2) * (fermi_energy - omega_debye)), c_float{}));
 #else
 			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
 #endif
 		}
-		inline c_float u_upper_bound(c_float k) const {
+		inline c_float g_upper_bound(c_float k) const {
 #ifdef approximate_theta
 			return sqrt(static_cast<c_float>(2) * (fermi_energy + omega_debye));
 #else
@@ -100,8 +100,8 @@ namespace Continuum {
 #endif
 		}
 		inline std::string info() const {
-			return "SCModel // [T U omega_D mu] = [" + std::to_string(temperature)
-				+ " " + std::to_string(U) + " " + std::to_string(omega_debye)
+			return "SCModel // [T g omega_D epsilon_F] = [" + std::to_string(temperature)
+				+ " " + std::to_string(phonon_coupling) + " " + std::to_string(omega_debye)
 				+ " " + std::to_string(fermi_energy) + "]";
 		}
 
@@ -110,8 +110,8 @@ namespace Continuum {
 		c_float fermi_wavevector{};
 		c_float V_OVER_N{};
 
-		c_float U_MAX{};
-		c_float U_MIN{};
+		c_float K_MAX{};
+		c_float K_MIN{};
 		c_float STEP{};
 	};
 }

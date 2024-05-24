@@ -43,23 +43,12 @@ namespace Continuum {
 	void ModeHelper::createStartingStates()
 	{
 		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization) });
-		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
-		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, 1. / sqrt(DISCRETIZATION));
+		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->STEP));
+		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->STEP));
 	}
 
 	void ModeHelper::fillMatrices()
 	{
-		//SymbolicOperators::WickTerm first("-4 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:n{k;up} o:f{q;}");
-		//SymbolicOperators::WickTerm second("2 sum:momentum{q} c:U{k,q;} delta:momentum{k,l} o:f{q;}");
-		//SymbolicOperators::WickTerm third("4 c:\\epsilon_0{k;} delta:momentum{k,l} o:f{k;}");
-		//for(int k = 0; k < 1; ++k){
-		//	c_float k_float = model->index_to_momentum(k);
-		//	std::cout << computeTerm(first, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
-		//		+ computeTerm(second, model->index_to_momentum(k_float), model->index_to_momentum(k_float))
-		//		- computeTerm(third, model->index_to_momentum(k_float), model->index_to_momentum(k_float)) 
-		//		<< std::endl;
-		//}
-
 		K_plus.setZero(hermitian_discretization, hermitian_discretization);
 		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
 		L.setZero(hermitian_discretization, antihermitian_discretization);
@@ -79,37 +68,18 @@ namespace Continuum {
 			}
 		}
 
-		//decltype(K_plus) diff = K_plus - K_plus.adjoint();
-		//for(int i = 0; i < diff.rows();  ++i){
-		//	for(int j = i + 1; j < diff.rows(); ++j){
-		//		if (!is_zero(diff(i, j))){
-		//			std::cout << "i: " << i % DISCRETIZATION << "\t" << i / DISCRETIZATION << "  ||  ";
-		//			std::cout << "j: " << j % DISCRETIZATION << "\t" << j / DISCRETIZATION << std::endl;
-		//		}
+		//std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm()   << " && ||K_+|| = " << K_plus.norm() << std::endl;
+		//std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << " && ||K_-|| = " << K_minus.norm() << std::endl;
+		//for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
+		//	if (K_plus.diagonal().real()(i) < -PRECISION<c_float>) {
+		//		std::cout << i << "+: " << K_plus.diagonal().real()(i) << "\n";
 		//	}
 		//}
-		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm()   << " && ||K_+|| = " << K_plus.norm() << std::endl;
-		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << " && ||K_-|| = " << K_minus.norm() << std::endl;
-
-		for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
-			if (K_plus.diagonal().real()(i) < -PRECISION<c_float>) {
-				std::cout << i << "+: " << K_plus.diagonal().real()(i) << "\n";
-			}
-		}
-		for (int i = 0; i < K_minus.diagonal().real().size(); ++i) {
-			if (K_minus.diagonal().real()(i) < -PRECISION<c_float>) {
-				std::cout << i << "-: " << K_minus.diagonal().real()(i) << "\n";
-			}
-		}
-
-		Eigen::SelfAdjointEigenSolver<decltype(K_plus)> test_solver(K_plus.block(0, 0, DISCRETIZATION, DISCRETIZATION));
-		for(int i = 0; i < test_solver.eigenvalues().rows(); ++i){
-			if(test_solver.eigenvalues()(i) < -1e-10){
-				std::cerr << "test: " << test_solver.eigenvalues()(i) << std::endl;
-
-				//std::cerr << test_solver.eigenvectors().col(i) << std::endl;
-			}
-		}
+		//for (int i = 0; i < K_minus.diagonal().real().size(); ++i) {
+		//	if (K_minus.diagonal().real()(i) < -PRECISION<c_float>) {
+		//		std::cout << i << "-: " << K_minus.diagonal().real()(i) << "\n";
+		//	}
+		//}
 	}
 
 	void ModeHelper::fill_M()
@@ -141,7 +111,7 @@ namespace Continuum {
 					//}
 					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
 
-					if (term.sums.momenta.empty() && term.coefficients.front().name == "U") {
+					if (term.sums.momenta.empty() && term.coefficients.front().name == "g") {
 						// These kinds of terms scale as 1/N -> 0
 						continue;
 					}
@@ -222,7 +192,7 @@ namespace Continuum {
 			return value * static_cast<c_float>(term.sums.spins.size() + 1U);
 		}
 		// For now, sums can only ever occur with U
-		assert(term.coefficients.size() == 1U && term.coefficients.front().name == "U");
+		assert(term.coefficients.size() == 1U && term.coefficients.front().name == "g");
 
 		auto integrand = [&](c_float q) {
 			c_complex value{ this->get_expectation_value(term.operators.front(),
@@ -235,19 +205,19 @@ namespace Continuum {
 			};
 
 #ifdef approximate_theta
-		if (k > this->model->u_upper_bound(k)) return 0;
+		if (k > this->model->g_upper_bound(k)) return 0;
 #endif
 		c_float error;
 		return (term.multiplicity / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
-			//* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->u_lower_bound(k), model->u_upper_bound(k), DISCRETIZATION);
-			* boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, model->u_lower_bound(k), model->u_upper_bound(k), 8, 1e-14, &error);
+			//* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->g_lower_bound(k), model->g_upper_bound(k), DISCRETIZATION);
+			* boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k), 8, 1e-14, &error);
 	}
 
 	int ModeHelper::hermitian_discretization = 0;
 	int ModeHelper::antihermitian_discretization = 0;
 
 	ModeHelper::ModeHelper(Utility::InputFileReader& input)
-		: _parent(this, SQRT_PRECISION<c_float>, false)
+		: _parent(this, 1e-5, false, false) //SQRT_PRECISION<c_float>
 	{
 		hermitian_discretization = DISCRETIZATION * hermitian_size;
 		antihermitian_discretization = DISCRETIZATION * antihermitian_size;

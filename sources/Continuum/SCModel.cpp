@@ -11,13 +11,13 @@ using Utility::constexprPower;
 
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
-		: Delta(DISCRETIZATION, parameters.U* parameters.omega_debye), temperature{ parameters.temperature },
-		U{ parameters.U }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
+		: Delta(DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
+		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
-		U_MAX{ sqrt(2 * (fermi_energy + omega_debye)) - fermi_wavevector },
-		U_MIN{ fermi_energy > omega_debye ? sqrt(2 * (fermi_energy - omega_debye)) - fermi_wavevector : -fermi_wavevector },
-		STEP{ (U_MAX - U_MIN) / (DISCRETIZATION - 1) }
+		K_MAX{ sqrt(2 * (fermi_energy + omega_debye)) - fermi_wavevector },
+		K_MIN{ fermi_energy > omega_debye ? sqrt(2 * (fermi_energy - omega_debye)) - fermi_wavevector : -fermi_wavevector },
+		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) }
 	{
 		omega_debye += SQRT_PRECISION<c_float>;
 		assert(index_to_momentum(0) >= 0);
@@ -99,9 +99,9 @@ namespace Continuum {
 			return x * x * sc_expectation_value(x);
 			};
 
-		//result.fill(Utility::Numerics::Integration::trapezoidal_rule_kahan(integrand, u_lower_bound(0), u_upper_bound(0), DISCRETIZATION));
+		//result.fill(Utility::Numerics::Integration::trapezoidal_rule_kahan(integrand, g_lower_bound(0), g_upper_bound(0), DISCRETIZATION));
 		c_float error;
-		result.fill(boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, u_lower_bound(0), u_upper_bound(0), 8, 1e-14, &error));
+		result.fill(boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, g_lower_bound(0), g_upper_bound(0), 8, 1e-14, &error));
 #else
 		auto integrand = [this](c_float eps) -> c_complex {
 			return sqrt(2 * (eps + this->fermi_energy)) * sc_from_epsilon(eps);
@@ -119,12 +119,12 @@ namespace Continuum {
 //			}
 //#endif
 //			double error;
-//			result(u_idx) = boost::math::quadrature::gauss_kronrod<double, 61>::integrate(integrand, u_lower_bound(k), u_upper_bound(k), 8, 1e-16, &error);
-//			//result(u_idx) = Utility::Numerics::Integration::trapezoidal_rule(integrand, u_lower_bound(k), u_upper_bound(k), 1000);
+//			result(u_idx) = boost::math::quadrature::gauss_kronrod<double, 61>::integrate(integrand, g_lower_bound(k), g_upper_bound(k), 8, 1e-16, &error);
+//			//result(u_idx) = Utility::Numerics::Integration::trapezoidal_rule(integrand, g_lower_bound(k), g_upper_bound(k), 1000);
 //		}
 
 		const c_float prefactor = -V_OVER_N / (2. * PI * PI);
-		result *= prefactor * U;
+		result *= prefactor * phonon_coupling;
 		this->Delta.fill_with(result);
 		result -= initial_values;
 	}
@@ -135,7 +135,7 @@ namespace Continuum {
 		{
 			return bare_dispersion_to_fermi_level(first);
 		}
-		else if (coeff.name == "U")
+		else if (coeff.name == "g")
 		{
 #ifdef approximate_theta
 			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first))
@@ -143,12 +143,12 @@ namespace Continuum {
 #else
 			if (coeff.momenta[0] == coeff.momenta[1])
 			{
-				return this->U * this->V_OVER_N;
+				return this->phonon_coupling * this->V_OVER_N;
 			}
 			if (omega_debye > std::abs(bare_dispersion(first) - bare_dispersion(second)))
 #endif
 			{
-				return this->U * this->V_OVER_N;
+				return this->phonon_coupling * this->V_OVER_N;
 			}
 			else
 			{

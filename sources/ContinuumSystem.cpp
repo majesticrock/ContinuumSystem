@@ -24,15 +24,15 @@ int main(int argc, char** argv) {
 
 	if constexpr (false) { // compute gap in a range for small U
 		constexpr int N_points = 200;
-		constexpr c_float step = 1;
-		constexpr c_float begin = 152;
+		constexpr c_float step = 0.03;
+		constexpr c_float begin = 1;
 		std::vector<std::vector<c_float>> gap_data(N_points);
 		
 #pragma omp parallel for
 		for (int U = 0; U < N_points; ++U) {
 			ModelInitializer init(input);
 			c_float entry = begin + step * U;
-			init.U = entry;
+			init.phonon_coupling = entry;
 			SCModel model(init);
 			Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
 			solver.compute();
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
 
 		//std::vector<std::string> names{ "higgs_SC_a", "higgs_SC_a+b", "higgs_SC_a+ib",
 		//			"phase_SC_a", "phase_SC_a+b", "phase_SC_a+ib" };
-		std::vector<std::string> names{ "higgs_SC", "phase_SC" };
+		std::vector<std::string> names{ "phase_SC", "higgs_SC" };
 
 		for (size_t i = 0U; i < mode_result.size(); ++i)
 		{

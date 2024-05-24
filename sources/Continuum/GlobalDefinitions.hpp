@@ -26,7 +26,7 @@ namespace Continuum {
 	}
 
 	template<class RealType>
-	constexpr RealType SQRT_PRECISION = 5e-6; //5e1 * 1.4901174450357931e-8; // 50 * sqrt(epsilon)
+	constexpr RealType SQRT_PRECISION = 1e-6; //5e1 * 1.4901174450357931e-8; // 50 * sqrt(epsilon)
 	template<> constexpr float SQRT_PRECISION<float> = 1.09182874e-3f; // sqrt(10 * epsilon)
 
 	template<class RealType>
