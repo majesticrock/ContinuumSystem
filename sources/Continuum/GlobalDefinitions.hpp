@@ -1,12 +1,14 @@
 #pragma once
 #define _USE_MATH_DEFINES
+#define BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND
+
 #include <Eigen/Dense>
 #include <complex>
 #include <cmath>
 #include <type_traits>
 #include "../../../Utility/sources/UnderlyingFloatingPoint.hpp"
 
-#define approximate_theta
+//#define approximate_theta
 
 namespace Continuum {
 	using c_float = double;

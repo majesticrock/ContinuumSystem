@@ -7,7 +7,7 @@
 #include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
 #include "../../../Utility/sources/Selfconsistency/BroydenSolver.hpp"
 
-#include <boost/math/quadrature/gauss_kronrod.hpp>
+#include <boost/math/quadrature/gauss.hpp>
 
 #define ieom_diag(k) 4. * PI * k * k
 #define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->STEP
@@ -207,10 +207,10 @@ namespace Continuum {
 #ifdef approximate_theta
 		if (k > this->model->g_upper_bound(k)) return 0;
 #endif
-		c_float error;
+		//c_float error;
 		return (term.multiplicity / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
 			//* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->g_lower_bound(k), model->g_upper_bound(k), DISCRETIZATION);
-			* boost::math::quadrature::gauss_kronrod<c_float, 61>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k), 8, 1e-14, &error);
+			* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
 	}
 
 	int ModeHelper::hermitian_discretization = 0;
@@ -225,8 +225,8 @@ namespace Continuum {
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
-		//Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
-		Utility::Selfconsistency::BroydenSolver<c_float, SCModel, ModelAttributes<c_float>> solver(model.get(), &model->Delta, 100U);
+		//Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>, Utility::Selfconsistency::PrintEverything> solver(model.get(), &model->Delta);
+		Utility::Selfconsistency::BroydenSolver<c_float, SCModel, ModelAttributes<c_float>> solver(model.get(), &model->Delta, 40U);
 		solver.compute(true);
 
 		this->expectation_values = model->get_expectation_values();

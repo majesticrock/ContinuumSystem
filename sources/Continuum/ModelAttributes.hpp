@@ -42,6 +42,16 @@ namespace Continuum {
 			return ret;
 		}
 
+		inline static ModelAttributes Gaussian(int size, int center, int FWHM, double maximum) {
+			ModelAttributes<DataType> ret;
+			ret.selfconsistency_values.resize(size);
+			for(int i = 0; i < size; ++i){
+				ret[i] = maximum * std::exp(- 16. * 0.693147 * (i - center) * (i - center) 
+					/ static_cast<Utility::UnderlyingFloatingPoint_t<DataType>>(FWHM * FWHM));
+			}
+			return ret;
+		}
+
 		// Using this constructor constructs the attribute vector with a fixed value, default is 0
 		explicit ModelAttributes(const size_t number_of_attributes, const DataType& default_value = DataType{})
 			: selfconsistency_values(number_of_attributes, default_value) {};

@@ -18,9 +18,10 @@ int Continuum::DISCRETIZATION = 500;
 c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
 
 int main(int argc, char** argv) {
-	Utility::InputFileReader input("params/test.config");
+	Utility::InputFileReader input("params/params.config");
+	const std::string output_folder = input.getString("output_folder");
 	Continuum::set_discretization(input.getInt("discretization_points"));
-	std::filesystem::create_directories(BASE_FOLDER + "test/");
+	std::filesystem::create_directories(BASE_FOLDER + output_folder + "/");
 
 	if constexpr (false) { // compute gap in a range for small U
 		constexpr int N_points = 200;
@@ -47,14 +48,16 @@ int main(int argc, char** argv) {
 	ModeHelper modes(input);
 
 	auto delta_result = modes.getModel().Delta.abs().as_vector();
-	Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + "test/gap.dat.gz");
+	Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + output_folder + "/gap.dat.gz");
 	std::cout << "Gap data have been saved!" << std::endl;
 	std::cout << "Delta_max = " << std::scientific << std::setprecision(14)
 		<< *std::max_element(delta_result.begin(), delta_result.end()) << std::endl;
+	std::cout << "Delta_min = " << std::scientific << std::setprecision(14)
+		<< *std::min_element(delta_result.begin(), delta_result.end()) << std::endl;
 
-	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + "test/continuum.dat.gz");
+	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + output_folder + "/continuum.dat.gz");
 
-	if constexpr (false) { // compute and save the expectation values
+	if constexpr (true) { // compute and save the expectation values
 		auto expecs = modes.getModel().get_expectation_values();
 		auto ks = modes.getModel().get_k_points();
 
@@ -68,7 +71,8 @@ int main(int argc, char** argv) {
 			pairs.push_back(std::real(x));
 		}
 
-		Utility::saveData(std::vector<std::vector<c_float>>{ks, occupations, pairs}, BASE_FOLDER + "test/expecs.dat.gz");
+		Utility::saveData(std::vector<std::vector<c_float>>{ks, occupations, pairs}, BASE_FOLDER + output_folder + "/expecs.dat.gz");
+		std::cout << "Expectation values have been saved!" << std::endl;
 	}
 
 	auto mode_result = modes.computeCollectiveModes(150);
@@ -82,7 +86,7 @@ int main(int argc, char** argv) {
 
 		for (size_t i = 0U; i < mode_result.size(); ++i)
 		{
-			mode_result[i].writeDataToFile(BASE_FOLDER + "test/resolvent_" + names[i], comments);
+			mode_result[i].writeDataToFile(BASE_FOLDER + output_folder + "/resolvent_" + names[i], comments);
 		}
 	}
 

@@ -64,8 +64,6 @@ namespace Continuum {
 			return 0.5 * k * k;
 		};
 	
-		c_complex sc_from_epsilon(c_float epsilon) const;
-		c_float n_from_epsilon(c_float epsilon) const;
 	public:
 		c_complex sc_expectation_value(c_float k) const;
 		c_float occupation(c_float k) const;
@@ -106,6 +104,7 @@ namespace Continuum {
 		}
 
 		SCModel(ModelInitializer const& parameters);
+		virtual ~SCModel = default;
 
 		c_float fermi_wavevector{};
 		c_float V_OVER_N{};
