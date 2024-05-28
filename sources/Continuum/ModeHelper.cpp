@@ -71,12 +71,12 @@ namespace Continuum {
 		//std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm()   << " && ||K_+|| = " << K_plus.norm() << std::endl;
 		//std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << " && ||K_-|| = " << K_minus.norm() << std::endl;
 		//for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
-		//	if (K_plus.diagonal().real()(i) < -PRECISION<c_float>) {
+		//	if (K_plus.diagonal().real()(i) < -PRECISION) {
 		//		std::cout << i << "+: " << K_plus.diagonal().real()(i) << "\n";
 		//	}
 		//}
 		//for (int i = 0; i < K_minus.diagonal().real().size(); ++i) {
-		//	if (K_minus.diagonal().real()(i) < -PRECISION<c_float>) {
+		//	if (K_minus.diagonal().real()(i) < -PRECISION) {
 		//		std::cout << i << "-: " << K_minus.diagonal().real()(i) << "\n";
 		//	}
 		//}
@@ -217,7 +217,7 @@ namespace Continuum {
 	int ModeHelper::antihermitian_discretization = 0;
 
 	ModeHelper::ModeHelper(Utility::InputFileReader& input)
-		: _parent(this, 1e-5, false, false) //SQRT_PRECISION<c_float>
+		: _parent(this, 1e-5, false, false) //SQRT_PRECISION
 	{
 		hermitian_discretization = DISCRETIZATION * hermitian_size;
 		antihermitian_discretization = DISCRETIZATION * antihermitian_size;

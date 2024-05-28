@@ -59,7 +59,6 @@ namespace Continuum {
 				return Delta.front();
 			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), Delta[index], Delta[index + 1]);
 		};
-
 		constexpr static c_float bare_dispersion(c_float k) {
 			return 0.5 * k * k;
 		};
@@ -71,8 +70,9 @@ namespace Continuum {
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
 			return bare_dispersion(k) - fermi_energy;
 		};
+		c_float dispersion_to_fermi_level(c_float k) const;
 		inline c_float energy(c_float k) const {
-			return sqrt(boost::math::pow<2>(bare_dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
+			return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
 		};
 
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
@@ -104,7 +104,7 @@ namespace Continuum {
 		}
 
 		SCModel(ModelInitializer const& parameters);
-		virtual ~SCModel = default;
+		virtual ~SCModel() = default;
 
 		c_float fermi_wavevector{};
 		c_float V_OVER_N{};

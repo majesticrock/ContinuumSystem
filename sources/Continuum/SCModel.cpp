@@ -25,21 +25,25 @@ namespace Continuum {
 		K_MIN{ fermi_energy > delta_range_factor * omega_debye ? sqrt(2 * (fermi_energy - delta_range_factor * omega_debye)) - fermi_wavevector : -fermi_wavevector },
 		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) }
 	{
-		omega_debye += PRECISION<c_float>;
+		omega_debye += PRECISION;
 		assert(index_to_momentum(0) >= 0);
 		//std::cout << std::abs(bare_dispersion_to_fermi_level(index_to_momentum(0))) << std::endl;
-		//Delta = decltype(Delta)::Random(DISCRETIZATION);
-		Delta = decltype(Delta)::Gaussian(DISCRETIZATION, DISCRETIZATION / 2, (int)(DISCRETIZATION / delta_range_factor), 0.01 * phonon_coupling);
+		Delta = decltype(Delta)::Random(2 * DISCRETIZATION);
+		//Delta = decltype(Delta)::Gaussian(DISCRETIZATION, DISCRETIZATION / 2, (int)(DISCRETIZATION / delta_range_factor), 0.01 * phonon_coupling);
 	}
 
 	std::vector<c_float> SCModel::continuum_boundaries() const
 	{
 		return {
 			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
-				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION<c_float>, 100)),
+				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION, 100)),
 			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
-				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION<c_float>, 100))
+				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION, 100))
 		};
+	}
+
+	c_float SCModel::dispersion_to_fermi_level(c_float k) const {
+		return bare_dispersion_to_fermi_level(k); // TODO
 	}
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {
@@ -54,7 +58,7 @@ namespace Continuum {
 
 	c_float SCModel::occupation(c_float k) const {
 		const auto DELTA = std::abs(interpolate_delta(k));
-		const auto eps_mu = bare_dispersion_to_fermi_level(k);
+		const auto eps_mu = dispersion_to_fermi_level(k);
 		if (is_zero(DELTA)) {
 			if (is_zero(temperature)) {
 				if (is_zero(eps_mu)) return 0.5;
