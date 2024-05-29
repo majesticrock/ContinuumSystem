@@ -15,7 +15,7 @@
 
 namespace Continuum {
 	using c_float = double;
-	using c_complex = c_float; //std::complex<c_float>;
+	using c_complex = std::complex<c_float>; //
 
 	constexpr c_float PI = static_cast<c_float>(M_PIl);
 
@@ -28,11 +28,11 @@ namespace Continuum {
 	*  hbar = 1
 	*  m_e = 1
 	*  e = 1
-	*  4 pi epsilon_0 = 1
 	*/
 	namespace PhysicalConstants {
 		constexpr c_float k_B = 8.617333262e-5; // eV / K
-		constexpr c_float em_prefactor = 32. * PI * PI * PI * PI; // e^2 / (4 pi epsilon_0)
+		constexpr c_float vacuum_permitivity = 0.05526349406 * 3.62262628; // sqrt(eV)
+		constexpr c_float em_factor = 1. / (2 * PI * PI * vacuum_permitivity); // sqrt(eV)
 	}
 
 	constexpr double SQRT_PRECISION = 9.5367431640625e-07; 

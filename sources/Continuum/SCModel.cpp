@@ -12,18 +12,22 @@ using Utility::constexprPower;
 namespace Continuum {
 #ifdef approximate_theta
 	constexpr c_float delta_range_factor = 4;
+	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float delta_range_factor = 4;
+	constexpr c_float delta_range_factor = 50;
+	constexpr c_float sc_is_finite_range = 4;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
-		: Delta(DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
+		: Delta(2 * DISCRETIZATION, parameters.phonon_coupling * parameters.omega_debye), temperature{ parameters.temperature },
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
 		K_MAX{ sqrt(2 * (fermi_energy + delta_range_factor * omega_debye)) - fermi_wavevector },
 		K_MIN{ fermi_energy > delta_range_factor * omega_debye ? sqrt(2 * (fermi_energy - delta_range_factor * omega_debye)) - fermi_wavevector : -fermi_wavevector },
-		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) }
+		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) },
+		MAX_K_WITH_SC{ sqrt(2 * (fermi_energy + sc_is_finite_range * omega_debye)) },
+		MIN_K_WITH_SC{ sqrt(2 * (fermi_energy - sc_is_finite_range * omega_debye)) }
 	{
 		omega_debye += PRECISION;
 		assert(index_to_momentum(0) >= 0);
@@ -43,7 +47,7 @@ namespace Continuum {
 	}
 
 	c_float SCModel::dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion_to_fermi_level(k); // TODO
+		return bare_dispersion_to_fermi_level(k) + interpolate_delta_n(k); // TODO
 	}
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {
@@ -76,11 +80,18 @@ namespace Continuum {
 	void SCModel::iterationStep(const ParameterVector& initial_values, ParameterVector& result) {
 		result.setZero();
 		this->Delta.fill_with(initial_values);
-		auto integrand = [this](c_float x) -> c_complex {
+		auto phonon_integrand = [this](c_float x) -> c_complex {
 			return x * x * sc_expectation_value(x);
 			};
 
-#pragma omp parallel for
+		auto sc_em_inner_integrand = [this](c_float k_tilde) -> c_complex {
+			return k_tilde * sc_expectation_value(k_tilde);
+			};
+		auto num_em_inner_integrand = [this](c_float k_tilde) -> c_float {
+			return k_tilde * occupation(k_tilde);
+			};
+
+//#pragma omp parallel for
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
 			const c_float k = index_to_momentum(u_idx);
 #ifdef approximate_theta
@@ -89,10 +100,44 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			result(u_idx) = boost::math::quadrature::gauss<double, 30>::integrate(integrand, g_lower_bound(k), g_upper_bound(k));
-		}
 
-		result *= -V_OVER_N * phonon_coupling / (2. * PI * PI);
+			auto sc_em_integrand = [&](c_float q) -> c_complex {
+				if(is_zero(q)) {
+					return k * sc_expectation_value(k);
+				}
+				c_float upper = q + k;
+				c_float lower = std::abs(q - k);
+				if(upper > MAX_K_WITH_SC) upper = MAX_K_WITH_SC;
+				if(lower < MIN_K_WITH_SC) lower = MIN_K_WITH_SC;
+				if(lower >= upper) return c_complex{};
+				return boost::math::quadrature::gauss<double, 30>::integrate(
+					sc_em_inner_integrand, lower, upper) / q;
+			};
+			auto num_em_integrand = [&](c_float q) -> c_float {
+				if(is_zero(q)) {
+					return k * occupation(k);
+				}
+				c_float upper = q + k;
+				c_float lower = std::abs(q - k);
+				if(upper > MAX_K_WITH_SC) upper = MAX_K_WITH_SC;
+				if(lower < MIN_K_WITH_SC) lower = MIN_K_WITH_SC;
+				if(lower >= upper) return c_float{};
+				return boost::math::quadrature::gauss<double, 30>::integrate(
+					num_em_inner_integrand, lower, upper) / q;
+			};
+
+			result(u_idx) = (-V_OVER_N * phonon_coupling / (2. * PI * PI)) 
+				* boost::math::quadrature::gauss<double, 30>::integrate(
+					phonon_integrand, g_lower_bound(k), g_upper_bound(k));
+
+			result(u_idx) += (PhysicalConstants::em_factor / k)
+				* boost::math::quadrature::gauss<double, 30>::integrate(
+					sc_em_integrand, c_float{}, index_to_momentum(DISCRETIZATION));
+
+			result(u_idx + DISCRETIZATION) = 0 * (-PhysicalConstants::em_factor / k)
+				* boost::math::quadrature::gauss<double, 30>::integrate(
+					num_em_integrand, c_float{}, index_to_momentum(DISCRETIZATION));
+		}
 		this->Delta.fill_with(result);
 		result -= initial_values;
 	}

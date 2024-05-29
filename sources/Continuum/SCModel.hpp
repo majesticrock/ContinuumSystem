@@ -47,17 +47,27 @@ namespace Continuum {
 		c_float temperature{};
 		c_float phonon_coupling{};
 		c_float omega_debye{};
-		c_float fermi_energy{};
+		const c_float fermi_energy{};
 
 		static constexpr c_float CUT_OFF = std::numeric_limits<c_float>::epsilon();
 
 		inline c_complex interpolate_delta(c_float k) const {
 			const int index = momentum_to_index(k);
 			if (index >= DISCRETIZATION - 1)
-				return Delta.back(); // Assuming Delta(k) = const for k -> infinity
+				return Delta[DISCRETIZATION - 1]; // Assuming Delta(k) = const for k -> infinity
 			if (index < 0)
 				return Delta.front();
-			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), Delta[index], Delta[index + 1]);
+			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), 
+					Delta[index], Delta[index + 1]);
+		};
+		inline c_float interpolate_delta_n(c_float k) const {
+			const int index = momentum_to_index(k);
+			if (index >= DISCRETIZATION - 1)
+				return std::real(Delta.back()); // Assuming Delta(k) = const for k -> infinity
+			if (index < 0)
+				return std::real(Delta[DISCRETIZATION]);
+			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), 
+					std::real(Delta[index + DISCRETIZATION]), std::real(Delta[index + DISCRETIZATION + 1]));
 		};
 		constexpr static c_float bare_dispersion(c_float k) {
 			return 0.5 * k * k;
@@ -106,11 +116,14 @@ namespace Continuum {
 		SCModel(ModelInitializer const& parameters);
 		virtual ~SCModel() = default;
 
-		c_float fermi_wavevector{};
-		c_float V_OVER_N{};
+		const c_float fermi_wavevector{};
+		const c_float V_OVER_N{};
 
-		c_float K_MAX{};
-		c_float K_MIN{};
-		c_float STEP{};
+		const c_float K_MAX{};
+		const c_float K_MIN{};
+		const c_float STEP{};
+
+		const c_float MAX_K_WITH_SC;
+		const c_float MIN_K_WITH_SC;
 	};
 }

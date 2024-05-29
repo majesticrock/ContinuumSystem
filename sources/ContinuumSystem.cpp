@@ -5,6 +5,7 @@
 
 #include <iomanip>
 #include <omp.h>
+#include <mpi.h>
 
 #include <filesystem>
 #include <algorithm>
@@ -18,6 +19,14 @@ int Continuum::DISCRETIZATION = 500;
 c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
 
 int main(int argc, char** argv) {
+	// First call MPI_Init
+	MPI_Init(&argc, &argv);
+
+	// Get my rank and the number of ranks
+	int rank, numberOfRanks;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numberOfRanks);
+
 	Utility::InputFileReader input("params/params.config");
 	const std::string output_folder = input.getString("output_folder");
 	Continuum::set_discretization(input.getInt("discretization_points"));
@@ -46,14 +55,18 @@ int main(int argc, char** argv) {
 	}
 
 	ModeHelper modes(input);
-
 	auto delta_result = modes.getModel().Delta.abs().as_vector();
-	Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + output_folder + "/gap.dat.gz");
+	//Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + output_folder + "/gap.dat.gz");
+	Utility::saveData(std::vector<std::vector<double>>{
+			modes.getModel().get_k_points(), std::vector<double>(delta_result.begin(), delta_result.begin() + DISCRETIZATION),
+			std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.end())
+		}, BASE_FOLDER + output_folder + "/gap.dat.gz");
 	std::cout << "Gap data have been saved!" << std::endl;
 	std::cout << "Delta_max = " << std::scientific << std::setprecision(14)
 		<< *std::max_element(delta_result.begin(), delta_result.end()) << std::endl;
 	std::cout << "Delta_min = " << std::scientific << std::setprecision(14)
 		<< *std::min_element(delta_result.begin(), delta_result.end()) << std::endl;
+	return MPI_Finalize();
 
 	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + output_folder + "/continuum.dat.gz");
 
@@ -90,5 +103,5 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	return 0;
+	return MPI_Finalize();
 }
