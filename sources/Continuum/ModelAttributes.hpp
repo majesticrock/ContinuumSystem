@@ -52,6 +52,17 @@ namespace Continuum {
 			return ret;
 		}
 
+		template<class Allocator>
+		inline static ModelAttributes FromAllocator(Allocator const& alloc, size_t size)
+		{
+			ModelAttributes<DataType> ret;
+			ret.selfconsistency_values.resize(size);
+			for(size_t i = 0U; i < size; ++i){
+				ret.selfconsistency_values[i] = alloc(i);
+			}
+			return ret;
+		}
+
 		// Using this constructor constructs the attribute vector with a fixed value, default is 0
 		explicit ModelAttributes(const size_t number_of_attributes, const DataType& default_value = DataType{})
 			: selfconsistency_values(number_of_attributes, default_value) {};
@@ -171,7 +182,7 @@ namespace Continuum {
 				return ret;
 			}
 			else {
-				ModelAttributes<DataType> ret(*this);
+				ModelAttributes<DataType> ret;
 				ret.converged = this->converged;
 				ret.selfconsistency_values.resize(this->size());
 				return ret;

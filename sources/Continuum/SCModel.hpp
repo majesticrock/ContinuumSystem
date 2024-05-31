@@ -53,18 +53,18 @@ namespace Continuum {
 
 		inline c_complex interpolate_delta(c_float k) const {
 			const int index = momentum_to_index(k);
-			if (index >= DISCRETIZATION - 1)
-				return Delta[DISCRETIZATION - 1]; // Assuming Delta(k) = const for k -> infinity
-			if (index < 0)
-				return Delta.front();
+			if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
+				return (index >= DISCRETIZATION ? c_complex{} : Delta[DISCRETIZATION - 1]);
+			if (index < 0) // Assuming Delta(k) = 0 for k->0
+				return c_complex{};
 			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), 
 					Delta[index], Delta[index + 1]);
 		};
 		inline c_float interpolate_delta_n(c_float k) const {
 			const int index = momentum_to_index(k);
-			if (index >= DISCRETIZATION - 1)
-				return std::real(Delta.back()); // Assuming Delta(k) = const for k -> infinity
-			if (index < 0)
+			if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
+				return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
+			if (index < 0) // Assuming Delta(k) = const for k->0
 				return std::real(Delta[DISCRETIZATION]);
 			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), 
 					std::real(Delta[index + DISCRETIZATION]), std::real(Delta[index + DISCRETIZATION + 1]));
@@ -112,6 +112,8 @@ namespace Continuum {
 				+ " " + std::to_string(phonon_coupling) + " " + std::to_string(omega_debye)
 				+ " " + std::to_string(fermi_energy) + "]";
 		}
+
+		c_float internal_energy() const;
 
 		SCModel(ModelInitializer const& parameters);
 		virtual ~SCModel() = default;

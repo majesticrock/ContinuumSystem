@@ -55,18 +55,22 @@ int main(int argc, char** argv) {
 	}
 
 	ModeHelper modes(input);
-	auto delta_result = modes.getModel().Delta.abs().as_vector();
+	auto delta_result = modes.getModel().Delta.real().as_vector();
+	auto delta_imag = modes.getModel().Delta.imag().as_vector();
 	//Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + output_folder + "/gap.dat.gz");
 	Utility::saveData(std::vector<std::vector<double>>{
-			modes.getModel().get_k_points(), std::vector<double>(delta_result.begin(), delta_result.begin() + DISCRETIZATION),
-			std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.end())
+			modes.getModel().get_k_points(), 
+			std::vector<double>(delta_result.begin(), delta_result.begin() + DISCRETIZATION),
+			std::vector<double>(delta_imag.begin(), delta_imag.begin() + DISCRETIZATION)
+			//std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION),
 		}, BASE_FOLDER + output_folder + "/gap.dat.gz");
 	std::cout << "Gap data have been saved!" << std::endl;
+	
 	std::cout << "Delta_max = " << std::scientific << std::setprecision(14)
-		<< *std::max_element(delta_result.begin(), delta_result.end()) << std::endl;
+		<< *std::max_element(delta_result.begin(), delta_result.begin()  + DISCRETIZATION) << std::endl;
 	std::cout << "Delta_min = " << std::scientific << std::setprecision(14)
-		<< *std::min_element(delta_result.begin(), delta_result.end()) << std::endl;
-	return MPI_Finalize();
+		<< *std::min_element(delta_result.begin(), delta_result.begin()  + DISCRETIZATION) << std::endl;
+	std::cout << "Internal energy = " << modes.getModel().internal_energy() << std::endl;
 
 	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + output_folder + "/continuum.dat.gz");
 
@@ -87,6 +91,7 @@ int main(int argc, char** argv) {
 		Utility::saveData(std::vector<std::vector<c_float>>{ks, occupations, pairs}, BASE_FOLDER + output_folder + "/expecs.dat.gz");
 		std::cout << "Expectation values have been saved!" << std::endl;
 	}
+	return MPI_Finalize();
 
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {
