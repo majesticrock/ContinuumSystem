@@ -17,8 +17,8 @@ namespace Continuum {
 	constexpr c_float delta_range_factor = 1;
 	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float delta_range_factor = 15;
-	constexpr c_float sc_is_finite_range = 15;
+	constexpr c_float delta_range_factor = 10;
+	constexpr c_float sc_is_finite_range = 10;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
@@ -126,7 +126,7 @@ namespace Continuum {
 
 				if (lower >= upper) return c_complex{};
 				return boost::math::quadrature::gauss<double, 30>::integrate(
-					sc_em_inner_integrand, lower, upper) * (q / (q * q + fermi_wavevector * fermi_wavevector));
+					sc_em_inner_integrand, lower, upper) / q;//* (q / (q * q + fermi_wavevector * fermi_wavevector));
 				};
 
 			/*auto num_em_integrand = [&](c_float q) -> c_float {
@@ -152,7 +152,8 @@ namespace Continuum {
 			};*/
 
 			result(u_idx) = (PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
-				sc_em_integrand, c_float{}, MAX_K_WITH_SC + k);
+				//sc_em_integrand, c_float{}, MAX_K_WITH_SC + k);
+				sc_em_integrand, g_lower_bound(k), g_upper_bound(k));
 			//result(u_idx + DISCRETIZATION) = (-PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
 			//		num_em_integrand, c_float{}, MAX_K_WITH_SC + k);
 #endif
