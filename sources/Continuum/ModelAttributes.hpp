@@ -45,8 +45,8 @@ namespace Continuum {
 		inline static ModelAttributes Gaussian(int size, int center, int FWHM, double maximum) {
 			ModelAttributes<DataType> ret;
 			ret.selfconsistency_values.resize(size);
-			for(int i = 0; i < size; ++i){
-				ret[i] = maximum * std::exp(- 16. * 0.693147 * (i - center) * (i - center) 
+			for (int i = 0; i < size; ++i) {
+				ret[i] = maximum * std::exp(-16. * 0.693147 * (i - center) * (i - center)
 					/ static_cast<Utility::UnderlyingFloatingPoint_t<DataType>>(FWHM * FWHM));
 			}
 			return ret;
@@ -57,7 +57,7 @@ namespace Continuum {
 		{
 			ModelAttributes<DataType> ret;
 			ret.selfconsistency_values.resize(size);
-			for(size_t i = 0U; i < size; ++i){
+			for (size_t i = 0U; i < size; ++i) {
 				ret.selfconsistency_values[i] = alloc(i);
 			}
 			return ret;
@@ -189,11 +189,12 @@ namespace Continuum {
 			}
 		};
 		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> abs() const {
-			if constexpr(Utility::is_complex<DataType>()){
+			if constexpr (Utility::is_complex<DataType>()) {
 				return ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>>(*this, Magnitude);
-			} else {
+			}
+			else {
 				ModelAttributes<DataType> ret(*this);
-				for(auto& val : ret){
+				for (auto& val : ret) {
 					val = std::abs(val);
 				}
 				return ret;

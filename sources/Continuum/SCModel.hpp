@@ -57,8 +57,8 @@ namespace Continuum {
 				return (index >= DISCRETIZATION ? c_complex{} : Delta[DISCRETIZATION - 1]);
 			if (index < 0) // Assuming Delta(k) = 0 for k->0
 				return c_complex{};
-			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), 
-					Delta[index], Delta[index + 1]);
+			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1),
+				Delta[index], Delta[index + 1]);
 		};
 		inline c_float interpolate_delta_n(c_float k) const {
 			const int index = momentum_to_index(k);
@@ -66,17 +66,17 @@ namespace Continuum {
 				return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
 			if (index < 0) // Assuming Delta(k) = const for k->0
 				return std::real(Delta[DISCRETIZATION]);
-			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1), 
-					std::real(Delta[index + DISCRETIZATION]), std::real(Delta[index + DISCRETIZATION + 1]));
+			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1),
+				std::real(Delta[index + DISCRETIZATION]), std::real(Delta[index + DISCRETIZATION + 1]));
 		};
 		constexpr static c_float bare_dispersion(c_float k) {
 			return 0.5 * k * k;
 		};
-	
+
 	public:
 		c_complex sc_expectation_value(c_float k) const;
 		c_float occupation(c_float k) const;
-		
+
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
 			return bare_dispersion(k) - fermi_energy;
 		};

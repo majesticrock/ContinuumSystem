@@ -32,9 +32,10 @@ namespace Continuum {
 
 	c_complex ModeHelper::get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const
 	{
-		if(op.type == SymbolicOperators::Number_Type){
+		if (op.type == SymbolicOperators::Number_Type) {
 			return model->occupation(momentum);
-		} else if (op.type == SymbolicOperators::SC_Type){
+		}
+		else if (op.type == SymbolicOperators::SC_Type) {
 			return model->sc_expectation_value(momentum);
 		}
 		assert(false && "Expectation value not recognized!");

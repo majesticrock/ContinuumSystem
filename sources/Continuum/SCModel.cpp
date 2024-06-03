@@ -4,8 +4,9 @@
 #include "../../../Utility/sources/Numerics/Minimization/Bisection.hpp"
 #include <algorithm>
 #include <numeric>
+#include <complex>
 
-#include <boost/math/quadrature/gauss.hpp> 
+#include <boost/math/quadrature/gauss.hpp>
 
 using Utility::constexprPower;
 
@@ -16,12 +17,12 @@ namespace Continuum {
 	constexpr c_float delta_range_factor = 1;
 	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float delta_range_factor = 4;
-	constexpr c_float sc_is_finite_range = 4;
+	constexpr c_float delta_range_factor = 15;
+	constexpr c_float sc_is_finite_range = 15;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
-		: Delta(DISCRETIZATION, parameters.phonon_coupling * parameters.omega_debye), temperature{ parameters.temperature },
+		: Delta(DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
@@ -36,9 +37,9 @@ namespace Continuum {
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye)))
-					? 0.01 : 0.1;
-			if(i < DISCRETIZATION){
-				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION));
+				? 0.01 : 0.1;
+			if (i < DISCRETIZATION) {
+				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION)+0.5 * PI);
 			}
 			return c_complex{};
 			}, DISCRETIZATION);
@@ -105,7 +106,7 @@ namespace Continuum {
 			}; */
 #endif
 
-//#pragma omp parallel for
+			//#pragma omp parallel for
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
 			const c_float k = index_to_momentum(u_idx);
 #ifdef approximate_theta
@@ -117,16 +118,16 @@ namespace Continuum {
 
 #ifdef _use_coulomb
 			auto sc_em_integrand = [&](c_float q) -> c_complex {
-				if(is_zero(q)) {
-					return 2 * k * sc_expectation_value(k);
-				}
+				//if(is_zero(q)) {
+				//	return 2 * k * sc_expectation_value(k);
+				//}
 				const c_float lower = std::max(std::abs(q - k), MIN_K_WITH_SC);
 				const c_float upper = std::min(q + k, MAX_K_WITH_SC);
-				
-				if(lower >= upper) return c_complex{};
+
+				if (lower >= upper) return c_complex{};
 				return boost::math::quadrature::gauss<double, 30>::integrate(
-					sc_em_inner_integrand, lower, upper) / q;
-			};
+					sc_em_inner_integrand, lower, upper) * (q / (q * q + fermi_wavevector * fermi_wavevector));
+				};
 
 			/*auto num_em_integrand = [&](c_float q) -> c_float {
 				if(is_zero(q)) {
@@ -134,7 +135,7 @@ namespace Continuum {
 				}
 				const c_float lower = std::abs(q - k);
 				const c_float upper = q + k;
-				
+
 				const c_float numerics_lower = std::max(lower, MIN_K_WITH_SC);
 				const c_float numerics_upper = std::min(upper, MAX_K_WITH_SC);
 
@@ -146,16 +147,16 @@ namespace Continuum {
 				if(numerics_lower < numerics_upper)
 					result += boost::math::quadrature::gauss<double, 30>::integrate(
 						num_em_inner_integrand, numerics_lower, numerics_upper) / q;
-				
+
 				return result;
 			};*/
 
 			result(u_idx) = (PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
-					sc_em_integrand, c_float{}, MAX_K_WITH_SC + k);
+				sc_em_integrand, c_float{}, MAX_K_WITH_SC + k);
 			//result(u_idx + DISCRETIZATION) = (-PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
 			//		num_em_integrand, c_float{}, MAX_K_WITH_SC + k);
 #endif
-			result(u_idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI)) 
+			result(u_idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate(
 					phonon_integrand, g_lower_bound(k), g_upper_bound(k));
 		}
@@ -215,6 +216,6 @@ namespace Continuum {
 			return -k * k * energy(k);
 			};
 		return (V_OVER_N / (2 * PI * PI)) * boost::math::quadrature::gauss<c_float, 30>::integrate(
-					procedure, MIN_K_WITH_SC, MAX_K_WITH_SC);
+			procedure, MIN_K_WITH_SC, MAX_K_WITH_SC);
 	}
 }
