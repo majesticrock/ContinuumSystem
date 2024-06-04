@@ -12,10 +12,16 @@
 #include "../../../Utility/sources/UnderlyingFloatingPoint.hpp"
 
 //#define approximate_theta
+#define _complex
+#define _bipolar_integration 2
 
 namespace Continuum {
 	using c_float = double;
-	using c_complex = std::complex<c_float>; //
+#ifdef _complex
+	using c_complex = std::complex<c_float>;
+#else
+	using c_complex = c_float;
+#endif
 
 	constexpr c_float PI = static_cast<c_float>(M_PI);
 

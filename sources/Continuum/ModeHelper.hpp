@@ -20,6 +20,9 @@ namespace Continuum {
 
 		c_float compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q = 0) const;
 		c_complex get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const;
+
+		c_complex compute_phonon_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
+		c_complex compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
 	protected:
 		SymbolicOperators::TermLoader wicks;
 		//size_t TOTAL_BASIS{};

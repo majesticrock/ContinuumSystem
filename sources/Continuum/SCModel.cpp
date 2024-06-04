@@ -39,7 +39,11 @@ namespace Continuum {
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye)))
 				? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
-				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION)+0.5 * PI);
+#ifdef _complex
+				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
+#else
+				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
+#endif
 			}
 			return c_complex{};
 			}, DISCRETIZATION);
@@ -91,6 +95,7 @@ namespace Continuum {
 	}
 
 	void SCModel::iterationStep(const ParameterVector& initial_values, ParameterVector& result) {
+		static int step_num = 0;
 		result.setZero();
 		this->Delta.fill_with(initial_values);
 		auto phonon_integrand = [this](c_float x) -> c_complex {
@@ -98,6 +103,7 @@ namespace Continuum {
 			};
 
 #ifdef _use_coulomb
+#if _bipolar_integration == 1 || _bipolar_integration == 0
 		auto sc_em_inner_integrand = [this](c_float k_tilde) -> c_complex {
 			return k_tilde * sc_expectation_value(k_tilde);
 			};
@@ -105,8 +111,9 @@ namespace Continuum {
 			return k_tilde * occupation(k_tilde);
 			}; */
 #endif
+#endif
 
-			//#pragma omp parallel for
+//#pragma omp parallel for
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
 			const c_float k = index_to_momentum(u_idx);
 #ifdef approximate_theta
@@ -117,6 +124,7 @@ namespace Continuum {
 #endif
 
 #ifdef _use_coulomb
+#if _bipolar_integration == 1 || _bipolar_integration == 0
 			auto sc_em_integrand = [&](c_float q) -> c_complex {
 				//if(is_zero(q)) {
 				//	return 2 * k * sc_expectation_value(k);
@@ -128,34 +136,32 @@ namespace Continuum {
 				return boost::math::quadrature::gauss<double, 30>::integrate(
 					sc_em_inner_integrand, lower, upper) / q;//* (q / (q * q + fermi_wavevector * fermi_wavevector));
 				};
-
-			/*auto num_em_integrand = [&](c_float q) -> c_float {
-				if(is_zero(q)) {
-					return k * occupation(k);
-				}
-				const c_float lower = std::abs(q - k);
-				const c_float upper = q + k;
-
-				const c_float numerics_lower = std::max(lower, MIN_K_WITH_SC);
-				const c_float numerics_upper = std::min(upper, MAX_K_WITH_SC);
-
-				c_float result{};
-				// if Delta = 0 => <n_k> = 1 if epsilon < 0 and 0 otherwise
-				if(lower < numerics_lower) {
-					result = 0.5 * (numerics_lower * numerics_lower - lower * lower);
-				}
-				if(numerics_lower < numerics_upper)
-					result += boost::math::quadrature::gauss<double, 30>::integrate(
-						num_em_inner_integrand, numerics_lower, numerics_upper) / q;
-
-				return result;
-			};*/
-
-			result(u_idx) = (PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
-				//sc_em_integrand, c_float{}, MAX_K_WITH_SC + k);
+#endif
+#if _bipolar_integration == 2 || _bipolar_integration == 0
+			auto sc_em_integrand_2 = [&](c_float p) -> c_complex {
+				const auto min = std::min(k + p, g_upper_bound(k));
+				const auto max = std::max(std::abs(k - p), g_lower_bound(k));
+				assert(not is_zero(max));
+				return p * sc_expectation_value(p) * std::log(min / max);
+				};
+#endif
+#if _bipolar_integration == 0
+			const auto value1 = boost::math::quadrature::gauss<double, 30>::integrate(
 				sc_em_integrand, g_lower_bound(k), g_upper_bound(k));
-			//result(u_idx + DISCRETIZATION) = (-PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
-			//		num_em_integrand, c_float{}, MAX_K_WITH_SC + k);
+			const auto value2 = boost::math::quadrature::gauss<double, 30>::integrate(
+				sc_em_integrand_2, MIN_K_WITH_SC, MAX_K_WITH_SC);
+
+			if(step_num == 0)
+			std::cout << "Iter " << step_num << ": " << std::scientific << std::abs(value1) << "\t" << std::abs(value2) 
+				<< "\tDiff = " << std::abs((value1 - value2) / std::abs(value1)) << std::endl;
+#endif
+#if _bipolar_integration == 1 || _bipolar_integration == 0
+			result(u_idx) = (PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
+				sc_em_integrand, g_lower_bound(k), g_upper_bound(k));
+#else
+			result(u_idx) = (PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
+				sc_em_integrand_2, MIN_K_WITH_SC, MAX_K_WITH_SC);
+#endif
 #endif
 			result(u_idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate(
@@ -163,6 +169,7 @@ namespace Continuum {
 		}
 		this->Delta.fill_with(result);
 		result -= initial_values;
+		++step_num;
 	}
 
 	c_float SCModel::computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const

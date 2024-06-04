@@ -163,21 +163,29 @@ namespace Continuum {
 		}
 	}
 
+	c_complex ModeHelper::compute_phonon_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
+	{
+
+	}
+
+	c_complex ModeHelper::compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
+	{
+
+	}
+
 	c_complex ModeHelper::computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
 		if (term.sums.momenta.empty()) {
-			c_complex value;
-			if (term.coefficients.empty()) {
-				value = static_cast<c_float>(term.multiplicity);
-			}
-			else {
+			c_complex value { static_cast<c_float>(term.multiplicity) };
+			
+			if (!term.coefficients.empty()) {
 				const SymbolicOperators::Coefficient* coeff_ptr = &term.coefficients.front();
 				if (coeff_ptr->momenta.size() == 2U) {
-					value = term.multiplicity * model->computeCoefficient(*coeff_ptr,
+					value *= model->computeCoefficient(*coeff_ptr,
 						compute_momentum(coeff_ptr->momenta[0], k, l), compute_momentum(coeff_ptr->momenta[1], k, l));
 				}
 				else if (coeff_ptr->momenta.size() == 1U) {
-					value = term.multiplicity * model->computeCoefficient(*coeff_ptr,
+					value *= model->computeCoefficient(*coeff_ptr,
 						compute_momentum(coeff_ptr->momenta[0], k, l));
 				}
 				else {
