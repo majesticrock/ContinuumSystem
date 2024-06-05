@@ -2,9 +2,9 @@
 #include "GlobalDefinitions.hpp"
 #include "../../../FermionCommute/sources/TermLoader.hpp"
 #include "../../../FermionCommute/sources/WickTerm.hpp"
-#include "../../../Utility/sources/better_to_string.hpp"
-#include "../../../Utility/sources/Numerics/iEoM/GeneralResolvent.hpp"
-#include "../../../Utility/sources/Numerics/iEoM/XPResolvent.hpp"
+#include <Utility/better_to_string.hpp>
+#include <Utility/Numerics/iEoM/GeneralResolvent.hpp>
+#include <Utility/Numerics/iEoM/XPResolvent.hpp>
 #include "SCModel.hpp"
 #include <memory>
 #include <map>

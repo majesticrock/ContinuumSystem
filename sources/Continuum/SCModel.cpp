@@ -1,7 +1,6 @@
 #include "SCModel.hpp"
-#include "../../../Utility/sources/Numerics/Integration/TrapezoidalRule.hpp"
-#include "../../../Utility/sources/ConstexprPower.hpp"
-#include "../../../Utility/sources/Numerics/Minimization/Bisection.hpp"
+#include <Utility/ConstexprPower.hpp>
+#include <Utility/Numerics/Minimization/Bisection.hpp>
 #include <algorithm>
 #include <numeric>
 #include <complex>

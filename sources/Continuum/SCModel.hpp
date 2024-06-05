@@ -6,8 +6,8 @@
 #include <map>
 #include <boost/math/special_functions/pow.hpp>
 #include "../../../FermionCommute/sources/WickTerm.hpp"
-#include "../../../Utility/sources/InputFileReader.hpp"
-#include "../../../Utility/sources/Numerics/Interpolation.hpp"
+#include <Utility/InputFileReader.hpp>
+#include <Utility/Numerics/Interpolation.hpp>
 
 namespace Continuum {
 	struct ModelInitializer {

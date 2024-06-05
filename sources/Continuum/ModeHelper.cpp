@@ -1,11 +1,10 @@
 #include "ModeHelper.hpp"
 #include <memory>
 #include <cassert>
-#include "../../../Utility/sources/Numerics/Interpolation.hpp"
-#include "../../../Utility/sources/Numerics/Integration/TrapezoidalRule.hpp"
-
-#include "../../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
-#include "../../../Utility/sources/Selfconsistency/BroydenSolver.hpp"
+#include <Utility/Numerics/Interpolation.hpp>
+#include <Utility/Numerics/Integration/TrapezoidalRule.hpp>
+#include <Utility/Selfconsistency/IterativeSolver.hpp>
+#include <Utility/Selfconsistency/BroydenSolver.hpp>
 
 #include <boost/math/quadrature/gauss.hpp>
 

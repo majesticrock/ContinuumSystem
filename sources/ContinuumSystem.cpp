@@ -1,6 +1,6 @@
 #include "Continuum/SCModel.hpp"
-#include "../../Utility/sources/Selfconsistency/IterativeSolver.hpp"
-#include "../../Utility/sources/OutputConvenience.hpp"
+#include <Utility/Selfconsistency/IterativeSolver.hpp>
+#include <Utility/OutputConvenience.hpp>
 #include "Continuum/ModeHelper.hpp"
 
 #include <iomanip>
