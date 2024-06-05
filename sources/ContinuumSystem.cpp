@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 			//std::cout << model.info() << "\t" << *std::max_element(buffer.begin(), buffer.end()) << std::endl;
 		}
 		Utility::saveData(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
-		return 0;
+		return EXIT;
 	}
 
 	ModeHelper modes(input);
@@ -99,7 +99,6 @@ int main(int argc, char** argv) {
 		Utility::saveData(std::vector<std::vector<c_float>>{ks, occupations, pairs}, BASE_FOLDER + output_folder + "/expecs.dat.gz");
 		std::cout << "Expectation values have been saved!" << std::endl;
 	}
-	return EXIT;
 
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {

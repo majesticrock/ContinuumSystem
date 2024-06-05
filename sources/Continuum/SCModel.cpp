@@ -9,8 +9,6 @@
 
 using Utility::constexprPower;
 
-#define _use_coulomb
-
 namespace Continuum {
 #ifdef approximate_theta
 	constexpr c_float delta_range_factor = 1;
@@ -191,6 +189,20 @@ namespace Continuum {
 #endif
 			{
 				return this->phonon_coupling * this->V_OVER_N;
+			}
+			else
+			{
+				return c_float{};
+			}
+		} 
+		else if(coeff.name == "V") {
+			if (coeff.momenta[0] == coeff.momenta[1])
+			{
+				return PhysicalConstants::em_factor;
+			}
+			if (omega_debye > std::abs(bare_dispersion(first) - bare_dispersion(second)))
+			{
+				return PhysicalConstants::em_factor;
 			}
 			else
 			{

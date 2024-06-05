@@ -3,18 +3,29 @@
 #include "../../../FermionCommute/sources/TermLoader.hpp"
 #include "../../../FermionCommute/sources/WickTerm.hpp"
 #include <Utility/better_to_string.hpp>
-#include <Utility/Numerics/iEoM/GeneralResolvent.hpp>
-#include <Utility/Numerics/iEoM/XPResolvent.hpp>
 #include "SCModel.hpp"
 #include <memory>
 #include <map>
 
+#ifdef _complex
+#include <Utility/Numerics/iEoM/GeneralResolvent.hpp>
+#else
+#include <Utility/Numerics/iEoM/XPResolvent.hpp>
+#endif
+
+#ifdef _complex
+#define __ieom_algorithm Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_complex>
+#else
+#define __ieom_algorithm Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_complex>
+#endif
+
 namespace Continuum {
-	class ModeHelper : public Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>
+	class ModeHelper : public __ieom_algorithm
 	{
 	private:
-		friend struct Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>;
-		using _parent = Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>;
+
+		friend struct __ieom_algorithm;
+		using _parent = __ieom_algorithm;
 
 		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> expectation_values;
 
@@ -50,3 +61,5 @@ namespace Continuum {
 		ModeHelper(Utility::InputFileReader& input);
 	};
 }
+
+#undef __ieom_algorithm;

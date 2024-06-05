@@ -5,6 +5,7 @@
 #include <Utility/Numerics/Integration/TrapezoidalRule.hpp>
 #include <Utility/Selfconsistency/IterativeSolver.hpp>
 #include <Utility/Selfconsistency/BroydenSolver.hpp>
+#include <Utility/ConstexprPower.hpp>
 
 #include <boost/math/quadrature/gauss.hpp>
 
@@ -14,19 +15,20 @@
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
 	{
-		// For now we do not encounter sums of momenta, e.g., k+l
-		// Should that occur, we need to implement a logic for that here
-		assert(momentum.momentum_list.size() == 1U);
-		switch (momentum.momentum_list.front().second) {
-		case 'k':
-			return momentum.momentum_list.front().first * k;
-		case 'l':
-			return momentum.momentum_list.front().first * l;
-		case 'q':
-			return momentum.momentum_list.front().first * q;
-		default:
-			throw std::runtime_error("Momentum not recognized! " + momentum.momentum_list.front().second);
+		c_float momentum_value{};
+		for(const auto& momentum_pair : momentum.momentum_list) {
+			switch (momentum_pair.second) {
+			case 'k':
+				momentum_value += momentum_pair.first * k;
+			case 'l':
+				momentum_value +=  momentum_pair.first * l;
+			case 'q':
+				momentum_value +=  momentum_pair.first * q;
+			default:
+				throw std::runtime_error("Momentum not recognized! " + momentum_pair.second);
+			}
 		}
+		return momentum_value;
 	}
 
 	c_complex ModeHelper::get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const
@@ -49,14 +51,23 @@ namespace Continuum {
 
 	void ModeHelper::fillMatrices()
 	{
+#ifdef _complex
+		M.setZero(number_of_basis_terms, number_of_basis_terms);
+		N.setZero(number_of_basis_terms, number_of_basis_terms);
+#else
 		K_plus.setZero(hermitian_discretization, hermitian_discretization);
 		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
 		L.setZero(hermitian_discretization, antihermitian_discretization);
+#endif
 
 		for (int i = 0; i < number_of_basis_terms; ++i)
 		{
 			for (int j = 0; j < number_of_basis_terms; ++j)
 			{
+#ifdef _complex
+				fill_block_M(i, j);
+				fill_block_N(i, j);
+#else
 				// Ignore the offdiagonal blocks as they are 0
 				if ((i < hermitian_size && j < hermitian_size) || (j >= hermitian_size && i >= hermitian_size)) {
 					fill_block_M(i, j);
@@ -65,27 +76,19 @@ namespace Continuum {
 				else if (i < hermitian_size && j >= hermitian_size) {
 					fill_block_N(i, j);
 				}
+#endif
 			}
 		}
-
-		//std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm()   << " && ||K_+|| = " << K_plus.norm() << std::endl;
-		//std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << " && ||K_-|| = " << K_minus.norm() << std::endl;
-		//for (int i = 0; i < K_plus.diagonal().real().size(); ++i) {
-		//	if (K_plus.diagonal().real()(i) < -PRECISION) {
-		//		std::cout << i << "+: " << K_plus.diagonal().real()(i) << "\n";
-		//	}
-		//}
-		//for (int i = 0; i < K_minus.diagonal().real().size(); ++i) {
-		//	if (K_minus.diagonal().real()(i) < -PRECISION) {
-		//		std::cout << i << "-: " << K_minus.diagonal().real()(i) << "\n";
-		//	}
-		//}
 	}
 
 	void ModeHelper::fill_M()
 	{
-		K_plus = _parent::Matrix::Zero(hermitian_discretization, hermitian_discretization);
-		K_minus = _parent::Matrix::Zero(antihermitian_discretization, antihermitian_discretization);
+#ifdef _complex
+		M.setZero(number_of_basis_terms, number_of_basis_terms);
+#else
+		K_plus.setZero(hermitian_discretization, hermitian_discretization);
+		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
+#endif
 
 		for (int i = 0; i < number_of_basis_terms; ++i)
 		{
@@ -105,16 +108,16 @@ namespace Continuum {
 			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
 				const c_float k = this->model->index_to_momentum(k_idx);
 				if (!term.delta_momenta.empty()) {
-					//if (i == j && i == 0) {
-					//	if(k_idx < 20)
-					//		std::cout << "k=" <<k <<"\t\t" << term << " = " << computeTerm(term, k, k).real() << std::endl;
-					//}
-					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
-
-					if (term.sums.momenta.empty() && term.coefficients.front().name == "g") {
-						// These kinds of terms scale as 1/N -> 0
-						continue;
+					if (term.sums.momenta.empty()) {
+						if (term.coefficients.front().name == "g" || term.coefficients.front().name == "V") {
+							// These kinds of terms scale as 1/N -> 0
+							continue;
+						}
 					}
+#ifdef _complex
+					M(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
+							+= ieom_diag(k) * computeTerm(term, k, k);
+#else
 					if (i < hermitian_size) {
 						K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
 							+= ieom_diag(k) * std::real(computeTerm(term, k, k));
@@ -123,10 +126,15 @@ namespace Continuum {
 						K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + k_idx)
 							+= ieom_diag(k) * std::real(computeTerm(term, k, k));
 					}
+#endif
 				}
 				else {
 					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
 						const c_float l = this->model->index_to_momentum(l_idx);
+#ifdef _complex
+						M(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
+								+= ieom_offdiag(k, l) * computeTerm(term, k, l);
+#else
 						if (i < hermitian_size) {
 							K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
 								+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
@@ -135,6 +143,7 @@ namespace Continuum {
 							K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
 								+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
 						}
+#endif
 					}
 				}
 			}
@@ -147,15 +156,25 @@ namespace Continuum {
 			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
 				const c_float k = this->model->index_to_momentum(k_idx);
 				if (!term.delta_momenta.empty()) {
-					// only k=l and k=-l should occur. Additionally, only the magntiude should matter
-					L(i * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + k_idx)
+					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
+#ifdef _complex
+					N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
+						+= ieom_diag(k) * computeTerm(term, k, k);
+#else
+					L(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
 						+= ieom_diag(k) * std::real(computeTerm(term, k, k));
+#endif
 				}
 				else {
 					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
 						const c_float l = this->model->index_to_momentum(l_idx);
+#ifdef _complex
+						N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
+							+= ieom_offdiag(k, l) * computeTerm(term, k, l);
+#else
 						L(i * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
 							+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
+#endif
 					}
 				}
 			}
@@ -164,12 +183,59 @@ namespace Continuum {
 
 	c_complex ModeHelper::compute_phonon_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
+		auto integrand = [&](c_float q) {
+			c_complex value{ this->get_expectation_value(term.operators.front(),
+				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
 
+			for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
+				value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
+			}
+			return q * q * value;
+			};
+
+#ifdef approximate_theta
+		if (k > this->model->g_upper_bound(k)) return 0;
+#endif
+		return (term.multiplicity / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
+			* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
 	}
 
 	c_complex ModeHelper::compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
+		if(term.coefficients.front().momenta[0].momentum_list.size() == 1)
+		{ // V(k, k-q)
+			auto integrand = [&](c_float q) {
+				c_complex value{ this->get_expectation_value(term.operators.front(),
+				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
 
+				for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
+					value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
+				}
+				const c_float weight = Utility::constexprPower<2>(std::min(k + q, model->g_upper_bound(q)))
+					- Utility::constexprPower<2>(std::max(std::abs(k - q), model->g_lower_bound(q)));
+				return (weight / q) * value;
+				};
+
+			return 0.5 * term.multiplicity * PhysicalConstants::em_factor
+				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->MIN_K_WITH_SC, model->MAX_K_WITH_SC);
+		} 
+		else if(term.coefficients.front().momenta[0].momentum_list.size() == 2) 
+		{ // V(k-q, k)
+			auto integrand = [&](c_float q) {
+				c_complex value{ this->get_expectation_value(term.operators.front(),
+				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
+
+				for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
+					value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
+				}
+				const c_float weight = std::log(std::min(k + q, model->g_upper_bound(q)) / std::max(std::abs(k - q), model->g_lower_bound(q)));
+				return (q * weight) * value;
+				};
+
+			return term.multiplicity * PhysicalConstants::em_factor
+				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->MIN_K_WITH_SC, model->MAX_K_WITH_SC);
+		}
+		throw std::runtime_error("Something went wrong while computing an em sum...");
 	}
 
 	c_complex ModeHelper::computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
@@ -199,26 +265,16 @@ namespace Continuum {
 			}
 			return value * static_cast<c_float>(term.sums.spins.size() + 1U);
 		}
-		// For now, sums can only ever occur with U
-		assert(term.coefficients.size() == 1U && term.coefficients.front().name == "g");
+		assert(term.coefficients.size() == 1U);
 
-		auto integrand = [&](c_float q) {
-			c_complex value{ this->get_expectation_value(term.operators.front(),
-				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
-
-			for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
-				value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
-			}
-			return q * q * value;
-			};
-
-#ifdef approximate_theta
-		if (k > this->model->g_upper_bound(k)) return 0;
-#endif
-		//c_float error;
-		return (term.multiplicity / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
-			//* Utility::Numerics::Integration::trapezoidal_rule(integrand, model->g_lower_bound(k), model->g_upper_bound(k), DISCRETIZATION);
-			* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
+		if(term.coefficients.front().name == "g")
+		{
+			return compute_phonon_sum(term, k, l);
+		}
+		else if(term.coefficients.front().name == "V"){
+			return compute_em_sum(term, k, l);
+		}
+		throw std::runtime_error("Something went wrong while computing terms...");
 	}
 
 	int ModeHelper::hermitian_discretization = 0;
