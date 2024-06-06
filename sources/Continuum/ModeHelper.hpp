@@ -9,21 +9,16 @@
 
 #ifdef _complex
 #include <Utility/Numerics/iEoM/GeneralResolvent.hpp>
-#else
-#include <Utility/Numerics/iEoM/XPResolvent.hpp>
-#endif
-
-#ifdef _complex
 #define __ieom_algorithm Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_complex>
 #else
-#define __ieom_algorithm Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_complex>
+#include <Utility/Numerics/iEoM/XPResolvent.hpp>
+#define __ieom_algorithm Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>
 #endif
 
 namespace Continuum {
 	class ModeHelper : public __ieom_algorithm
 	{
 	private:
-
 		friend struct __ieom_algorithm;
 		using _parent = __ieom_algorithm;
 
@@ -43,6 +38,7 @@ namespace Continuum {
 
 		static int hermitian_discretization;
 		static int antihermitian_discretization;
+		static int total_matrix_size;
 
 		std::unique_ptr<SCModel> model;
 
@@ -62,4 +58,4 @@ namespace Continuum {
 	};
 }
 
-#undef __ieom_algorithm;
+#undef __ieom_algorithm

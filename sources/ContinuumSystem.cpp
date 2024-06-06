@@ -65,12 +65,11 @@ int main(int argc, char** argv) {
 	ModeHelper modes(input);
 	auto delta_result = modes.getModel().Delta.real().as_vector();
 	auto delta_imag = modes.getModel().Delta.imag().as_vector();
-	//Utility::saveData(modes.getModel().get_k_points(), delta_result, BASE_FOLDER + output_folder + "/gap.dat.gz");
+
 	Utility::saveData(std::vector<std::vector<double>>{
 		modes.getModel().get_k_points(),
 			std::vector<double>(delta_result.begin(), delta_result.begin() + DISCRETIZATION),
 			std::vector<double>(delta_imag.begin(), delta_imag.begin() + DISCRETIZATION)
-			//std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION),
 	}, BASE_FOLDER + output_folder + "/gap.dat.gz");
 	std::cout << "Gap data have been saved!" << std::endl;
 
@@ -82,7 +81,7 @@ int main(int argc, char** argv) {
 
 	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + output_folder + "/continuum.dat.gz");
 
-	if constexpr (true) { // compute and save the expectation values
+	if constexpr (false) { // compute and save the expectation values
 		auto expecs = modes.getModel().get_expectation_values();
 		auto ks = modes.getModel().get_k_points();
 
@@ -105,10 +104,12 @@ int main(int argc, char** argv) {
 		std::vector<std::string> comments;
 		comments.push_back("Discretization: " + std::to_string(DISCRETIZATION));
 
-		//std::vector<std::string> names{ "higgs_SC_a", "higgs_SC_a+b", "higgs_SC_a+ib",
-		//			"phase_SC_a", "phase_SC_a+b", "phase_SC_a+ib" };
+#ifdef _complex
+		std::vector<std::string> names{ "higgs_SC_a", "higgs_SC_a+b", "higgs_SC_a+ib",
+					"phase_SC_a", "phase_SC_a+b", "phase_SC_a+ib" };
+#else
 		std::vector<std::string> names{ "phase_SC", "higgs_SC" };
-
+#endif
 		for (size_t i = 0U; i < mode_result.size(); ++i)
 		{
 			mode_result[i].writeDataToFile(BASE_FOLDER + output_folder + "/resolvent_" + names[i], comments);

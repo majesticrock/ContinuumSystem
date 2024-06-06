@@ -20,10 +20,13 @@ namespace Continuum {
 			switch (momentum_pair.second) {
 			case 'k':
 				momentum_value += momentum_pair.first * k;
+				break;
 			case 'l':
-				momentum_value +=  momentum_pair.first * l;
+				momentum_value += momentum_pair.first * l;
+				break;
 			case 'q':
-				momentum_value +=  momentum_pair.first * q;
+				momentum_value += momentum_pair.first * q;
+				break;
 			default:
 				throw std::runtime_error("Momentum not recognized! " + momentum_pair.second);
 			}
@@ -44,16 +47,22 @@ namespace Continuum {
 
 	void ModeHelper::createStartingStates()
 	{
+#ifdef _complex
+		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
+		std::fill(starting_states[0].begin(), starting_states[0].begin() + DISCRETIZATION, sqrt(model->STEP));
+		std::fill(starting_states[1].begin() + 3 * DISCRETIZATION, starting_states[1].end(), sqrt(model->STEP));
+#else
 		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization) });
 		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->STEP));
 		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->STEP));
+#endif
 	}
 
 	void ModeHelper::fillMatrices()
 	{
 #ifdef _complex
-		M.setZero(number_of_basis_terms, number_of_basis_terms);
-		N.setZero(number_of_basis_terms, number_of_basis_terms);
+		M.setZero(total_matrix_size, total_matrix_size);
+		N.setZero(total_matrix_size, total_matrix_size);
 #else
 		K_plus.setZero(hermitian_discretization, hermitian_discretization);
 		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
@@ -84,7 +93,7 @@ namespace Continuum {
 	void ModeHelper::fill_M()
 	{
 #ifdef _complex
-		M.setZero(number_of_basis_terms, number_of_basis_terms);
+		M.setZero(total_matrix_size, total_matrix_size);
 #else
 		K_plus.setZero(hermitian_discretization, hermitian_discretization);
 		K_minus.setZero(antihermitian_discretization, antihermitian_discretization);
@@ -94,10 +103,11 @@ namespace Continuum {
 		{
 			for (int j = 0; j < number_of_basis_terms; ++j)
 			{
+#ifndef _complex
 				// Ignore the offdiagonal blocks as they are 0
-				if ((i < hermitian_size && j < hermitian_size) || (j >= hermitian_size && i >= hermitian_size)) {
+				if ((i < hermitian_size && j < hermitian_size) || (j >= hermitian_size && i >= hermitian_size)) 
+#endif
 					fill_block_M(i, j);
-				}
 			}
 		}
 	}
@@ -114,36 +124,14 @@ namespace Continuum {
 							continue;
 						}
 					}
-#ifdef _complex
 					M(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
 							+= ieom_diag(k) * computeTerm(term, k, k);
-#else
-					if (i < hermitian_size) {
-						K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
-							+= ieom_diag(k) * std::real(computeTerm(term, k, k));
-					}
-					else {
-						K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + k_idx)
-							+= ieom_diag(k) * std::real(computeTerm(term, k, k));
-					}
-#endif
 				}
 				else {
 					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
 						const c_float l = this->model->index_to_momentum(l_idx);
-#ifdef _complex
 						M(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
 								+= ieom_offdiag(k, l) * computeTerm(term, k, l);
-#else
-						if (i < hermitian_size) {
-							K_plus(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
-								+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
-						}
-						else {
-							K_minus((i - hermitian_size) * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
-								+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
-						}
-#endif
 					}
 				}
 			}
@@ -157,24 +145,14 @@ namespace Continuum {
 				const c_float k = this->model->index_to_momentum(k_idx);
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
-#ifdef _complex
 					N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
 						+= ieom_diag(k) * computeTerm(term, k, k);
-#else
-					L(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
-						+= ieom_diag(k) * std::real(computeTerm(term, k, k));
-#endif
 				}
 				else {
 					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
 						const c_float l = this->model->index_to_momentum(l_idx);
-#ifdef _complex
 						N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
 							+= ieom_offdiag(k, l) * computeTerm(term, k, l);
-#else
-						L(i * DISCRETIZATION + k_idx, (j - hermitian_size) * DISCRETIZATION + l_idx)
-							+= ieom_offdiag(k, l) * std::real(computeTerm(term, k, l));
-#endif
 					}
 				}
 			}
@@ -240,6 +218,11 @@ namespace Continuum {
 
 	c_complex ModeHelper::computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
+#ifndef _use_coulomb
+		if(!term.coefficients.empty()){
+			if(term.coefficients.front().name == "V") return c_complex{};
+		}
+#endif
 		if (term.sums.momenta.empty()) {
 			c_complex value { static_cast<c_float>(term.multiplicity) };
 			
@@ -258,11 +241,13 @@ namespace Continuum {
 						+ std::to_string(coeff_ptr->momenta.size()));
 				}
 			}
+
 			if (term.operators.empty()) return value;
 
 			for (const auto& op : term.operators) {
 				value *= this->get_expectation_value(op, this->compute_momentum(op.momentum, k, l));
 			}
+
 			return value * static_cast<c_float>(term.sums.spins.size() + 1U);
 		}
 		assert(term.coefficients.size() == 1U);
@@ -279,12 +264,18 @@ namespace Continuum {
 
 	int ModeHelper::hermitian_discretization = 0;
 	int ModeHelper::antihermitian_discretization = 0;
+	int ModeHelper::total_matrix_size = 0;
 
 	ModeHelper::ModeHelper(Utility::InputFileReader& input)
-		: _parent(this, 1e-5, false, false) //SQRT_PRECISION
+		: _parent(this, SQRT_PRECISION, //SQRT_PRECISION
+#ifndef _complex
+		DISCRETIZATION * hermitian_size, DISCRETIZATION * antihermitian_size, false, 
+#endif
+		false)
 	{
 		hermitian_discretization = DISCRETIZATION * hermitian_size;
 		antihermitian_discretization = DISCRETIZATION * antihermitian_size;
+		total_matrix_size = DISCRETIZATION * number_of_basis_terms;
 
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);

@@ -14,8 +14,8 @@ namespace Continuum {
 	constexpr c_float delta_range_factor = 1;
 	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float delta_range_factor = 10;
-	constexpr c_float sc_is_finite_range = 10;
+	constexpr c_float delta_range_factor = 5;
+	constexpr c_float sc_is_finite_range = 5;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
@@ -37,7 +37,7 @@ namespace Continuum {
 				? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
 #ifdef _complex
-				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
+				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
 #else
 				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
 #endif
