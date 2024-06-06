@@ -40,6 +40,8 @@ namespace Continuum {
 			return model->occupation(momentum);
 		}
 		else if (op.type == SymbolicOperators::SC_Type) {
+			if(op.isDaggered)
+				return std::conj(model->sc_expectation_value(momentum));
 			return model->sc_expectation_value(momentum);
 		}
 		assert(false && "Expectation value not recognized!");

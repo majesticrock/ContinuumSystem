@@ -14,8 +14,8 @@ namespace Continuum {
 	constexpr c_float delta_range_factor = 1;
 	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float delta_range_factor = 5;
-	constexpr c_float sc_is_finite_range = 5;
+	constexpr c_float delta_range_factor = 10;
+	constexpr c_float sc_is_finite_range = 10;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)

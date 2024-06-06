@@ -105,8 +105,10 @@ int main(int argc, char** argv) {
 		comments.push_back("Discretization: " + std::to_string(DISCRETIZATION));
 
 #ifdef _complex
-		std::vector<std::string> names{ "higgs_SC_a", "higgs_SC_a+b", "higgs_SC_a+ib",
-					"phase_SC_a", "phase_SC_a+b", "phase_SC_a+ib" };
+		std::vector<std::string> names { 
+					"phase_SC_a", "phase_SC_a+b", "phase_SC_a+ib",
+					"higgs_SC_a", "higgs_SC_a+b", "higgs_SC_a+ib"
+					};
 #else
 		std::vector<std::string> names{ "phase_SC", "higgs_SC" };
 #endif
