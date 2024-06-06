@@ -37,7 +37,7 @@ namespace Continuum {
 				? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
 #ifdef _complex
-				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
+				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
 #else
 				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
 #endif
