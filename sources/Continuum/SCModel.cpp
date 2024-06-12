@@ -5,8 +5,6 @@
 #include <numeric>
 #include <complex>
 
-#include <boost/math/quadrature/gauss.hpp>
-
 using Utility::constexprPower;
 
 namespace Continuum {
@@ -19,7 +17,7 @@ namespace Continuum {
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
-		: Delta(DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
+		: Delta(2 * DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
@@ -37,13 +35,13 @@ namespace Continuum {
 				? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
 #ifdef _complex
-				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
+				return c_complex{};//std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
 #else
 				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
 #endif
 			}
-			return c_complex{};
-			}, DISCRETIZATION);
+			return (index_to_momentum(k) > fermi_wavevector ? 0.0 : 1.0 );
+			}, 2 * DISCRETIZATION);
 
 		//std::cout << std::abs(bare_dispersion_to_fermi_level(index_to_momentum(0))) << std::endl;
 		//Delta = decltype(Delta)::Random(2 * DISCRETIZATION);
@@ -61,7 +59,7 @@ namespace Continuum {
 	}
 
 	c_float SCModel::dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion_to_fermi_level(k);// + interpolate_delta_n(k); // TODO
+		return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k);
 	}
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {

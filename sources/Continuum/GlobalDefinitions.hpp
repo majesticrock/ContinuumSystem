@@ -40,7 +40,7 @@ namespace Continuum {
 	namespace PhysicalConstants {
 		constexpr c_float k_B = 8.617333262e-5; // eV / K
 		constexpr c_float vacuum_permitivity = 0.05526349406 * 3.62262628; // sqrt(eV)
-		constexpr c_float em_factor = 1. / (2 * PI * PI * vacuum_permitivity); // 1 / (2 * pi * pi * epsilon_0) in sqrt(eV)
+		constexpr c_float em_factor = 1. / (4 * PI * PI * vacuum_permitivity); // 1 / (4 * pi * pi * epsilon_0) in sqrt(eV)
 	}
 
 	constexpr double SQRT_PRECISION = 9.5367431640625e-07;

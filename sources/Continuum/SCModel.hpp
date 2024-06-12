@@ -8,6 +8,7 @@
 #include "../../../FermionCommute/sources/WickTerm.hpp"
 #include <Utility/InputFileReader.hpp>
 #include <Utility/Numerics/Interpolation.hpp>
+#include <boost/math/quadrature/gauss.hpp>
 
 namespace Continuum {
 	struct ModelInitializer {
@@ -65,7 +66,7 @@ namespace Continuum {
 			if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
 				return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
 			if (index < 0) // Assuming Delta(k) = const for k->0
-				return std::real(Delta[DISCRETIZATION]);
+				return c_float{};
 			return Utility::Numerics::linearly_interpolate(k, index_to_momentum(index), index_to_momentum(index + 1),
 				std::real(Delta[index + DISCRETIZATION]), std::real(Delta[index + DISCRETIZATION + 1]));
 		};
@@ -76,6 +77,17 @@ namespace Continuum {
 	public:
 		c_complex sc_expectation_value(c_float k) const;
 		c_float occupation(c_float k) const;
+
+		inline c_float fock_energy(k) const {
+			if(is_zero(k - fermi_wavevector)) {
+				return -PhysicalConstants::em_factor * fermi_wavevector;
+			}
+
+			return -PhysicalConstants::em_factor * fermi_wavevector * (
+				1.0 + ((fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector)) 
+					* std::log(std::abs((k + fermi_wavevector) / (k - fermi_wavevector)))
+			);
+		}
 
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
 			return bare_dispersion(k) - fermi_energy;
@@ -127,5 +139,31 @@ namespace Continuum {
 
 		const c_float MAX_K_WITH_SC;
 		const c_float MIN_K_WITH_SC;
+
+	private:
+		template<class ExpectationValues>
+		inline auto I_1(ExpecationValues const& expecs, c_float k) const {
+			auto integrand = [&expecs, &k](c_float y) {
+				if(is_zero(y)) return decltype(expecs(k)){};
+				return (1. - 2. * y) * std::log(1. / y - 1.) * expecs(k * (1. - 2. * y));
+				};
+			constexpr c_float lower_bound = 0.0;
+			const c_float upper_bound = 0.5 * (1. - MIN_K_WITH_SC / k);
+			if(is_zero(lower_bound - upper_bound)) return decltype(expecs(k)){};
+
+			return 2. * PhysicalConstants::em_prefactor * k * boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound);
+		}
+		template<class ExpectationValues>
+		inline auto I_2(ExpecationValues const& expecs, c_float k) const {
+			auto integrand = [&expecs, &k](c_float y) {
+				if(is_zero(y)) return decltype(expecs(k)){};
+				return (2. * y + 1.) * std::log(1. + 1. / y) * expecs(k * (2. * y + 1.));
+				};
+			constexpr c_float lower_bound = 0.0;
+			const c_float upper_bound = 0.5 * (MAX_K_WITH_SC / k - 1.0);
+			if(is_zero(lower_bound - upper_bound)) return decltype(expecs(k)){};
+
+			return 2. * PhysicalConstants::em_prefactor * k * boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound);
+		}
 	};
 }
