@@ -12,6 +12,12 @@
 #define ieom_diag(k) 4. * PI * k * k
 #define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->STEP
 
+#ifdef _complex
+#define __conj(z) std::conj(z)
+#else
+#define __conj(z) z
+#endif
+
 namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
 	{
@@ -40,8 +46,9 @@ namespace Continuum {
 			return model->occupation(momentum);
 		}
 		else if (op.type == SymbolicOperators::SC_Type) {
-			if(op.isDaggered)
-				return std::conj(model->sc_expectation_value(momentum));
+			if(op.isDaggered) {
+				return __conj(model->sc_expectation_value(momentum));
+			}
 			return model->sc_expectation_value(momentum);
 		}
 		assert(false && "Expectation value not recognized!");
@@ -197,7 +204,7 @@ namespace Continuum {
 				};
 
 			return 0.5 * term.multiplicity * PhysicalConstants::em_factor
-				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->MIN_K_WITH_SC, model->MAX_K_WITH_SC);
+				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->K_MIN, model->K_MAX);
 		} 
 		else if(term.coefficients.front().momenta[0].momentum_list.size() == 2) 
 		{ // V(k-q, k)
@@ -213,7 +220,7 @@ namespace Continuum {
 				};
 
 			return term.multiplicity * PhysicalConstants::em_factor
-				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->MIN_K_WITH_SC, model->MAX_K_WITH_SC);
+				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->K_MIN, model->K_MAX);
 		}
 		throw std::runtime_error("Something went wrong while computing an em sum...");
 	}
@@ -282,9 +289,9 @@ namespace Continuum {
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
-		//Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
-		Utility::Selfconsistency::BroydenSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta, 200);
-		solver.compute(true);
+		Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
+		//Utility::Selfconsistency::BroydenSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta, 200);
+		solver.compute(true, 1500);
 
 		this->expectation_values = model->get_expectation_values();
 	}

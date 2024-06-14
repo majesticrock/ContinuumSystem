@@ -9,6 +9,8 @@
 #include <Utility/InputFileReader.hpp>
 #include <Utility/Numerics/Interpolation.hpp>
 #include <boost/math/quadrature/gauss.hpp>
+#include <Utility/ConstexprPower.hpp>
+#include <tuple>
 
 namespace Continuum {
 	struct ModelInitializer {
@@ -28,12 +30,12 @@ namespace Continuum {
 		ModelAttributes<c_complex> Delta;
 
 		inline c_float index_to_momentum(int k_idx) const {
-			assert(fermi_wavevector + K_MIN + STEP * k_idx >= 0);
-			return fermi_wavevector + K_MIN + STEP * k_idx;
+			assert(K_MIN + STEP * k_idx >= 0);
+			return K_MIN + STEP * k_idx;
 		}
 		inline int momentum_to_index(c_float k) const {
 			assert(k >= 0);
-			return static_cast<int>(std::lround((k - fermi_wavevector - K_MIN) / STEP));
+			return static_cast<int>(std::lround((k - K_MIN) / STEP));
 		}
 		inline std::vector<c_float> get_k_points() const {
 			std::vector<c_float> ks;
@@ -77,24 +79,29 @@ namespace Continuum {
 	public:
 		c_complex sc_expectation_value(c_float k) const;
 		c_float occupation(c_float k) const;
-
-		inline c_float fock_energy(k) const {
-			if(is_zero(k - fermi_wavevector)) {
-				return -PhysicalConstants::em_factor * fermi_wavevector;
+		inline c_float delta_n(c_float k) const {
+			if(is_zero(fermi_wavevector - k)) {
+				return 0.5 - occupation(k);
+			} 
+			else if(fermi_wavevector - k > 0) {
+				return 1. - occupation(k);
 			}
-
-			return -PhysicalConstants::em_factor * fermi_wavevector * (
-				1.0 + ((fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector)) 
-					* std::log(std::abs((k + fermi_wavevector) / (k - fermi_wavevector)))
-			);
+			return -occupation(k);
 		}
+
+		c_float fock_energy(c_float k) const;
 
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
 			return bare_dispersion(k) - fermi_energy;
 		};
-		c_float dispersion_to_fermi_level(c_float k) const;
+
 		inline c_float energy(c_float k) const {
 			return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
+		};
+
+		inline c_float dispersion_to_fermi_level(c_float k) const
+		{
+			return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k);
 		};
 
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
@@ -105,20 +112,9 @@ namespace Continuum {
 		};
 		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> get_expectation_values() const;
 
-		inline c_float g_lower_bound(c_float k) const {
-#ifdef approximate_theta
-			return sqrt(std::max((static_cast<c_float>(2) * (fermi_energy - omega_debye)), c_float{}));
-#else
-			return sqrt(std::max(c_float{}, k * k - 2 * omega_debye));
-#endif
-		}
-		inline c_float g_upper_bound(c_float k) const {
-#ifdef approximate_theta
-			return sqrt(static_cast<c_float>(2) * (fermi_energy + omega_debye));
-#else
-			return sqrt(k * k + 2 * omega_debye);
-#endif
-		}
+		c_float g_lower_bound(c_float k) const;
+		c_float g_upper_bound(c_float k) const;
+
 		inline std::string info() const {
 			return "SCModel // [T g omega_D epsilon_F] = [" + std::to_string(temperature)
 				+ " " + std::to_string(phonon_coupling) + " " + std::to_string(omega_debye)
@@ -136,34 +132,101 @@ namespace Continuum {
 		const c_float K_MAX{};
 		const c_float K_MIN{};
 		const c_float STEP{};
-
-		const c_float MAX_K_WITH_SC;
-		const c_float MIN_K_WITH_SC;
-
 	private:
-		template<class ExpectationValues>
-		inline auto I_1(ExpecationValues const& expecs, c_float k) const {
-			auto integrand = [&expecs, &k](c_float y) {
-				if(is_zero(y)) return decltype(expecs(k)){};
-				return (1. - 2. * y) * std::log(1. / y - 1.) * expecs(k * (1. - 2. * y));
-				};
-			constexpr c_float lower_bound = 0.0;
-			const c_float upper_bound = 0.5 * (1. - MIN_K_WITH_SC / k);
-			if(is_zero(lower_bound - upper_bound)) return decltype(expecs(k)){};
+		c_float compute_fermiwavevector(c_float epsilon_F) const;
 
-			return 2. * PhysicalConstants::em_prefactor * k * boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound);
+		inline c_float phonon_alpha(const c_float k) const {
+			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
+			const c_float k2 = k * k;
+			const c_float kF2 = fermi_wavevector * fermi_wavevector;
+
+			return k2 - PhysicalConstants::em_factor * (kF2 - k2) * log_expr / k;
 		}
-		template<class ExpectationValues>
-		inline auto I_2(ExpecationValues const& expecs, c_float k) const {
-			auto integrand = [&expecs, &k](c_float y) {
-				if(is_zero(y)) return decltype(expecs(k)){};
-				return (2. * y + 1.) * std::log(1. + 1. / y) * expecs(k * (2. * y + 1.));
-				};
-			constexpr c_float lower_bound = 0.0;
-			const c_float upper_bound = 0.5 * (MAX_K_WITH_SC / k - 1.0);
-			if(is_zero(lower_bound - upper_bound)) return decltype(expecs(k)){};
 
-			return 2. * PhysicalConstants::em_prefactor * k * boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound);
+		inline auto phonon_beta(const c_float k, const c_float ALPHA) const {
+			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
+			const c_float k2 = k * k;
+			const c_float kF2 = fermi_wavevector * fermi_wavevector;
+
+			const c_float beta = ALPHA + k2 - PhysicalConstants::em_factor * (kF2 - k2) * log_expr / k;
+			const c_float beta_derivative = 2 * k - (PhysicalConstants::em_factor / k2) * ( 2 * fermi_wavevector * k - (kF2 + k2) * log_expr );
+
+			return std::make_tuple(beta, beta_derivative);
+		}
+
+		static constexpr c_float OFF_SET_FACTOR = 0.05;
+
+		template<class ExpectationValues>
+		inline auto I_1(ExpectationValues const& expecs, c_float k) const {
+			auto integrand = [&expecs, &k](c_float x) {
+				const c_float tanh_x = std::tanh(0.5 * x);
+				return expecs(k * tanh_x) * x * tanh_x / Utility::constexprPower<2>(std::cosh(0.5 * x));
+				};
+
+			const c_float alpha{ K_MIN / k };//
+			if(is_zero(1. - alpha)) return decltype(expecs(k)){};
+			const c_float lower_bound = std::log( (1. + alpha) / (1. - alpha) );
+			constexpr c_float upper_bound = 30; // a priori error estimation of machine epsilon
+
+			const c_float prefactor = 0.5 * PhysicalConstants::em_factor * k;
+			constexpr c_float CUT_OFF_CONSTANT = 1.16034524813597e-11;//1.73136903588109e-7;
+
+			if(k > fermi_wavevector){
+				const c_float middle_bound = 2. * std::atanh(fermi_wavevector / k);
+				const c_float k_f_offset = OFF_SET_FACTOR * DISCRETIZATION  * STEP;
+
+				if(k > fermi_wavevector + k_f_offset){
+					const c_float middle_middle_bound = 2. * std::atanh((fermi_wavevector + k_f_offset) / k);
+
+					return prefactor * (CUT_OFF_CONSTANT * expecs(k)
+						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
+						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, middle_middle_bound)
+						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_middle_bound, upper_bound));
+				}
+
+				return prefactor * (CUT_OFF_CONSTANT * expecs(k)
+					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
+					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, upper_bound));
+			}
+
+			return prefactor * (CUT_OFF_CONSTANT * expecs(k)
+				+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound));
+		}
+
+		template<class ExpectationValues>
+		inline auto I_2(ExpectationValues const& expecs, c_float k) const {
+			auto integrand = [&expecs, &k](c_float x) {
+				const c_float coth_x = 1. / std::tanh(0.5 * x);
+				return expecs(k * coth_x) * x * coth_x / Utility::constexprPower<2>(std::sinh(0.5 * x));
+				};
+			const c_float beta{ K_MAX / k };
+			if(is_zero(beta - 1.)) return decltype(expecs(k)){};
+			const c_float lower_bound = std::log( (beta + 1.) / (beta - 1.) );
+			constexpr c_float upper_bound = 30; // a priori error estimation of machine epsilon
+
+			const c_float prefactor = 0.5 * PhysicalConstants::em_factor * k;
+			constexpr c_float CUT_OFF_CONSTANT = 1.16034524813640e-11;//1.73136904981569e-7;
+
+			if(k < fermi_wavevector){
+				const c_float middle_bound = 2. * std::atanh(k / fermi_wavevector); // acoth(x) = atanh(1/x)
+				const c_float k_f_offset = OFF_SET_FACTOR * DISCRETIZATION * STEP;
+
+				if(k < fermi_wavevector - k_f_offset){
+					const c_float middle_middle_bound = 2. * std::atanh(k / (fermi_wavevector - k_f_offset));
+
+					return prefactor * (CUT_OFF_CONSTANT * expecs(k)
+						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
+						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, middle_middle_bound)
+						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_middle_bound, upper_bound));
+				}
+
+				return prefactor * (CUT_OFF_CONSTANT * expecs(k)
+					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
+					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, upper_bound));
+			}
+
+			return prefactor * (CUT_OFF_CONSTANT * expecs(k)
+				+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound));
 		}
 	};
 }

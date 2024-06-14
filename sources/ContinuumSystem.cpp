@@ -69,7 +69,8 @@ int main(int argc, char** argv) {
 	Utility::saveData(std::vector<std::vector<double>>{
 		modes.getModel().get_k_points(),
 			std::vector<double>(delta_result.begin(), delta_result.begin() + DISCRETIZATION),
-			std::vector<double>(delta_imag.begin(), delta_imag.begin() + DISCRETIZATION)
+			std::vector<double>(delta_imag.begin(), delta_imag.begin() + DISCRETIZATION),
+			std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)
 	}, BASE_FOLDER + output_folder + "/gap.dat.gz");
 	std::cout << "Gap data have been saved!" << std::endl;
 
@@ -81,7 +82,17 @@ int main(int argc, char** argv) {
 
 	Utility::saveData(modes.getModel().continuum_boundaries(), BASE_FOLDER + output_folder + "/continuum.dat.gz");
 
-	if constexpr (false) { // compute and save the expectation values
+	if constexpr (true) { // compute and save the single particle energies
+		std::vector<std::vector<double>> data(2, std::vector<double>(Continuum::DISCRETIZATION));
+		const auto step = 2. * modes.getModel().fermi_wavevector / Continuum::DISCRETIZATION;
+		for(size_t i = 0U; i < data[0].size(); ++i){
+			data[0][i] = 1e-6 + i * step;
+			data[1][i] = modes.getModel().energy(data[0][i]);
+		}
+		Utility::saveData(data, BASE_FOLDER + output_folder + "/one_particle_energies.dat.dz");
+	}
+
+	if constexpr (true) { // compute and save the expectation values
 		auto expecs = modes.getModel().get_expectation_values();
 		auto ks = modes.getModel().get_k_points();
 
@@ -99,6 +110,7 @@ int main(int argc, char** argv) {
 		std::cout << "Expectation values have been saved!" << std::endl;
 	}
 
+	return EXIT;
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {
 		std::vector<std::string> comments;

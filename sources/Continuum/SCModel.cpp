@@ -1,51 +1,49 @@
 #include "SCModel.hpp"
-#include <Utility/ConstexprPower.hpp>
 #include <Utility/Numerics/Minimization/Bisection.hpp>
 #include <algorithm>
 #include <numeric>
 #include <complex>
+#include <boost/math/tools/roots.hpp>
 
 using Utility::constexprPower;
 
 namespace Continuum {
 #ifdef approximate_theta
-	constexpr c_float delta_range_factor = 1;
 	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float delta_range_factor = 10;
-	constexpr c_float sc_is_finite_range = 10;
+	constexpr c_float sc_is_finite_range = .5;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(2 * DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
-		fermi_wavevector{ sqrt(2 * parameters.fermi_energy) },
+		fermi_wavevector{ compute_fermiwavevector(fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
-		K_MAX{ sqrt(2 * (fermi_energy + delta_range_factor * omega_debye)) - fermi_wavevector },
-		K_MIN{ fermi_energy > delta_range_factor * omega_debye ? sqrt(2 * (fermi_energy - delta_range_factor * omega_debye)) - fermi_wavevector : -fermi_wavevector },
-		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) },
-		MAX_K_WITH_SC{ sqrt(2 * (fermi_energy + sc_is_finite_range * omega_debye)) },
-		MIN_K_WITH_SC{ sqrt(2 * (fermi_energy - sc_is_finite_range * omega_debye)) }
+		K_MAX{ fermi_wavevector + sqrt(2 * sc_is_finite_range * omega_debye) },
+		K_MIN{ fermi_wavevector - sqrt(2 * sc_is_finite_range * omega_debye) },
+		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) }
 	{
 		omega_debye += PRECISION;
 		assert(index_to_momentum(0) >= 0);
+
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye)))
 				? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
 #ifdef _complex
-				return c_complex{};//std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
+				return magnitude; //std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
 #else
 				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
 #endif
 			}
-			return (index_to_momentum(k) > fermi_wavevector ? 0.0 : 1.0 );
+			return (index_to_momentum(k) > fermi_wavevector ? -0.001 : 0.001 );
 			}, 2 * DISCRETIZATION);
 
-		//std::cout << std::abs(bare_dispersion_to_fermi_level(index_to_momentum(0))) << std::endl;
-		//Delta = decltype(Delta)::Random(2 * DISCRETIZATION);
-		//Delta = decltype(Delta)::Gaussian(DISCRETIZATION, DISCRETIZATION / 2, (int)(DISCRETIZATION / delta_range_factor), 0.01 * phonon_coupling);
+		//auto test = [](c_float q){
+		//	return 1.0;
+		//};
+		//std::cout << (I_1(test, 1.)) / PhysicalConstants::em_factor << std::endl;
 	}
 
 	std::vector<c_float> SCModel::continuum_boundaries() const
@@ -58,14 +56,22 @@ namespace Continuum {
 		};
 	}
 
-	c_float SCModel::dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k);
+	c_float SCModel::fock_energy(c_float k) const 
+	{
+		if(is_zero(k - fermi_wavevector)) {
+			return -PhysicalConstants::em_factor * fermi_wavevector;
+		}
+
+		return -PhysicalConstants::em_factor * fermi_wavevector * (
+			1.0 + ((fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector)) 
+				* std::log(std::abs((k + fermi_wavevector) / (k - fermi_wavevector)))
+		);
 	}
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {
 		const auto DELTA = interpolate_delta(k);
-		const c_float E = energy(k);
 		if (is_zero(DELTA)) return 0;
+		const c_float E = energy(k);
 		if (is_zero(temperature)) {
 			return -DELTA / (2 * E);
 		}
@@ -96,21 +102,18 @@ namespace Continuum {
 		auto phonon_integrand = [this](c_float x) -> c_complex {
 			return x * x * sc_expectation_value(x);
 			};
-
-#ifdef _use_coulomb
-#if _bipolar_integration == 1 || _bipolar_integration == 0
-		auto sc_em_inner_integrand = [this](c_float k_tilde) -> c_complex {
-			return k_tilde * sc_expectation_value(k_tilde);
+		auto delta_n_wrapper = [this](c_float q) {
+				return this->delta_n(q);
+				};
+		auto sc_wrapper = [this](c_float q) {
+			return this->sc_expectation_value(q);
 			};
-		/* auto num_em_inner_integrand = [this](c_float k_tilde) -> c_float {
-			return k_tilde * occupation(k_tilde);
-			}; */
-#endif
-#endif
 
 //#pragma omp parallel for
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
 			const c_float k = index_to_momentum(u_idx);
+			//if(!is_zero(delta_n(k)) && step_num == 0) std::cout << (k - fermi_wavevector) / fermi_wavevector << "\t" << delta_n(k) << std::endl;
+
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
 			if (std::abs(bare_dispersion_to_fermi_level(k)) > omega_debye) {
@@ -119,52 +122,58 @@ namespace Continuum {
 #endif
 
 #ifdef _use_coulomb
-#if _bipolar_integration == 1 || _bipolar_integration == 0
-			auto sc_em_integrand = [&](c_float q) -> c_complex {
-				//if(is_zero(q)) {
-				//	return 2 * k * sc_expectation_value(k);
-				//}
-				const c_float lower = std::max(std::abs(q - k), MIN_K_WITH_SC);
-				const c_float upper = std::min(q + k, MAX_K_WITH_SC);
-
-				if (lower >= upper) return c_complex{};
-				return boost::math::quadrature::gauss<double, 30>::integrate(
-					sc_em_inner_integrand, lower, upper) / q;//* (q / (q * q + fermi_wavevector * fermi_wavevector));
-				};
-#endif
-#if _bipolar_integration == 2 || _bipolar_integration == 0
-			auto sc_em_integrand_2 = [&](c_float p) -> c_complex {
-				const auto min = std::min(k + p, g_upper_bound(k));
-				const auto max = std::max(std::abs(k - p), g_lower_bound(k));
-				assert(not is_zero(max));
-				return p * sc_expectation_value(p) * std::log(min / max);
-				};
-#endif
-#if _bipolar_integration == 0
-			const auto value1 = boost::math::quadrature::gauss<double, 30>::integrate(
-				sc_em_integrand, g_lower_bound(k), g_upper_bound(k));
-			const auto value2 = boost::math::quadrature::gauss<double, 30>::integrate(
-				sc_em_integrand_2, MIN_K_WITH_SC, MAX_K_WITH_SC);
-
-			if(step_num == 0)
-			std::cout << "Iter " << step_num << ": " << std::scientific << std::abs(value1) << "\t" << std::abs(value2) 
-				<< "\tDiff = " << std::abs((value1 - value2) / std::abs(value1)) << std::endl;
-#endif
-#if _bipolar_integration == 1 || _bipolar_integration == 0
-			result(u_idx) = (PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
-				sc_em_integrand, g_lower_bound(k), g_upper_bound(k));
-#else
-			result(u_idx) = (PhysicalConstants::em_factor / k) * boost::math::quadrature::gauss<double, 30>::integrate(
-				sc_em_integrand_2, MIN_K_WITH_SC, MAX_K_WITH_SC);
-#endif
+			result(u_idx) = I_1(sc_wrapper, k) + I_2(sc_wrapper, k);
+			//auto i1 = 1e3 * I_1(delta_n_wrapper, k);
+			//if(i1 > 0.1) std::cout << (k - fermi_wavevector) / fermi_wavevector << "\t" << i1 << std::endl;
+			result(u_idx + DISCRETIZATION) = I_1(delta_n_wrapper, k) + I_2(delta_n_wrapper, k);
 #endif
 			result(u_idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 30>::integrate(
-					phonon_integrand, g_lower_bound(k), g_upper_bound(k));
+				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(k), g_upper_bound(k) );
 		}
+
 		this->Delta.fill_with(result);
 		result -= initial_values;
 		++step_num;
+	}
+
+	c_float SCModel::g_lower_bound(c_float k) const
+	{
+#ifdef approximate_theta
+		return sqrt(std::max((static_cast<c_float>(2) * (fermi_energy - omega_debye)), c_float{}));
+#else
+#ifdef _use_coulomb
+		const c_float ALPHA = 2. * omega_debye - phonon_alpha(k);
+		auto func = [&](c_float l){
+			return this->phonon_beta(l, ALPHA);
+			};
+		const auto [lb, lb_diff] = func(K_MIN);
+		const auto [ub, ub_diff] = func(k);
+		if(lb * ub >= c_float{}) return K_MIN;
+		return boost::math::tools::newton_raphson_iterate(func, sqrt(k * k - 2. * omega_debye), K_MIN, k, 15);
+#else
+		return std::max(sqrt(k * k - 2. * omega_debye), K_MIN);
+#endif
+#endif
+	}
+	
+	c_float SCModel::g_upper_bound(c_float k) const
+	{
+#ifdef approximate_theta
+		return sqrt(2. * (fermi_energy + omega_debye));
+#else
+#ifdef _use_coulomb
+		const c_float ALPHA = 2. * omega_debye + phonon_alpha(k);
+		auto func = [&](c_float l){
+			return this->phonon_beta(l, -ALPHA);
+			};
+		const auto [lb, lb_diff] = func(k);
+		const auto [ub, ub_diff] = func(K_MAX);
+		if(lb * ub >= c_float{}) return K_MAX;
+		return boost::math::tools::newton_raphson_iterate(func, sqrt(k * k + 2. * omega_debye), k, K_MAX, 15);
+#else
+		return std::min(sqrt(k * k + 2. * omega_debye), K_MAX);
+#endif
+#endif
 	}
 
 	c_float SCModel::computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const
@@ -228,11 +237,17 @@ namespace Continuum {
 		return ret;
 	}
 
-	c_float SCModel::internal_energy() const {
+	c_float SCModel::internal_energy() const 
+	{
 		auto procedure = [this](c_float k) -> c_float {
 			return -k * k * energy(k);
 			};
 		return (V_OVER_N / (2 * PI * PI)) * boost::math::quadrature::gauss<c_float, 30>::integrate(
-			procedure, MIN_K_WITH_SC, MAX_K_WITH_SC);
+			procedure, K_MIN, K_MAX);
+	}
+
+	c_float SCModel::compute_fermiwavevector(c_float epsilon_F) const
+	{
+		return PhysicalConstants::em_factor + sqrt((PhysicalConstants::em_factor * PhysicalConstants::em_factor) + 2. * epsilon_F);
 	}
 }
