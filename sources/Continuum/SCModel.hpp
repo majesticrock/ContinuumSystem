@@ -126,7 +126,7 @@ namespace Continuum {
 		SCModel(ModelInitializer const& parameters);
 		virtual ~SCModel() = default;
 
-		const c_float fermi_wavevector{};
+		c_float fermi_wavevector{};
 		const c_float V_OVER_N{};
 
 		const c_float K_MAX{};
@@ -154,8 +154,29 @@ namespace Continuum {
 			return std::make_tuple(beta, beta_derivative);
 		}
 
-		static constexpr c_float OFF_SET_FACTOR = 0.05;
+		static constexpr int n_gauss = 60;
+#ifdef _screening
+		template<class ExpectationValues>
+		inline auto integral_screening(ExpectationValues const& expecs, c_float k) const
+		{
+			auto integrand = [&](c_float q){
+				const c_float k_diff{ q - k };
+				const c_float k_sum{ q + k };
+				return expecs(q) * q * std::log((_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff));
+			};
+			const c_float prefactor = 0.5 * PhysicalConstants::em_factor / k;
 
+			const c_float k_f_offset{  };
+			return prefactor * 
+				(
+					boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, K_MIN, fermi_wavevector - k_f_offset)
+					//+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, fermi_wavevector - k_f_offset, fermi_wavevector + k_f_offset)
+					+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, fermi_wavevector + k_f_offset, K_MAX)
+				);
+		}
+#endif
+
+		static constexpr c_float OFF_SET_FACTOR = 0.03;
 		template<class ExpectationValues>
 		inline auto I_1(ExpectationValues const& expecs, c_float k) const {
 			auto integrand = [&expecs, &k](c_float x) {
@@ -179,18 +200,18 @@ namespace Continuum {
 					const c_float middle_middle_bound = 2. * std::atanh((fermi_wavevector + k_f_offset) / k);
 
 					return prefactor * (CUT_OFF_CONSTANT * expecs(k)
-						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
-						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, middle_middle_bound)
-						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_middle_bound, upper_bound));
+						+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, lower_bound, middle_bound)
+						+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, middle_bound, middle_middle_bound)
+						+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, middle_middle_bound, upper_bound));
 				}
 
 				return prefactor * (CUT_OFF_CONSTANT * expecs(k)
-					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
-					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, upper_bound));
+					+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, lower_bound, middle_bound)
+					+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, middle_bound, upper_bound));
 			}
 
 			return prefactor * (CUT_OFF_CONSTANT * expecs(k)
-				+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound));
+				+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, lower_bound, upper_bound));
 		}
 
 		template<class ExpectationValues>
@@ -215,18 +236,18 @@ namespace Continuum {
 					const c_float middle_middle_bound = 2. * std::atanh(k / (fermi_wavevector - k_f_offset));
 
 					return prefactor * (CUT_OFF_CONSTANT * expecs(k)
-						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
-						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, middle_middle_bound)
-						+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_middle_bound, upper_bound));
+						+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, lower_bound, middle_bound)
+						+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, middle_bound, middle_middle_bound)
+						+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, middle_middle_bound, upper_bound));
 				}
 
 				return prefactor * (CUT_OFF_CONSTANT * expecs(k)
-					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, middle_bound)
-					+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, middle_bound, upper_bound));
+					+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, lower_bound, middle_bound)
+					+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, middle_bound, upper_bound));
 			}
 
 			return prefactor * (CUT_OFF_CONSTANT * expecs(k)
-				+ boost::math::quadrature::gauss<double, 30>::integrate(integrand, lower_bound, upper_bound));
+				+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, lower_bound, upper_bound));
 		}
 	};
 }

@@ -1,9 +1,11 @@
 #include "SCModel.hpp"
 #include <Utility/Numerics/Minimization/Bisection.hpp>
+#include <Utility/Numerics/Roots/Bisection.hpp>
 #include <algorithm>
 #include <numeric>
 #include <complex>
 #include <boost/math/tools/roots.hpp>
+#include <limits>
 
 using Utility::constexprPower;
 
@@ -11,7 +13,7 @@ namespace Continuum {
 #ifdef approximate_theta
 	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float sc_is_finite_range = .5;
+	constexpr c_float sc_is_finite_range = 10;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
@@ -25,6 +27,12 @@ namespace Continuum {
 	{
 		omega_debye += PRECISION;
 		assert(index_to_momentum(0) >= 0);
+
+		auto adjust_kf = [this](c_float kF) {
+			fermi_wavevector = kF;
+			return bare_dispersion_to_fermi_level(kF) + fock_energy(kF);
+		};
+		Utility::Numerics::Roots::bisection(adjust_kf, 0.95 * fermi_wavevector, 1.05 * fermi_wavevector, PRECISION, 250);
 
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = index_to_momentum(i);
@@ -58,6 +66,18 @@ namespace Continuum {
 
 	c_float SCModel::fock_energy(c_float k) const 
 	{
+#ifdef _screening
+		const c_float ln_factor{ ((1. + _screening * _screening) * fermi_wavevector * fermi_wavevector - k * k) / (4.0 * k * fermi_wavevector) };
+		const c_float k_diff{ k - fermi_wavevector };
+		const c_float k_sum{ k + fermi_wavevector };
+
+		return -PhysicalConstants::em_factor * fermi_wavevector * 
+		(
+			1.0 + ln_factor * std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) )
+			+ (_screening / fermi_wavevector) * (std::atan(k_diff / _screening) - std::atan(k_sum / _screening))
+		);
+
+#else
 		if(is_zero(k - fermi_wavevector)) {
 			return -PhysicalConstants::em_factor * fermi_wavevector;
 		}
@@ -66,6 +86,7 @@ namespace Continuum {
 			1.0 + ((fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector)) 
 				* std::log(std::abs((k + fermi_wavevector) / (k - fermi_wavevector)))
 		);
+#endif
 	}
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {
@@ -122,10 +143,13 @@ namespace Continuum {
 #endif
 
 #ifdef _use_coulomb
+#ifdef _screening
+			result(u_idx) = integral_screening(sc_wrapper, k);
+			result(u_idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, k);
+#else
 			result(u_idx) = I_1(sc_wrapper, k) + I_2(sc_wrapper, k);
-			//auto i1 = 1e3 * I_1(delta_n_wrapper, k);
-			//if(i1 > 0.1) std::cout << (k - fermi_wavevector) / fermi_wavevector << "\t" << i1 << std::endl;
 			result(u_idx + DISCRETIZATION) = I_1(delta_n_wrapper, k) + I_2(delta_n_wrapper, k);
+#endif
 #endif
 			result(u_idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(k), g_upper_bound(k) );

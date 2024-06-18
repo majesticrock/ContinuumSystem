@@ -14,6 +14,7 @@
 //#define approximate_theta
 #define _complex
 #define _use_coulomb
+#define _screening 1e-3
 
 #define _bipolar_integration 2
 
