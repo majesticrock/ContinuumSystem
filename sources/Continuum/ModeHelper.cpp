@@ -189,40 +189,35 @@ namespace Continuum {
 
 	c_complex ModeHelper::compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
-		if(term.coefficients.front().momenta[0].momentum_list.size() == 1)
-		{ // V(k, k-q)
-			auto integrand = [&](c_float q) {
-				c_complex value{ this->get_expectation_value(term.operators.front(),
-				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
-
-				for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
-					value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
-				}
-				const c_float weight = Utility::constexprPower<2>(std::min(k + q, model->g_upper_bound(q)))
-					- Utility::constexprPower<2>(std::max(std::abs(k - q), model->g_lower_bound(q)));
-				return (weight / q) * value;
-				};
-
-			return 0.5 * term.multiplicity * PhysicalConstants::em_factor
-				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->K_MIN, model->K_MAX);
-		} 
-		else if(term.coefficients.front().momenta[0].momentum_list.size() == 2) 
-		{ // V(k-q, k)
-			auto integrand = [&](c_float q) {
-				c_complex value{ this->get_expectation_value(term.operators.front(),
-				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
-
-				for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
-					value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
-				}
-				const c_float weight = std::log(std::min(k + q, model->g_upper_bound(q)) / std::max(std::abs(k - q), model->g_lower_bound(q)));
-				return (q * weight) * value;
-				};
-
-			return term.multiplicity * PhysicalConstants::em_factor
-				* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->K_MIN, model->K_MAX);
+		SymbolicOperators::WickOperator const* summed_op =  &(term.operators.front().dependsOn('q') ? term.operators.front() : term.operators[1]);
+		SymbolicOperators::WickOperator const* other_op = nullptr;
+		if(term.operators.size() == 2U) {
+			other_op = &(!term.operators.front().dependsOn('q') ? term.operators.front() : term.operators[1]);
 		}
-		throw std::runtime_error("Something went wrong while computing an em sum...");
+		c_complex value{};
+		if(summed_op->type == SymbolicOperators::Number_Type){
+			value = term.multiplicity * 0.5 * (model->fock_energy(k) + model->interpolate_delta_n(k));
+		} 
+		else {
+#ifdef _screening
+			auto sc_wrapper = [this](c_float q) {
+				return model->sc_expectation_value(q);
+				};
+			value = term.multiplicity * 0.5 * model->integral_screening(sc_wrapper, k);
+#endif
+		}
+		if(other_op){
+			if(other_op->type == SymbolicOperators::Number_Type) {
+				value *= model->occupation(k);
+			}
+			else if(other_op->type == SymbolicOperators::SC_Type) {
+				value *= model->sc_expectation_value(k);
+			}
+			else {
+				throw;
+			}
+		}
+		return value;
 	}
 
 	c_complex ModeHelper::computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const

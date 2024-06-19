@@ -133,7 +133,6 @@ namespace Continuum {
 //#pragma omp parallel for
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
 			const c_float k = index_to_momentum(u_idx);
-			//if(!is_zero(delta_n(k)) && step_num == 0) std::cout << (k - fermi_wavevector) / fermi_wavevector << "\t" << delta_n(k) << std::endl;
 
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
@@ -227,18 +226,9 @@ namespace Continuum {
 			}
 		} 
 		else if(coeff.name == "V") {
-			if (coeff.momenta[0] == coeff.momenta[1])
-			{
-				return PhysicalConstants::em_factor;
-			}
-			if (omega_debye > std::abs(bare_dispersion(first) - bare_dispersion(second)))
-			{
-				return PhysicalConstants::em_factor;
-			}
-			else
-			{
-				return c_float{};
-			}
+#ifdef _screening
+			return 0.5 * PhysicalConstants::em_factor / (first * first + _screening * _screening);
+#endif
 		}
 		else
 		{

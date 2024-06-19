@@ -46,7 +46,7 @@ namespace Continuum {
 			return ks;
 		}
 		std::vector<c_float> continuum_boundaries() const;
-	protected:
+
 		c_float temperature{};
 		c_float phonon_coupling{};
 		c_float omega_debye{};
@@ -76,7 +76,6 @@ namespace Continuum {
 			return 0.5 * k * k;
 		};
 
-	public:
 		c_complex sc_expectation_value(c_float k) const;
 		c_float occupation(c_float k) const;
 		inline c_float delta_n(c_float k) const {
@@ -132,27 +131,6 @@ namespace Continuum {
 		const c_float K_MAX{};
 		const c_float K_MIN{};
 		const c_float STEP{};
-	private:
-		c_float compute_fermiwavevector(c_float epsilon_F) const;
-
-		inline c_float phonon_alpha(const c_float k) const {
-			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
-			const c_float k2 = k * k;
-			const c_float kF2 = fermi_wavevector * fermi_wavevector;
-
-			return k2 - PhysicalConstants::em_factor * (kF2 - k2) * log_expr / k;
-		}
-
-		inline auto phonon_beta(const c_float k, const c_float ALPHA) const {
-			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
-			const c_float k2 = k * k;
-			const c_float kF2 = fermi_wavevector * fermi_wavevector;
-
-			const c_float beta = ALPHA + k2 - PhysicalConstants::em_factor * (kF2 - k2) * log_expr / k;
-			const c_float beta_derivative = 2 * k - (PhysicalConstants::em_factor / k2) * ( 2 * fermi_wavevector * k - (kF2 + k2) * log_expr );
-
-			return std::make_tuple(beta, beta_derivative);
-		}
 
 		static constexpr int n_gauss = 60;
 #ifdef _screening
@@ -248,6 +226,28 @@ namespace Continuum {
 
 			return prefactor * (CUT_OFF_CONSTANT * expecs(k)
 				+ boost::math::quadrature::gauss<double, n_gauss>::integrate(integrand, lower_bound, upper_bound));
+		}
+
+	private:
+		c_float compute_fermiwavevector(c_float epsilon_F) const;
+
+		inline c_float phonon_alpha(const c_float k) const {
+			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
+			const c_float k2 = k * k;
+			const c_float kF2 = fermi_wavevector * fermi_wavevector;
+
+			return k2 - PhysicalConstants::em_factor * (kF2 - k2) * log_expr / k;
+		}
+
+		inline auto phonon_beta(const c_float k, const c_float ALPHA) const {
+			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
+			const c_float k2 = k * k;
+			const c_float kF2 = fermi_wavevector * fermi_wavevector;
+
+			const c_float beta = ALPHA + k2 - PhysicalConstants::em_factor * (kF2 - k2) * log_expr / k;
+			const c_float beta_derivative = 2 * k - (PhysicalConstants::em_factor / k2) * ( 2 * fermi_wavevector * k - (kF2 + k2) * log_expr );
+
+			return std::make_tuple(beta, beta_derivative);
 		}
 	};
 }

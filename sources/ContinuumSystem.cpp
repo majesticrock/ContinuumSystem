@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
 		std::cout << "Expectation values have been saved!" << std::endl;
 	}
 
-	return EXIT;
+	//return EXIT;
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {
 		std::vector<std::string> comments;
