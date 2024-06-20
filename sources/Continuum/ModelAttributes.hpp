@@ -15,6 +15,7 @@ namespace Continuum {
 		bool converged{};
 
 		using value_type = DataType;
+		using RealType = Utility::UnderlyingFloatingPoint_t<DataType>;
 
 		~ModelAttributes() = default;
 		ModelAttributes() = default;
@@ -47,7 +48,7 @@ namespace Continuum {
 			ret.selfconsistency_values.resize(size);
 			for (int i = 0; i < size; ++i) {
 				ret[i] = maximum * std::exp(-16. * 0.693147 * (i - center) * (i - center)
-					/ static_cast<Utility::UnderlyingFloatingPoint_t<DataType>>(FWHM * FWHM));
+					/ static_cast<RealType>(FWHM * FWHM));
 			}
 			return ret;
 		}
@@ -133,6 +134,18 @@ namespace Continuum {
 			this->selfconsistency_values.resize(vector.size());
 			std::copy(vector.begin(), vector.end(), this->selfconsistency_values.begin());
 		}
+		template<class Vector>
+		inline void fill_with(const Vector& vector, RealType weight) {
+			assert(this->size() == vector.size());
+			for(size_t i = 0U; i < this->size(); ++i){
+				this->selfconsistency_values[i] = (1. - weight) * this->selfconsistency_values[i] + weight * vector[i];
+			}
+		}
+		inline void clear_noise(RealType precision) {
+			for(auto& val : this->selfconsistency_values){
+				if(std::abs(val) < precision) val = DataType{};
+			}
+		}
 		inline void reset() {
 			converged = false;
 			std::fill(begin(), end(), DataType{});
@@ -155,9 +168,9 @@ namespace Continuum {
 			return !is_zero(this->selfconsistency_values[i]);
 		}
 
-		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> real() const {
+		inline ModelAttributes<RealType> real() const {
 			if constexpr (Utility::is_complex<DataType>()) {
-				ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> ret;
+				ModelAttributes<RealType> ret;
 				ret.converged = this->converged;
 				ret.selfconsistency_values.resize(this->size());
 				for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
@@ -170,9 +183,9 @@ namespace Continuum {
 				return *this;
 			}
 		};
-		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> imag() const {
+		inline ModelAttributes<RealType> imag() const {
 			if constexpr (Utility::is_complex<DataType>()) {
-				ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> ret;
+				ModelAttributes<RealType> ret;
 				ret.converged = this->converged;
 				ret.selfconsistency_values.resize(this->size());
 				for (size_t i = 0U; i < this->selfconsistency_values.size(); ++i)
@@ -188,9 +201,9 @@ namespace Continuum {
 				return ret;
 			}
 		};
-		inline ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>> abs() const {
+		inline ModelAttributes<RealType> abs() const {
 			if constexpr (Utility::is_complex<DataType>()) {
-				return ModelAttributes<Utility::UnderlyingFloatingPoint_t<DataType>>(*this, Magnitude);
+				return ModelAttributes<RealType>(*this, Magnitude);
 			}
 			else {
 				ModelAttributes<DataType> ret(*this);

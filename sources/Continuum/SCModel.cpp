@@ -13,7 +13,7 @@ namespace Continuum {
 #ifdef approximate_theta
 	constexpr c_float sc_is_finite_range = 1;
 #else
-	constexpr c_float sc_is_finite_range = 10;
+	constexpr c_float sc_is_finite_range = 0.1;
 #endif
 
 	SCModel::SCModel(ModelInitializer const& parameters)
@@ -21,8 +21,8 @@ namespace Continuum {
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		fermi_wavevector{ compute_fermiwavevector(fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
-		K_MAX{ fermi_wavevector + sqrt(2 * sc_is_finite_range * omega_debye) },
-		K_MIN{ fermi_wavevector - sqrt(2 * sc_is_finite_range * omega_debye) },
+		K_MAX{ fermi_wavevector + sc_is_finite_range * sqrt(2 * omega_debye) },
+		K_MIN{ fermi_wavevector - sc_is_finite_range * sqrt(2 * omega_debye) },
 		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) }
 	{
 		omega_debye += PRECISION;
@@ -154,7 +154,8 @@ namespace Continuum {
 				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(k), g_upper_bound(k) );
 		}
 
-		this->Delta.fill_with(result);
+		this->Delta.fill_with(result, 0.5);
+		this->Delta.clear_noise(PRECISION);
 		result -= initial_values;
 		++step_num;
 	}
@@ -227,7 +228,7 @@ namespace Continuum {
 		} 
 		else if(coeff.name == "V") {
 #ifdef _screening
-			return 0.5 * PhysicalConstants::em_factor / (first * first + _screening * _screening);
+			return PhysicalConstants::em_factor / (first * first + _screening * _screening);
 #endif
 		}
 		else

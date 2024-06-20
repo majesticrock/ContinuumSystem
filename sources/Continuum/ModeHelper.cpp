@@ -183,7 +183,7 @@ namespace Continuum {
 #ifdef approximate_theta
 		if (k > this->model->g_upper_bound(k)) return 0;
 #endif
-		return (term.multiplicity / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
+		return (static_cast<c_float>(term.multiplicity) / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
 			* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
 	}
 
@@ -196,14 +196,14 @@ namespace Continuum {
 		}
 		c_complex value{};
 		if(summed_op->type == SymbolicOperators::Number_Type){
-			value = term.multiplicity * 0.5 * (model->fock_energy(k) + model->interpolate_delta_n(k));
+			value = static_cast<c_float>(term.multiplicity) * (model->fock_energy(k) + model->interpolate_delta_n(k));
 		} 
 		else {
 #ifdef _screening
 			auto sc_wrapper = [this](c_float q) {
 				return model->sc_expectation_value(q);
 				};
-			value = term.multiplicity * 0.5 * model->integral_screening(sc_wrapper, k);
+			value = static_cast<c_float>(term.multiplicity) * model->integral_screening(sc_wrapper, k);
 #endif
 		}
 		if(other_op){
@@ -228,7 +228,7 @@ namespace Continuum {
 		}
 #endif
 		if (term.sums.momenta.empty()) {
-			c_complex value { static_cast<c_float>(term.multiplicity) };
+			c_complex value { static_cast<c_float>(static_cast<c_float>(term.multiplicity)) };
 			
 			if (!term.coefficients.empty()) {
 				const SymbolicOperators::Coefficient* coeff_ptr = &term.coefficients.front();
