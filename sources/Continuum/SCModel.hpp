@@ -5,7 +5,7 @@
 #include <limits>
 #include <map>
 #include <boost/math/special_functions/pow.hpp>
-#include "../../../FermionCommute/sources/WickTerm.hpp"
+#include <SymbolicOperators/WickTerm.hpp>
 #include <Utility/InputFileReader.hpp>
 #include <Utility/Numerics/Interpolation.hpp>
 #include <boost/math/quadrature/gauss.hpp>

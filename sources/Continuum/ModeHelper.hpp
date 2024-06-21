@@ -1,7 +1,7 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
-#include "../../../FermionCommute/sources/TermLoader.hpp"
-#include "../../../FermionCommute/sources/WickTerm.hpp"
+#include <SymbolicOperators/TermLoader.hpp>
+#include <SymbolicOperators/WickTerm.hpp>
 #include <Utility/better_to_string.hpp>
 #include "SCModel.hpp"
 #include <memory>

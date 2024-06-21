@@ -17,7 +17,7 @@
 #include <algorithm>
 using namespace Continuum;
 
-#include "../../FermionCommute/sources/WickOperator.hpp"
+#include <SymbolicOperators/WickOperator.hpp>
 
 const std::string BASE_FOLDER = "../../data/continuum/";
 
