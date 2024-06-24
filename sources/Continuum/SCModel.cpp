@@ -4,7 +4,8 @@
 #include <algorithm>
 #include <numeric>
 #include <complex>
-#include <boost/math/tools/roots.hpp>
+//#include <boost/math/tools/roots.hpp>
+#include <Utility/Numerics/Roots/Bisection.hpp>
 #include <limits>
 
 using Utility::constexprPower;
@@ -150,6 +151,7 @@ namespace Continuum {
 			result(u_idx + DISCRETIZATION) = I_1(delta_n_wrapper, k) + I_2(delta_n_wrapper, k);
 #endif
 #endif
+			//std::cout << g_lower_bound(k) << "\t" << g_upper_bound(k) << std::endl;
 			result(u_idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(k), g_upper_bound(k) );
 		}
@@ -170,10 +172,10 @@ namespace Continuum {
 		auto func = [&](c_float l){
 			return this->phonon_beta(l, ALPHA);
 			};
-		const auto [lb, lb_diff] = func(K_MIN);
-		const auto [ub, ub_diff] = func(k);
+		const auto lb = func(K_MIN);
+		const auto ub = func(k);
 		if(lb * ub >= c_float{}) return K_MIN;
-		return boost::math::tools::newton_raphson_iterate(func, sqrt(k * k - 2. * omega_debye), K_MIN, k, 15);
+		return Utility::Numerics::Roots::bisection(func, K_MIN, k, 1e-14, 100);
 #else
 		return std::max(sqrt(k * k - 2. * omega_debye), K_MIN);
 #endif
@@ -190,10 +192,10 @@ namespace Continuum {
 		auto func = [&](c_float l){
 			return this->phonon_beta(l, -ALPHA);
 			};
-		const auto [lb, lb_diff] = func(k);
-		const auto [ub, ub_diff] = func(K_MAX);
+		const auto lb = func(k);
+		const auto ub = func(K_MAX);
 		if(lb * ub >= c_float{}) return K_MAX;
-		return boost::math::tools::newton_raphson_iterate(func, sqrt(k * k + 2. * omega_debye), k, K_MAX, 15);
+		return Utility::Numerics::Roots::bisection(func, k, K_MAX, 1e-14, 100);
 #else
 		return std::min(sqrt(k * k + 2. * omega_debye), K_MAX);
 #endif

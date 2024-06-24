@@ -284,7 +284,7 @@ namespace Continuum {
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
-		Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta);
+		auto solver = Utility::Selfconsistency::make_iterative<Utility::Selfconsistency::PrintEverything, c_complex>(model.get(), &model->Delta);
 		//Utility::Selfconsistency::BroydenSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta, 200);
 		solver.compute(true, 1500);
 

@@ -10,7 +10,6 @@
 #include <Utility/Numerics/Interpolation.hpp>
 #include <boost/math/quadrature/gauss.hpp>
 #include <Utility/ConstexprPower.hpp>
-#include <tuple>
 
 namespace Continuum {
 	struct ModelInitializer {
@@ -26,16 +25,27 @@ namespace Continuum {
 	};
 
 	class SCModel {
+	private:
+		constexpr static double __A = 4.;
+		constexpr static double __SINH_A = 27.289917197127752448908271590793818580289412485530296565528497015;
+		inline c_float scaling() const {
+			return (2. * __A) / DISCRETIZATION;
+		}
 	public:
 		ModelAttributes<c_complex> Delta;
 
 		inline c_float index_to_momentum(int k_idx) const {
-			assert(K_MIN + STEP * k_idx >= 0);
-			return K_MIN + STEP * k_idx;
+			//assert(K_MIN + STEP * k_idx >= 0);
+			//return K_MIN + STEP * k_idx;
+			return fermi_wavevector + 0.5 * (K_MAX - K_MIN) * std::sinh(scaling() * k_idx - __A) / __SINH_A;
 		}
 		inline int momentum_to_index(c_float k) const {
 			assert(k >= 0);
-			return static_cast<int>(std::lround((k - K_MIN) / STEP));
+			//return static_cast<int>(std::lround((k - K_MIN) / STEP));
+			k = (k - fermi_wavevector) / (K_MAX - K_MIN);
+			return static_cast<int>(std::lround(
+					(std::asinh(__SINH_A * k) + __A) / scaling()
+				));
 		}
 		inline std::vector<c_float> get_k_points() const {
 			std::vector<c_float> ks;
@@ -232,6 +242,7 @@ namespace Continuum {
 		c_float compute_fermiwavevector(c_float epsilon_F) const;
 
 		inline c_float phonon_alpha(const c_float k) const {
+			if(fermi_wavevector - k == 0.0) return k * k;
 			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
 			const c_float k2 = k * k;
 			const c_float kF2 = fermi_wavevector * fermi_wavevector;
@@ -240,14 +251,13 @@ namespace Continuum {
 		}
 
 		inline auto phonon_beta(const c_float k, const c_float ALPHA) const {
+			if(fermi_wavevector - k == 0.0) return k * k + ALPHA;
 			const c_float log_expr = std::log(std::abs((fermi_wavevector + k)/(fermi_wavevector - k)));
 			const c_float k2 = k * k;
 			const c_float kF2 = fermi_wavevector * fermi_wavevector;
 
 			const c_float beta = ALPHA + k2 - PhysicalConstants::em_factor * (kF2 - k2) * log_expr / k;
-			const c_float beta_derivative = 2 * k - (PhysicalConstants::em_factor / k2) * ( 2 * fermi_wavevector * k - (kF2 + k2) * log_expr );
-
-			return std::make_tuple(beta, beta_derivative);
+			return beta;
 		}
 	};
 }
