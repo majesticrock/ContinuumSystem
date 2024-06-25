@@ -14,7 +14,7 @@
 //#define approximate_theta
 //#define _complexs
 #define _use_coulomb
-#define _screening 1e-10
+#define _screening 1e-4
 
 #define _bipolar_integration 2
 
@@ -41,7 +41,7 @@ namespace Continuum {
 	namespace PhysicalConstants {
 		constexpr c_float k_B = 8.617333262e-5; // eV / K
 		constexpr c_float vacuum_permitivity = 0.05526349406 * 3.62262628; // sqrt(eV)
-		constexpr c_float em_factor =0;// 1. / (4 * PI * PI * vacuum_permitivity); // 1 / (4 * pi * pi * epsilon_0) in sqrt(eV)
+		constexpr c_float em_factor = 1. / (4 * PI * PI * vacuum_permitivity); // 1 / (4 * pi * pi * epsilon_0) in sqrt(eV)
 	}
 
 	constexpr double SQRT_PRECISION = 9.5367431640625e-07;
@@ -66,8 +66,14 @@ namespace Continuum {
 	extern int DISCRETIZATION;
 	extern c_float INV_N;
 
+	static constexpr int REL_INNER_DISCRETIZATION = 5;
+    extern int _INNER_DISC;
+    extern int _OUTER_DISC;
+
 	inline void set_discretization(int N) {
 		DISCRETIZATION = N;
 		INV_N = 1.0 / N;
+		_INNER_DISC = N / REL_INNER_DISCRETIZATION;
+		_OUTER_DISC = (N - _INNER_DISC) / 2;
 	}
 }

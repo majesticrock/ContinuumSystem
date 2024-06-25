@@ -10,7 +10,7 @@
 #include <boost/math/quadrature/gauss.hpp>
 
 #define ieom_diag(k) 4. * PI * k * k
-#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->STEP
+#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->momentumRanges.STEP
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -58,12 +58,12 @@ namespace Continuum {
 	{
 #ifdef _complex
 		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
-		std::fill(starting_states[0].begin(), starting_states[0].begin() + DISCRETIZATION, sqrt(model->STEP));
-		std::fill(starting_states[1].begin() + 3 * DISCRETIZATION, starting_states[1].end(), sqrt(model->STEP));
+		std::fill(starting_states[0].begin(), starting_states[0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
+		std::fill(starting_states[1].begin() + 3 * DISCRETIZATION, starting_states[1].end(), sqrt(model->momentumRanges.STEP));
 #else
 		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization) });
-		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->STEP));
-		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->STEP));
+		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
+		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
 #endif
 	}
 
@@ -125,7 +125,7 @@ namespace Continuum {
 	{
 		for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
 			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
-				const c_float k = this->model->index_to_momentum(k_idx);
+				const c_float k = this->model->momentumRanges.index_to_momentum(k_idx);
 				if (!term.delta_momenta.empty()) {
 					if (term.sums.momenta.empty()) {
 						if (term.coefficients.front().name == "g" || term.coefficients.front().name == "V") {
@@ -138,7 +138,7 @@ namespace Continuum {
 				}
 				else {
 					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
-						const c_float l = this->model->index_to_momentum(l_idx);
+						const c_float l = this->model->momentumRanges.index_to_momentum(l_idx);
 						M(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
 								+= ieom_offdiag(k, l) * computeTerm(term, k, l);
 					}
@@ -151,7 +151,7 @@ namespace Continuum {
 	{
 		for (const auto& term : wicks.N[number_of_basis_terms * j + i]) {
 			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
-				const c_float k = this->model->index_to_momentum(k_idx);
+				const c_float k = this->model->momentumRanges.index_to_momentum(k_idx);
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
 					N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
@@ -159,7 +159,7 @@ namespace Continuum {
 				}
 				else {
 					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
-						const c_float l = this->model->index_to_momentum(l_idx);
+						const c_float l = this->model->momentumRanges.index_to_momentum(l_idx);
 						N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
 							+= ieom_offdiag(k, l) * computeTerm(term, k, l);
 					}
@@ -284,9 +284,9 @@ namespace Continuum {
 		model = std::make_unique<SCModel>(ModelInitializer(input));
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
-		auto solver = Utility::Selfconsistency::make_iterative<Utility::Selfconsistency::PrintEverything, c_complex>(model.get(), &model->Delta);
-		//Utility::Selfconsistency::BroydenSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(model.get(), &model->Delta, 200);
-		solver.compute(true, 1500);
+		//auto solver = Utility::Selfconsistency::make_iterative<Utility::Selfconsistency::PrintEverything, c_complex>(model.get(), &model->Delta);
+		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
+		solver.compute(true);
 
 		this->expectation_values = model->get_expectation_values();
 	}

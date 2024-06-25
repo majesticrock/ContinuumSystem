@@ -21,8 +21,11 @@ using namespace Continuum;
 
 const std::string BASE_FOLDER = "../../data/continuum/";
 
-int Continuum::DISCRETIZATION = 500;
+int Continuum::DISCRETIZATION = 1000;
 c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
+int Continuum::_INNER_DISC = Continuum::DISCRETIZATION / Continuum::REL_INNER_DISCRETIZATION;
+int Continuum::_OUTER_DISC = Continuum::DISCRETIZATION - Continuum::_INNER_DISC;
+
 
 int main(int argc, char** argv) {
 #ifndef _NO_MPI
@@ -66,12 +69,16 @@ int main(int argc, char** argv) {
 	auto delta_result = modes.getModel().Delta.real().as_vector();
 	auto delta_imag = modes.getModel().Delta.imag().as_vector();
 
+	std::vector<std::string> comments;
+	comments.push_back("Discretization: " + std::to_string(DISCRETIZATION));
+	comments.push_back("k_F: " + std::to_string(modes.getModel().fermi_wavevector));
+
 	Utility::saveData(std::vector<std::vector<double>>{
-		modes.getModel().get_k_points(),
+		modes.getModel().momentumRanges.get_k_points(),
 			std::vector<double>(delta_result.begin(), delta_result.begin() + DISCRETIZATION),
 			std::vector<double>(delta_imag.begin(), delta_imag.begin() + DISCRETIZATION),
 			std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)
-	}, BASE_FOLDER + output_folder + "/gap.dat.gz");
+	}, BASE_FOLDER + output_folder + "/gap.dat.gz", comments);
 	std::cout << "Gap data have been saved!" << std::endl;
 
 	std::cout << "Delta_max = " << std::scientific << std::setprecision(14)
@@ -94,7 +101,7 @@ int main(int argc, char** argv) {
 
 	if constexpr (true) { // compute and save the expectation values
 		auto expecs = modes.getModel().get_expectation_values();
-		auto ks = modes.getModel().get_k_points();
+		auto ks = modes.getModel().momentumRanges.get_k_points();
 
 		std::vector<c_float> occupations, pairs;
 		occupations.reserve(ks.size());
@@ -113,9 +120,6 @@ int main(int argc, char** argv) {
 	//return EXIT;
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {
-		std::vector<std::string> comments;
-		comments.push_back("Discretization: " + std::to_string(DISCRETIZATION));
-
 #ifdef _complex
 		std::vector<std::string> names { 
 					"phase_SC_a", "phase_SC_a+b", "phase_SC_a+ib",

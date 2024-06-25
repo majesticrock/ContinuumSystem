@@ -11,23 +11,14 @@
 using Utility::constexprPower;
 
 namespace Continuum {
-#ifdef approximate_theta
-	constexpr c_float sc_is_finite_range = 1;
-#else
-	constexpr c_float sc_is_finite_range = 0.1;
-#endif
-
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(2 * DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		fermi_wavevector{ compute_fermiwavevector(fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
-		K_MAX{ fermi_wavevector + sc_is_finite_range * sqrt(2 * omega_debye) },
-		K_MIN{ fermi_wavevector - sc_is_finite_range * sqrt(2 * omega_debye) },
-		STEP{ (K_MAX - K_MIN) / (DISCRETIZATION - 1) }
+		momentumRanges(fermi_wavevector, omega_debye)
 	{
 		omega_debye += PRECISION;
-		assert(index_to_momentum(0) >= 0);
 
 		auto adjust_kf = [this](c_float kF) {
 			fermi_wavevector = kF;
@@ -36,7 +27,7 @@ namespace Continuum {
 		Utility::Numerics::Roots::bisection(adjust_kf, 0.95 * fermi_wavevector, 1.05 * fermi_wavevector, PRECISION, 250);
 
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
-			const c_float k = index_to_momentum(i);
+			const c_float k = momentumRanges.index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye)))
 				? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
@@ -46,7 +37,7 @@ namespace Continuum {
 				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
 #endif
 			}
-			return (index_to_momentum(k) > fermi_wavevector ? -0.001 : 0.001 );
+			return (momentumRanges.index_to_momentum(k) > fermi_wavevector ? -0.001 : 0.001 );
 			}, 2 * DISCRETIZATION);
 
 		//auto test = [](c_float q){
@@ -59,9 +50,9 @@ namespace Continuum {
 	{
 		return {
 			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
-				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION, 100)),
+				momentumRanges.index_to_momentum(0), momentumRanges.index_to_momentum(DISCRETIZATION - 1), PRECISION, 100)),
 			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
-				index_to_momentum(0), index_to_momentum(DISCRETIZATION - 1), PRECISION, 100))
+				momentumRanges.index_to_momentum(0), momentumRanges.index_to_momentum(DISCRETIZATION - 1), PRECISION, 100))
 		};
 	}
 
@@ -133,7 +124,7 @@ namespace Continuum {
 
 //#pragma omp parallel for
 		for (int u_idx = 0; u_idx < DISCRETIZATION; ++u_idx) {
-			const c_float k = index_to_momentum(u_idx);
+			const c_float k = momentumRanges.index_to_momentum(u_idx);
 
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
@@ -172,12 +163,12 @@ namespace Continuum {
 		auto func = [&](c_float l){
 			return this->phonon_beta(l, ALPHA);
 			};
-		const auto lb = func(K_MIN);
+		const auto lb = func(momentumRanges.K_MIN);
 		const auto ub = func(k);
-		if(lb * ub >= c_float{}) return K_MIN;
-		return Utility::Numerics::Roots::bisection(func, K_MIN, k, 1e-14, 100);
+		if(lb * ub >= c_float{}) return momentumRanges.K_MIN;
+		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, k, 1e-14, 100);
 #else
-		return std::max(sqrt(k * k - 2. * omega_debye), K_MIN);
+		return std::max(sqrt(k * k - 2. * omega_debye), momentumRanges.K_MIN);
 #endif
 #endif
 	}
@@ -193,11 +184,11 @@ namespace Continuum {
 			return this->phonon_beta(l, -ALPHA);
 			};
 		const auto lb = func(k);
-		const auto ub = func(K_MAX);
-		if(lb * ub >= c_float{}) return K_MAX;
-		return Utility::Numerics::Roots::bisection(func, k, K_MAX, 1e-14, 100);
+		const auto ub = func(momentumRanges.K_MAX);
+		if(lb * ub >= c_float{}) return momentumRanges.K_MAX;
+		return Utility::Numerics::Roots::bisection(func, k, momentumRanges.K_MAX, 1e-14, 100);
 #else
-		return std::min(sqrt(k * k + 2. * omega_debye), K_MAX);
+		return std::min(sqrt(k * k + 2. * omega_debye), momentumRanges.K_MAX);
 #endif
 #endif
 	}
@@ -246,7 +237,7 @@ namespace Continuum {
 		ret.emplace(SymbolicOperators::SC_Type, std::vector<c_complex>(DISCRETIZATION));
 
 		for (int k = 0; k < DISCRETIZATION; ++k) {
-			const c_float momentum = index_to_momentum(k);
+			const c_float momentum = momentumRanges.index_to_momentum(k);
 			ret.at(SymbolicOperators::Number_Type)[k] = this->occupation(momentum);
 			ret.at(SymbolicOperators::SC_Type)[k] = this->sc_expectation_value(momentum);
 		}
@@ -260,7 +251,7 @@ namespace Continuum {
 			return -k * k * energy(k);
 			};
 		return (V_OVER_N / (2 * PI * PI)) * boost::math::quadrature::gauss<c_float, 30>::integrate(
-			procedure, K_MIN, K_MAX);
+			procedure, momentumRanges.K_MIN, momentumRanges.K_MAX);
 	}
 
 	c_float SCModel::compute_fermiwavevector(c_float epsilon_F) const
