@@ -6,7 +6,6 @@
 #include <iomanip>
 #include <omp.h>
 
-#define _NO_MPI
 #ifndef _NO_MPI
 #include <mpi.h>
 #define EXIT MPI_Finalize()
@@ -117,7 +116,7 @@ int main(int argc, char** argv) {
 		std::cout << "Expectation values have been saved!" << std::endl;
 	}
 
-	//return EXIT;
+	return EXIT;
 	auto mode_result = modes.computeCollectiveModes(150);
 	if (!mode_result.empty()) {
 #ifdef _complex

@@ -63,6 +63,21 @@ namespace Continuum {
 #endif
     }
 
+    int MomentumRanges::momentum_to_floor_index(c_float k) const
+    {
+#ifdef _uniform_disc
+        return static_cast<int>((k - K_MIN) / STEP);
+#else
+        if(k < INNER_K_MIN) {
+            return static_cast<int>((k - K_MIN) / STEP);
+        }
+        if(k < INNER_K_MAX) {
+            return static_cast<int>((k - INNER_K_MIN) / INNER_STEP + _OUTER_DISC);
+        }
+        return static_cast<int>((k - INNER_K_MAX) / STEP + _INNER_DISC + _OUTER_DISC);
+#endif
+    }
+
     std::vector<c_float> MomentumRanges::get_k_points() const
     {
         std::vector<c_float> ks;

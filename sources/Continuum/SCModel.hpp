@@ -26,7 +26,10 @@ namespace Continuum {
 	};
 
 	class SCModel {
-		static constexpr int n_interpolate = 3;
+		static constexpr int n_interpolate = 4;
+		static constexpr int shifted_index(int index) {
+			return (index > n_interpolate / 2 - 1 ? index + 1 - n_interpolate / 2 : 0);
+		}
 	public:
 		ModelAttributes<c_complex> Delta;
 		std::vector<c_float> continuum_boundaries() const;
@@ -39,27 +42,28 @@ namespace Continuum {
 		static constexpr c_float CUT_OFF = std::numeric_limits<c_float>::epsilon();
 
 		inline c_complex interpolate_delta(c_float k) const {
-			const int index = momentumRanges.momentum_to_index(k);
+			const int index = momentumRanges.momentum_to_floor_index(k);
 			if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
 				return (index >= DISCRETIZATION ? c_complex{} : Delta[DISCRETIZATION - 1]);
 			if (index < 0) // Assuming Delta(k) = 0 for k->0
 				return c_complex{};
-			//return Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, index);
-			return Utility::Numerics::interpolate_lagrange<2>(k, 
-				std::array<c_complex, 2>{ momentumRanges.index_to_momentum(index), momentumRanges.index_to_momentum(index + 1) },
-				std::array<c_complex, 2>{ Delta[index], Delta[index + 1] });
+			return Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index));
+			//return Utility::Numerics::interpolate_lagrange<2>(k, 
+			//	std::array<c_complex, 2>{ momentumRanges.index_to_momentum(index), momentumRanges.index_to_momentum(index + 1) },
+			//	std::array<c_complex, 2>{ Delta[index], Delta[index + 1] });
 		};
 		inline c_float interpolate_delta_n(c_float k) const {
-			const int index = momentumRanges.momentum_to_index(k);
+			const int index = momentumRanges.momentum_to_floor_index(k);
 			if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
 				return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
 			if (index < 0) // Assuming Delta(k) = const for k->0
 				return c_float{};
-			//return Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, index, DISCRETIZATION);
-			return Utility::Numerics::interpolate_lagrange<2>(k, 
-				std::array<c_complex, 2>{ momentumRanges.index_to_momentum(index), momentumRanges.index_to_momentum(index + 1) },
-				std::array<c_complex, 2>{ std::real(Delta[index + DISCRETIZATION]), std::real(Delta[index + DISCRETIZATION + 1]) });
+			return Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index), DISCRETIZATION);
+			//return Utility::Numerics::interpolate_lagrange<2>(k, 
+			//	std::array<c_complex, 2>{ momentumRanges.index_to_momentum(index), momentumRanges.index_to_momentum(index + 1) },
+			//	std::array<c_complex, 2>{ std::real(Delta[index + DISCRETIZATION]), std::real(Delta[index + DISCRETIZATION + 1]) });
 		};
+
 		constexpr static c_float bare_dispersion(c_float k) {
 			return 0.5 * k * k;
 		};

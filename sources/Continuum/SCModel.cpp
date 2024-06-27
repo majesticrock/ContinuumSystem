@@ -59,10 +59,15 @@ namespace Continuum {
 	c_float SCModel::fock_energy(c_float k) const 
 	{
 #ifdef _screening
-		const c_float ln_factor{ ((1. + _screening * _screening) * fermi_wavevector * fermi_wavevector - k * k) / (4.0 * k * fermi_wavevector) };
+		if(is_zero(k)) {
+			return -PhysicalConstants::em_factor * fermi_wavevector * (
+				3.0 - 2.0 * (_screening / fermi_wavevector) * std::atan(fermi_wavevector / _screening)
+			);
+		}
+
 		const c_float k_diff{ k - fermi_wavevector };
 		const c_float k_sum{ k + fermi_wavevector };
-
+		const c_float ln_factor{ (_screening * _screening + fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector) };
 		return -PhysicalConstants::em_factor * fermi_wavevector * 
 		(
 			1.0 + ln_factor * std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) )
@@ -83,7 +88,7 @@ namespace Continuum {
 
 	c_complex SCModel::sc_expectation_value(c_float k) const {
 		const auto DELTA = interpolate_delta(k);
-		if (is_zero(DELTA)) return 0;
+		if (is_zero(DELTA)) return c_complex{};
 		const c_float E = energy(k);
 		if (is_zero(temperature)) {
 			return -DELTA / (2 * E);

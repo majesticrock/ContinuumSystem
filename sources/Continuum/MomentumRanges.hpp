@@ -21,6 +21,7 @@ namespace Continuum {
 
         c_float index_to_momentum(int k_idx) const;
         int momentum_to_index(c_float k) const;
+        int momentum_to_floor_index(c_float k) const;
 
         // Members that allow vector-like handling
         inline c_float operator[](int k_idx) const {
