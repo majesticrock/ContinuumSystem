@@ -6,7 +6,7 @@ constexpr Continuum::c_float sc_is_finite_range = 1;
 //#define _uniform_disc
 
 namespace Continuum {
-    MomentumRanges::MomentumRanges(const c_float k_F, const c_float omega_debye)
+    MomentumRanges::MomentumRanges(c_float& k_F, const c_float omega_debye)
         : K_MAX{ 2 * k_F }, // + sc_is_finite_range * sqrt(2 * omega_debye)
 		K_MIN{ 0 }, //k_F - sc_is_finite_range * sqrt(2 * omega_debye)
 		INNER_K_MAX{ k_F + 5 * omega_debye },

@@ -66,7 +66,6 @@ int main(int argc, char** argv) {
 
 	ModeHelper modes(input);
 	auto delta_result = modes.getModel().Delta.real().as_vector();
-	auto delta_imag = modes.getModel().Delta.imag().as_vector();
 
 	std::vector<std::string> comments;
 	comments.push_back("Discretization: " + std::to_string(DISCRETIZATION));
@@ -74,8 +73,8 @@ int main(int argc, char** argv) {
 
 	Utility::saveData(std::vector<std::vector<double>>{
 		modes.getModel().momentumRanges.get_k_points(),
-			std::vector<double>(delta_result.begin(), delta_result.begin() + DISCRETIZATION),
-			std::vector<double>(delta_imag.begin(), delta_imag.begin() + DISCRETIZATION),
+			modes.getModel().phonon_gap(),
+			modes.getModel().coulomb_gap(),
 			std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)
 	}, BASE_FOLDER + output_folder + "/gap.dat.gz", comments);
 	std::cout << "Gap data have been saved!" << std::endl;

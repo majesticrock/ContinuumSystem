@@ -15,9 +15,9 @@ namespace Continuum {
 		const c_float STEP{};
 		const c_float INNER_STEP{};
 
-        const c_float K_F{};
+        c_float& K_F;
 
-        MomentumRanges(const c_float k_F, const c_float omega_debye);
+        MomentumRanges(c_float& k_F, const c_float omega_debye);
 
         c_float index_to_momentum(int k_idx) const;
         int momentum_to_index(c_float k) const;

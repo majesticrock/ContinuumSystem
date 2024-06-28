@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <numeric>
 #include <complex>
-//#include <boost/math/tools/roots.hpp>
 #include <Utility/Numerics/Roots/Bisection.hpp>
 #include <limits>
 
@@ -28,22 +27,24 @@ namespace Continuum {
 
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
-			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye)))
-				? 0.01 : 0.1;
+			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
 #ifdef _complex
 				return magnitude; //std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
 #else
-				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI).real();
+				return std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) - 0.5 * PI).real();
 #endif
 			}
 			return (momentumRanges.index_to_momentum(k) > fermi_wavevector ? -0.001 : 0.001 );
 			}, 2 * DISCRETIZATION);
 
-		//auto test = [](c_float q){
-		//	return 1.0;
-		//};
-		//std::cout << (I_1(test, 1.)) / PhysicalConstants::em_factor << std::endl;
+		this->get_expectation_values();
+		occupation = SplineContainer(_expecs[SymbolicOperators::Number_Type], momentumRanges.K_MIN,
+			momentumRanges.STEP, momentumRanges.INNER_STEP, momentumRanges.STEP,
+			_OUTER_DISC, _INNER_DISC);
+		sc_expectation_value = SplineContainer(_expecs[SymbolicOperators::SC_Type],  momentumRanges.K_MIN,
+			momentumRanges.STEP, momentumRanges.INNER_STEP, momentumRanges.STEP,
+			_OUTER_DISC, _INNER_DISC);
 	}
 
 	std::vector<c_float> SCModel::continuum_boundaries() const
@@ -70,7 +71,7 @@ namespace Continuum {
 		const c_float ln_factor{ (_screening * _screening + fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector) };
 		return -PhysicalConstants::em_factor * fermi_wavevector * 
 		(
-			1.0 + ln_factor * std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) )
+			1.0 + ln_factor * log_expression(k_sum, k_diff) 
 			+ (_screening / fermi_wavevector) * (std::atan(k_diff / _screening) - std::atan(k_sum / _screening))
 		);
 
@@ -86,27 +87,27 @@ namespace Continuum {
 #endif
 	}
 
-	c_complex SCModel::sc_expectation_value(c_float k) const {
-		const auto DELTA = interpolate_delta(k);
-		if (is_zero(DELTA)) return c_complex{};
+	c_complex SCModel::sc_expectation_value_index(int k) const
+	{
+		if (is_zero(Delta[k])) return c_complex{};
 		const c_float E = energy(k);
 		if (is_zero(temperature)) {
-			return -DELTA / (2 * E);
+			return -Delta[k] / (2 * E);
 		}
-		return -std::tanh(E / (2 * temperature)) * DELTA / (2 * E);
+		return -std::tanh(E / (2 * temperature)) * Delta[k] / (2 * E);
 	}
 
-	c_float SCModel::occupation(c_float k) const {
-		const auto DELTA = std::abs(interpolate_delta(k));
+	c_float SCModel::occupation_index(int k) const
+	{
 		const auto eps_mu = dispersion_to_fermi_level(k);
-		if (is_zero(DELTA)) {
+		if (is_zero(Delta[k])) {
 			if (is_zero(temperature)) {
 				if (is_zero(eps_mu)) return 0.5;
 				return (eps_mu < 0 ? 1 : 0);
 			}
 			return 1. / (1 + std::exp(eps_mu / temperature));
 		}
-		const c_float E = sqrt(eps_mu * eps_mu + DELTA * DELTA);
+		const c_float E = sqrt(eps_mu * eps_mu + Delta[k] * Delta[k]);
 		if (is_zero(temperature)) {
 			return 0.5 * (1 - (eps_mu / E));
 		}
@@ -117,6 +118,10 @@ namespace Continuum {
 		static int step_num = 0;
 		result.setZero();
 		this->Delta.fill_with(initial_values);
+		this->get_expectation_values();
+		this->occupation.set_new_ys(_expecs[SymbolicOperators::Number_Type]);
+		this->sc_expectation_value.set_new_ys(_expecs[SymbolicOperators::SC_Type]);
+
 		auto phonon_integrand = [this](c_float x) -> c_complex {
 			return x * x * sc_expectation_value(x);
 			};
@@ -147,7 +152,6 @@ namespace Continuum {
 			result(u_idx + DISCRETIZATION) = I_1(delta_n_wrapper, k) + I_2(delta_n_wrapper, k);
 #endif
 #endif
-			//std::cout << g_lower_bound(k) << "\t" << g_upper_bound(k) << std::endl;
 			result(u_idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(k), g_upper_bound(k) );
 		}
@@ -164,7 +168,7 @@ namespace Continuum {
 		return sqrt(std::max((static_cast<c_float>(2) * (fermi_energy - omega_debye)), c_float{}));
 #else
 #ifdef _use_coulomb
-		const c_float ALPHA = 2. * omega_debye - phonon_alpha(k);
+		const c_float ALPHA = phonon_alpha(k) - 2. * omega_debye;
 		auto func = [&](c_float l){
 			return this->phonon_beta(l, ALPHA);
 			};
@@ -184,9 +188,9 @@ namespace Continuum {
 		return sqrt(2. * (fermi_energy + omega_debye));
 #else
 #ifdef _use_coulomb
-		const c_float ALPHA = 2. * omega_debye + phonon_alpha(k);
+		const c_float ALPHA = phonon_alpha(k) + 2. * omega_debye;
 		auto func = [&](c_float l){
-			return this->phonon_beta(l, -ALPHA);
+			return this->phonon_beta(l, ALPHA);
 			};
 		const auto lb = func(k);
 		const auto ub = func(momentumRanges.K_MAX);
@@ -235,32 +239,97 @@ namespace Continuum {
 		}
 	}
 
-	std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> SCModel::get_expectation_values() const
-	{
-		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> ret;
-		ret.emplace(SymbolicOperators::Number_Type, std::vector<c_complex>(DISCRETIZATION));
-		ret.emplace(SymbolicOperators::SC_Type, std::vector<c_complex>(DISCRETIZATION));
+	c_float SCModel::phonon_alpha(const c_float k) const {
+		const c_float k_sum = k + fermi_wavevector;
+		const c_float k_diff = k - fermi_wavevector;
+		const c_float atans = std::atan(k_diff / _screening) - std::atan(k_sum / _screening);
 
+		if(is_zero(k)) {
+			const c_float kF2 = fermi_wavevector * fermi_wavevector;
+			return -PhysicalConstants::em_factor * ( 2. * kF2 * fermi_wavevector / (_screening * _screening + kF2) + _screening * atans );
+		}
+		const c_float log_expr = 0.5 * k_sum * k_diff * log_expression(k_sum, k_diff);
+		return k * k - PhysicalConstants::em_factor * ( log_expr / k - _screening * atans );
+	}
+
+	const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
+	{
+		if(_expecs.empty()) {
+			_expecs.emplace(SymbolicOperators::Number_Type, std::vector<c_complex>(DISCRETIZATION));
+			_expecs.emplace(SymbolicOperators::SC_Type, std::vector<c_complex>(DISCRETIZATION));
+		}
 		for (int k = 0; k < DISCRETIZATION; ++k) {
-			const c_float momentum = momentumRanges.index_to_momentum(k);
-			ret.at(SymbolicOperators::Number_Type)[k] = this->occupation(momentum);
-			ret.at(SymbolicOperators::SC_Type)[k] = this->sc_expectation_value(momentum);
+			_expecs.at(SymbolicOperators::Number_Type)[k] = this->occupation_index(k);
+			_expecs.at(SymbolicOperators::SC_Type)[k] = this->sc_expectation_value_index(k);
 		}
 
-		return ret;
+		return _expecs;
+	}
+
+	c_complex SCModel::interpolate_delta(c_float k) const {
+		const int index = momentumRanges.momentum_to_floor_index(k);
+		if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
+			return (index >= DISCRETIZATION ? c_complex{} : Delta[DISCRETIZATION - 1]);
+		if (index < 0) // Assuming Delta(k) = 0 for k->0
+			return c_complex{};
+		return Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index));
+	}
+
+    c_float SCModel::interpolate_delta_n(c_float k) const {
+		const int index = momentumRanges.momentum_to_floor_index(k);
+		if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
+			return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
+		if (index < 0) // Assuming Delta(k) = const for k->0
+			return c_float{};
+		return Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index), DISCRETIZATION);
 	}
 
 	c_float SCModel::internal_energy() const 
 	{
+		if(! is_zero(Delta[DISCRETIZATION / 2])) {
+			// Order: -62.0978727910253 eV
+			auto procedure = [this](c_float k) -> c_float {
+				return -k * k * energy(k);
+				};
+			return (V_OVER_N / (2. * PI * PI)) * momentumRanges.integrate(procedure);
+		}
+		// No order: -2.25329965038867 eV * 2 because of the spin
 		auto procedure = [this](c_float k) -> c_float {
-			return -k * k * energy(k);
+			return k * k * dispersion_to_fermi_level(k);
 			};
-		return (V_OVER_N / (2 * PI * PI)) * boost::math::quadrature::gauss<c_float, 30>::integrate(
-			procedure, momentumRanges.K_MIN, momentumRanges.K_MAX);
+		return 2. * (V_OVER_N / (2. * PI * PI)) * momentumRanges.integrate(procedure, momentumRanges.K_MIN, fermi_wavevector);
 	}
 
 	c_float SCModel::compute_fermiwavevector(c_float epsilon_F) const
 	{
 		return PhysicalConstants::em_factor + sqrt((PhysicalConstants::em_factor * PhysicalConstants::em_factor) + 2. * epsilon_F);
+	}
+
+	std::string SCModel::info() const {
+		return "SCModel // [T g omega_D epsilon_F] = [" + std::to_string(temperature)
+			+ " " + std::to_string(phonon_coupling) + " " + std::to_string(omega_debye)
+			+ " " + std::to_string(fermi_energy) + "]";
+	}
+
+	std::vector<c_float> SCModel::phonon_gap() const
+	{
+		std::vector<c_float> ret(DISCRETIZATION);
+		for(int i = 0; i < DISCRETIZATION; ++i) {
+			const c_float k =  momentumRanges.index_to_momentum(i);
+			ret[i] = -(V_OVER_N * phonon_coupling / (2. * PI * PI))
+				* boost::math::quadrature::gauss<double, 30>::integrate( 
+					[this](c_float x) -> c_complex { return x * x * sc_expectation_value(x); }, g_lower_bound(k), g_upper_bound(k) );
+		}
+		return ret;
+	}
+
+	std::vector<c_float> SCModel::coulomb_gap() const
+	{
+		std::vector<c_float> ret(DISCRETIZATION);
+		for(int i = 0; i < DISCRETIZATION; ++i) {
+			ret[i] = integral_screening(
+				[this](c_float q) { return this->sc_expectation_value(q); }, momentumRanges.index_to_momentum(i) );
+		}
+		return ret;
 	}
 }
