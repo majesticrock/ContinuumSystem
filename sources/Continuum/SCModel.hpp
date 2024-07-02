@@ -52,6 +52,7 @@ namespace Continuum {
 		c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const;
 
 		std::string info() const;
+		std::string to_folder() const;
 		c_float internal_energy() const;
 		std::vector<c_float> continuum_boundaries() const;
 		std::vector<c_float> phonon_gap() const;

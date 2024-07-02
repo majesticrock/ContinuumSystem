@@ -5,6 +5,7 @@
 #include <numeric>
 #include <complex>
 #include <Utility/Numerics/Roots/Bisection.hpp>
+#include <Utility/better_to_string.hpp>
 #include <limits>
 
 using Utility::constexprPower;
@@ -17,8 +18,6 @@ namespace Continuum {
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
 		momentumRanges(fermi_wavevector, omega_debye)
 	{
-		omega_debye += PRECISION;
-
 		auto adjust_kf = [this](c_float kF) {
 			fermi_wavevector = kF;
 			return bare_dispersion_to_fermi_level(kF) + fock_energy(kF);
@@ -309,6 +308,30 @@ namespace Continuum {
 		return "SCModel // [T g omega_D epsilon_F] = [" + std::to_string(temperature)
 			+ " " + std::to_string(phonon_coupling) + " " + std::to_string(omega_debye)
 			+ " " + std::to_string(fermi_energy) + "]";
+	}
+
+	std::string SCModel::to_folder() const {
+		auto improved_string = [](c_float number) -> std::string {
+			if (std::floor(number) == number) {
+				// If the number is a whole number, format it with one decimal place
+				std::ostringstream out;
+				out.precision(1);
+				out << std::fixed << number;
+				return out.str();
+			}
+			else {
+				std::string str = Utility::better_to_string(number, std::chars_format::fixed);
+				// Remove trailing zeroes
+				str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+				str.erase(str.find_last_not_of('.') + 1, std::string::npos);
+				return str;
+			}
+			};
+
+		return "T=" + improved_string(temperature) 
+			+ "/E_F=" + improved_string(fermi_energy)
+			+ "/g=" + improved_string(phonon_coupling) 
+			+ "/omega_D=" + improved_string(omega_debye) + "/";		
 	}
 
 	std::vector<c_float> SCModel::phonon_gap() const

@@ -61,7 +61,7 @@ namespace Continuum {
 		std::fill(starting_states[0].begin(), starting_states[0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
 		std::fill(starting_states[1].begin() + 3 * DISCRETIZATION, starting_states[1].end(), sqrt(model->momentumRanges.STEP));
 #else
-		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization) });
+		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
 		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
 		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
 #endif

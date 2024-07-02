@@ -16,8 +16,6 @@
 #define _use_coulomb
 #define _screening 1e-4
 
-#define _bipolar_integration 2
-
 namespace Continuum {
 	using c_float = double;
 #ifdef _complex
