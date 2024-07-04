@@ -14,7 +14,7 @@ namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(2 * DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
-		fermi_wavevector{ compute_fermiwavevector(fermi_energy) },
+		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ compute_fermiwavevector(fermi_energy) },
 		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
 		momentumRanges(fermi_wavevector, omega_debye)
 	{
@@ -60,7 +60,7 @@ namespace Continuum {
 	{
 #ifdef _screening
 		if(is_zero(k)) {
-			return -PhysicalConstants::em_factor * fermi_wavevector * (
+			return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * (
 				3.0 - 2.0 * (_screening / fermi_wavevector) * std::atan(fermi_wavevector / _screening)
 			);
 		}
@@ -68,7 +68,7 @@ namespace Continuum {
 		const c_float k_diff{ k - fermi_wavevector };
 		const c_float k_sum{ k + fermi_wavevector };
 		const c_float ln_factor{ (_screening * _screening + fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector) };
-		return -PhysicalConstants::em_factor * fermi_wavevector * 
+		return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * 
 		(
 			1.0 + ln_factor * log_expression(k_sum, k_diff) 
 			+ (_screening / fermi_wavevector) * (std::atan(k_diff / _screening) - std::atan(k_sum / _screening))
@@ -76,10 +76,10 @@ namespace Continuum {
 
 #else
 		if(is_zero(k - fermi_wavevector)) {
-			return -PhysicalConstants::em_factor * fermi_wavevector;
+			return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector;
 		}
 
-		return -PhysicalConstants::em_factor * fermi_wavevector * (
+		return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * (
 			1.0 + ((fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector)) 
 				* std::log(std::abs((k + fermi_wavevector) / (k - fermi_wavevector)))
 		);
@@ -229,7 +229,7 @@ namespace Continuum {
 		} 
 		else if(coeff.name == "V") {
 #ifdef _screening
-			return PhysicalConstants::em_factor / (first * first + _screening * _screening);
+			return coulomb_scaling * PhysicalConstants::em_factor / (first * first + _screening * _screening);
 #endif
 		}
 		else
@@ -245,10 +245,10 @@ namespace Continuum {
 
 		if(is_zero(k)) {
 			const c_float kF2 = fermi_wavevector * fermi_wavevector;
-			return -PhysicalConstants::em_factor * ( 2. * kF2 * fermi_wavevector / (_screening * _screening + kF2) + _screening * atans );
+			return -coulomb_scaling * PhysicalConstants::em_factor * ( 2. * kF2 * fermi_wavevector / (_screening * _screening + kF2) + _screening * atans );
 		}
 		const c_float log_expr = 0.5 * k_sum * k_diff * log_expression(k_sum, k_diff);
-		return k * k - PhysicalConstants::em_factor * ( log_expr / k - _screening * atans );
+		return k * k - coulomb_scaling * PhysicalConstants::em_factor * ( log_expr / k - _screening * atans );
 	}
 
 	const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
@@ -301,7 +301,7 @@ namespace Continuum {
 
 	c_float SCModel::compute_fermiwavevector(c_float epsilon_F) const
 	{
-		return PhysicalConstants::em_factor + sqrt((PhysicalConstants::em_factor * PhysicalConstants::em_factor) + 2. * epsilon_F);
+		return coulomb_scaling * PhysicalConstants::em_factor + sqrt((coulomb_scaling * PhysicalConstants::em_factor * coulomb_scaling * PhysicalConstants::em_factor) + 2. * epsilon_F);
 	}
 
 	std::string SCModel::info() const {
@@ -329,6 +329,7 @@ namespace Continuum {
 			};
 
 		return "T=" + improved_string(temperature) 
+			+ "/coulomb_scaling=" + improved_string(coulomb_scaling)
 			+ "/E_F=" + improved_string(fermi_energy)
 			+ "/g=" + improved_string(phonon_coupling) 
 			+ "/omega_D=" + improved_string(omega_debye) + "/";		

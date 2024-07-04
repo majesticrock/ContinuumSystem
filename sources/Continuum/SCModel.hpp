@@ -20,10 +20,12 @@ namespace Continuum {
 		c_float phonon_coupling;
 		c_float omega_debye;
 		c_float fermi_energy;
+		c_float coulomb_scaling;
 
 		ModelInitializer(Utility::InputFileReader& input)
 			: temperature{ PhysicalConstants::k_B * input.getDouble("T") }, phonon_coupling{ input.getDouble("phonon_coupling") },
-			omega_debye{ input.getDouble("omega_debye") }, fermi_energy{ input.getDouble("fermi_energy") }
+			omega_debye{ input.getDouble("omega_debye") }, fermi_energy{ input.getDouble("fermi_energy") },
+			coulomb_scaling{ input.getDouble("coulomb_scaling") }
 		{ };
 	};
 
@@ -69,7 +71,7 @@ namespace Continuum {
 				auto integrand = [&](c_float q){
 					return expecs(q) * q * q / (_screening * _screening + q * q);
 				};
-				const c_float prefactor = 2. * PhysicalConstants::em_factor;
+				const c_float prefactor = 2. * coulomb_scaling * PhysicalConstants::em_factor;
 				return prefactor * momentumRanges.integrate(integrand);
 			}
 
@@ -78,7 +80,7 @@ namespace Continuum {
 				const c_float k_sum{ q + k };
 				return expecs(q) * q * std::log((_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff));
 			};
-			const c_float prefactor = 0.5 * PhysicalConstants::em_factor / k;
+			const c_float prefactor = 0.5 * coulomb_scaling * PhysicalConstants::em_factor / k;
 			return prefactor * momentumRanges.integrate(integrand);
 		}
 
@@ -122,6 +124,7 @@ namespace Continuum {
 		c_float phonon_coupling{};
 		c_float omega_debye{};
 		const c_float fermi_energy{};
+		c_float coulomb_scaling;
 
 		SplineContainer occupation;
 		SplineContainer sc_expectation_value;

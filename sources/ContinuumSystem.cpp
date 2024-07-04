@@ -26,6 +26,27 @@ c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
 int Continuum::_INNER_DISC = Continuum::DISCRETIZATION / Continuum::REL_INNER_DISCRETIZATION;
 int Continuum::_OUTER_DISC = Continuum::DISCRETIZATION - Continuum::_INNER_DISC;
 
+void compute_small_U_gap() {
+	Utility::InputFileReader input("params/params.config");
+	constexpr int N_points = 200;
+	constexpr c_float step = 0.03;
+	constexpr c_float begin = 1;
+	std::vector<std::vector<c_float>> gap_data(N_points);
+
+#pragma omp parallel for
+	for (int U = 0; U < N_points; ++U) {
+		ModelInitializer init(input);
+		c_float entry = begin + step * U;
+		init.phonon_coupling = entry;
+		SCModel model(init);
+		Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
+		solver.compute();
+		const auto buffer = model.Delta.abs().as_vector();
+		gap_data[U] = { entry, *std::max_element(buffer.begin(), buffer.end()) };
+	}
+	Utility::saveData(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
+}
+
 int main(int argc, char** argv) {
 #ifndef _NO_MPI
 	// First call MPI_Init
@@ -39,63 +60,50 @@ int main(int argc, char** argv) {
 
 	Utility::InputFileReader input("params/params.config");
 	Continuum::set_discretization(input.getInt("discretization_points"));
-	if constexpr (false) { // compute gap in a range for small U
-		constexpr int N_points = 200;
-		constexpr c_float step = 0.03;
-		constexpr c_float begin = 1;
-		std::vector<std::vector<c_float>> gap_data(N_points);
 
-#pragma omp parallel for
-		for (int U = 0; U < N_points; ++U) {
-			ModelInitializer init(input);
-			c_float entry = begin + step * U;
-			init.phonon_coupling = entry;
-			SCModel model(init);
-			Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
-			solver.compute();
-			const auto buffer = model.Delta.abs().as_vector();
-			gap_data[U] = { entry, *std::max_element(buffer.begin(), buffer.end()) };
-			//std::cout << model.info() << "\t" << *std::max_element(buffer.begin(), buffer.end()) << std::endl;
-		}
-		Utility::saveData(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
+	if (false) { // compute gap in a range for small U
+		compute_small_U_gap();
 		return EXIT;
 	}
 
+	/* 
+	* Generate setup for output
+	*/
 	ModeHelper modes(input);
 	auto delta_result = modes.getModel().Delta.real().as_vector();
-
 	const std::string output_folder = input.getString("output_folder") + "/" + modes.getModel().to_folder();
 	std::filesystem::create_directories(BASE_FOLDER + output_folder);
-
-	std::vector<std::string> comments;
-	comments.push_back("Discretization: " + std::to_string(DISCRETIZATION));
-	comments.push_back("k_F: " + std::to_string(modes.getModel().fermi_wavevector));
-
 	auto generate_comments = [&]() {
 		return nlohmann::json {
 			{ "time", Utility::time_stamp() },
 			{ "Discretization", DISCRETIZATION },
-			{ "Coulomb factor", PhysicalConstants::em_factor },
 			{ "Screening lambda", _screening },
-			{ "Delta_max", *std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION) },
-			{ "k_F", modes.getModel().fermi_wavevector }
+			{ "Delta_max", std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION, 
+				[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs){
+					return std::abs(lhs) < std::abs(rhs);
+				})) },
+			{ "k_F", modes.getModel().fermi_wavevector },
+			{ "T", modes.getModel().temperature },
+			{ "g", modes.getModel().phonon_coupling },
+			{ "omega_D", modes.getModel().omega_debye },
+			{ "E_F", modes.getModel().fermi_energy },
+			{ "Coulomb scaling", modes.getModel().coulomb_scaling }
 		};
 	};
+
+	/*
+	* Compute and output gap data
+	*/
 	nlohmann::json jDelta = {
 		{"ks", modes.getModel().momentumRanges.get_k_points()},
 		{"Delta_Phonon", modes.getModel().phonon_gap()},
 		{"Delta_Coulomb", modes.getModel().coulomb_gap()},
-		{"Delta_Fock", std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)}
+		{"Delta_Fock", std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)},
+		{"Internal energy", modes.getModel().internal_energy()}
 	};
 	jDelta.merge_patch(generate_comments());
 	Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
-
 	std::cout << "Gap data have been saved!" << std::endl;
-	std::cout << "Delta_max = " << std::scientific << std::setprecision(14)
-		<< *std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION) << std::endl;
-	std::cout << "Delta_min = " << std::scientific << std::setprecision(14)
-		<< *std::min_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION) << std::endl;
-	std::cout << "Internal energy = " << modes.getModel().internal_energy() << std::endl;
 
 	if constexpr (false) { // compute and save the single particle energies
 		std::vector<std::vector<double>> data(2, std::vector<double>(Continuum::DISCRETIZATION));
@@ -106,7 +114,6 @@ int main(int argc, char** argv) {
 		}
 		Utility::saveData(data, BASE_FOLDER + output_folder + "one_particle_energies.dat.dz");
 	}
-
 	if constexpr (false) { // compute and save the expectation values
 		auto expecs = modes.getModel().get_expectation_values();
 		auto ks = modes.getModel().momentumRanges.get_k_points();
