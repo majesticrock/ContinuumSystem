@@ -1,0 +1,27 @@
+#include "ModelInitializer.hpp"
+#include <Utility/Numerics/Roots/Bisection.hpp>
+#include <Utility/ConstexprPower.hpp>
+
+namespace Continuum {
+    c_float ModelInitializer::compute_fermi_wavevector() const
+	{
+		c_float kF = coulomb_scaling * PhysicalConstants::em_factor 
+			+ sqrt((coulomb_scaling * PhysicalConstants::em_factor * coulomb_scaling * PhysicalConstants::em_factor) + 2. * fermi_energy);
+
+		auto energy_at_fermi_level = [this](c_float kF) {
+			const c_float k_sum{ 2 * kF };
+			const c_float ln_factor{ (_screening * _screening) / (2.0 * kF * kF) };
+			const c_float fock = -coulomb_scaling * PhysicalConstants::em_factor * kF * 
+			(
+				1.0 + ln_factor * log_expression(k_sum, c_float{}) - (_screening / kF) * std::atan(k_sum / _screening)
+			);
+			return bare_dispersion(kF) + fock - fermi_energy;
+		};
+		return Utility::Numerics::Roots::bisection(energy_at_fermi_level, 0.95 * kF, 1.05 * kF, PRECISION, 250);
+	}
+
+	c_float ModelInitializer::compute_v_over_n() const 
+	{
+		return 3. * PI * PI / (Utility::constexprPower<3>(fermi_wavevector));
+	}
+}

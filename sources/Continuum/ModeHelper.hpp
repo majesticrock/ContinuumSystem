@@ -22,8 +22,6 @@ namespace Continuum {
 		friend struct __ieom_algorithm;
 		using _parent = __ieom_algorithm;
 
-		std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> expectation_values;
-
 		c_float compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q = 0) const;
 		c_complex get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const;
 
@@ -51,10 +49,10 @@ namespace Continuum {
 
 		c_complex computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
 	public:
-		const SCModel& getModel() const {
+		SCModel& getModel() const {
 			return *model;
 		};
-		ModeHelper(Utility::InputFileReader& input);
+		ModeHelper(ModelInitializer const& init);
 	};
 }
 

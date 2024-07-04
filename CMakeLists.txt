@@ -30,6 +30,8 @@ set(ADD_SOURCES
     sources/Continuum/SCModel.cpp
     sources/Continuum/MomentumRanges.cpp
     sources/Continuum/SplineContainer.cpp
+    sources/Continuum/ModelInitializer.cpp
+    sources/Continuum/Incrementer.cpp
 )
 target_sources(ContinuumSystem PRIVATE ${ADD_SOURCES})
 

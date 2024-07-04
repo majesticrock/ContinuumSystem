@@ -270,7 +270,7 @@ namespace Continuum {
 	int ModeHelper::antihermitian_discretization = 0;
 	int ModeHelper::total_matrix_size = 0;
 
-	ModeHelper::ModeHelper(Utility::InputFileReader& input)
+	ModeHelper::ModeHelper(ModelInitializer const& init)
 		: _parent(this, SQRT_PRECISION, //SQRT_PRECISION
 #ifndef _complex
 		DISCRETIZATION * hermitian_size, DISCRETIZATION * antihermitian_size, false, 
@@ -281,13 +281,11 @@ namespace Continuum {
 		antihermitian_discretization = DISCRETIZATION * antihermitian_size;
 		total_matrix_size = DISCRETIZATION * number_of_basis_terms;
 
-		model = std::make_unique<SCModel>(ModelInitializer(input));
+		model = std::make_unique<SCModel>(init);
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
 		//auto solver = Utility::Selfconsistency::make_iterative<Utility::Selfconsistency::PrintEverything, c_complex>(model.get(), &model->Delta);
 		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
 		solver.compute(true);
-
-		this->expectation_values = model->get_expectation_values();
 	}
 }

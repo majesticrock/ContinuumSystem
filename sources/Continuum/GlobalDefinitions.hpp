@@ -42,6 +42,13 @@ namespace Continuum {
 		constexpr c_float em_factor = 1. / (4 * PI * PI * vacuum_permitivity); // 1 / (4 * pi * pi * epsilon_0) in sqrt(eV)
 	}
 
+	constexpr c_float bare_dispersion(c_float k) {
+		return 0.5 * k * k;
+	};
+	inline c_float log_expression(c_float k_sum, c_float k_diff) {
+		return std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) );
+	}
+
 	constexpr double SQRT_PRECISION = 9.5367431640625e-07;
 	constexpr double PRECISION = 9.0949470177292824e-13; // 0 | 01111101011 | 0000000000000000000000000000000000000000000000000000
 

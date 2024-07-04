@@ -3,6 +3,7 @@
 #include "ModelAttributes.hpp"
 #include "MomentumRanges.hpp"
 #include "SplineContainer.hpp"
+#include "ModelInitializer.hpp"
 #include <cmath>
 #include <limits>
 #include <utility>
@@ -15,20 +16,6 @@
 #include <Utility/ConstexprPower.hpp>
 
 namespace Continuum {
-	struct ModelInitializer {
-		c_float temperature;
-		c_float phonon_coupling;
-		c_float omega_debye;
-		c_float fermi_energy;
-		c_float coulomb_scaling;
-
-		ModelInitializer(Utility::InputFileReader& input)
-			: temperature{ PhysicalConstants::k_B * input.getDouble("T") }, phonon_coupling{ input.getDouble("phonon_coupling") },
-			omega_debye{ input.getDouble("omega_debye") }, fermi_energy{ input.getDouble("fermi_energy") },
-			coulomb_scaling{ input.getDouble("coulomb_scaling") }
-		{ };
-	};
-
 	class SCModel {
 	public:
 		c_complex interpolate_delta(c_float k) const;
@@ -61,6 +48,7 @@ namespace Continuum {
 		std::vector<c_float> coulomb_gap() const;
 		const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& get_expectation_values() const;
 
+		void set_new_parameters(ModelInitializer const& parameters);
 		SCModel(ModelInitializer const& parameters);
 		virtual ~SCModel() = default;
 
@@ -90,12 +78,6 @@ namespace Continuum {
 			return (index > n_interpolate / 2 - 1 ? index + 1 - n_interpolate / 2 : 0);
 		}
 
-		static inline c_float log_expression(c_float k_sum, c_float k_diff) {
-			return std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) );
-		}
-		constexpr static c_float bare_dispersion(c_float k) {
-			return 0.5 * k * k;
-		};
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
 			return bare_dispersion(k) - fermi_energy;
 		}
@@ -112,7 +94,6 @@ namespace Continuum {
 		c_float occupation_index(int k) const;
 		inline c_float delta_n_index(int k) const;
 
-		c_float compute_fermiwavevector(c_float epsilon_F) const;
 		c_float phonon_alpha(const c_float k) const;
 		inline auto phonon_beta(const c_float k, const c_float ALPHA) const {
 			return phonon_alpha(k) - ALPHA;
@@ -123,14 +104,14 @@ namespace Continuum {
         c_float temperature{};
 		c_float phonon_coupling{};
 		c_float omega_debye{};
-		const c_float fermi_energy{};
+		c_float fermi_energy{};
 		c_float coulomb_scaling;
 
 		SplineContainer occupation;
 		SplineContainer sc_expectation_value;
 
         c_float fermi_wavevector{};
-		const c_float V_OVER_N{};
+		c_float V_OVER_N{};
 
 		MomentumRanges momentumRanges;
     private:

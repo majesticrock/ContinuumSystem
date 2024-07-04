@@ -1,6 +1,6 @@
 #include "SCModel.hpp"
 #include <Utility/Numerics/Minimization/Bisection.hpp>
-#include <Utility/Numerics/Roots/Bisection.hpp>
+#include <Utility/Selfconsistency/BroydenSolver.hpp>
 #include <algorithm>
 #include <numeric>
 #include <complex>
@@ -14,16 +14,10 @@ namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(2 * DISCRETIZATION, parameters.phonon_coupling* parameters.omega_debye), temperature{ parameters.temperature },
 		phonon_coupling{ parameters.phonon_coupling }, omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
-		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ compute_fermiwavevector(fermi_energy) },
-		V_OVER_N{ fermi_wavevector > 0 ? 3. * PI * PI / (constexprPower<3>(fermi_wavevector)) : 1 },
-		momentumRanges(fermi_wavevector, omega_debye)
+		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ parameters.fermi_wavevector },
+		V_OVER_N{ parameters.V_OVER_N },
+		momentumRanges(&fermi_wavevector, omega_debye)
 	{
-		auto adjust_kf = [this](c_float kF) {
-			fermi_wavevector = kF;
-			return bare_dispersion_to_fermi_level(kF) + fock_energy(kF);
-		};
-		Utility::Numerics::Roots::bisection(adjust_kf, 0.95 * fermi_wavevector, 1.05 * fermi_wavevector, PRECISION, 250);
-
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
@@ -38,12 +32,35 @@ namespace Continuum {
 			}, 2 * DISCRETIZATION);
 
 		this->get_expectation_values();
-		occupation = SplineContainer(_expecs[SymbolicOperators::Number_Type], momentumRanges.K_MIN,
+		this->occupation = SplineContainer(_expecs[SymbolicOperators::Number_Type], momentumRanges.K_MIN,
 			momentumRanges.STEP, momentumRanges.INNER_STEP, momentumRanges.STEP,
 			_OUTER_DISC, _INNER_DISC);
-		sc_expectation_value = SplineContainer(_expecs[SymbolicOperators::SC_Type],  momentumRanges.K_MIN,
+		this->sc_expectation_value = SplineContainer(_expecs[SymbolicOperators::SC_Type], momentumRanges.K_MIN,
 			momentumRanges.STEP, momentumRanges.INNER_STEP, momentumRanges.STEP,
 			_OUTER_DISC, _INNER_DISC);
+	}
+
+	void SCModel::set_new_parameters(ModelInitializer const& parameters) 
+	{
+		this->V_OVER_N = parameters.V_OVER_N; 
+		this->temperature = parameters.temperature; 
+		this->omega_debye = parameters.omega_debye; 
+		this->fermi_energy = parameters.fermi_energy; 
+		this->phonon_coupling = parameters.phonon_coupling; 
+		this->coulomb_scaling = parameters.coulomb_scaling; 
+		this->fermi_wavevector = parameters.fermi_wavevector;
+
+		this->momentumRanges = MomentumRanges(&fermi_wavevector, omega_debye);
+		this->get_expectation_values();
+		this->occupation = SplineContainer(_expecs[SymbolicOperators::Number_Type], momentumRanges.K_MIN,
+			momentumRanges.STEP, momentumRanges.INNER_STEP, momentumRanges.STEP,
+			_OUTER_DISC, _INNER_DISC);
+		this->sc_expectation_value = SplineContainer(_expecs[SymbolicOperators::SC_Type], momentumRanges.K_MIN,
+			momentumRanges.STEP, momentumRanges.INNER_STEP, momentumRanges.STEP,
+			_OUTER_DISC, _INNER_DISC);
+
+		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(this, &Delta, 200);
+		solver.compute(true);
 	}
 
 	std::vector<c_float> SCModel::continuum_boundaries() const
@@ -297,11 +314,6 @@ namespace Continuum {
 			return k * k * dispersion_to_fermi_level(k);
 			};
 		return 2. * (V_OVER_N / (2. * PI * PI)) * momentumRanges.integrate(procedure, momentumRanges.K_MIN, fermi_wavevector);
-	}
-
-	c_float SCModel::compute_fermiwavevector(c_float epsilon_F) const
-	{
-		return coulomb_scaling * PhysicalConstants::em_factor + sqrt((coulomb_scaling * PhysicalConstants::em_factor * coulomb_scaling * PhysicalConstants::em_factor) + 2. * epsilon_F);
 	}
 
 	std::string SCModel::info() const {
