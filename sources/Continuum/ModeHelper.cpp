@@ -10,7 +10,7 @@
 #include <boost/math/quadrature/gauss.hpp>
 
 #define ieom_diag(k) 4. * PI * k * k
-#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->momentumRanges.STEP
+#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->momentumRanges.LOWER_STEP
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -62,8 +62,8 @@ namespace Continuum {
 		std::fill(starting_states[1].begin() + 3 * DISCRETIZATION, starting_states[1].end(), sqrt(model->momentumRanges.STEP));
 #else
 		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
-		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
-		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
+		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.LOWER_STEP));
+		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->momentumRanges.LOWER_STEP));
 #endif
 	}
 
@@ -222,11 +222,9 @@ namespace Continuum {
 
 	c_complex ModeHelper::computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
-#ifndef _use_coulomb
 		if(!term.coefficients.empty()){
 			if(term.coefficients.front().name == "V") return c_complex{};
 		}
-#endif
 		if (term.sums.momenta.empty()) {
 			c_complex value { static_cast<c_float>(static_cast<c_float>(term.multiplicity)) };
 			

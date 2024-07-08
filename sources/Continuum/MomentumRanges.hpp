@@ -12,8 +12,9 @@ namespace Continuum {
 		c_float INNER_K_MAX{};
 		c_float INNER_K_MIN{};
 
-		c_float STEP{};
+		c_float LOWER_STEP{};
 		c_float INNER_STEP{};
+        c_float UPPER_STEP{};
 
         c_float* K_F;
 
@@ -77,4 +78,24 @@ namespace Continuum {
             return boost::math::quadrature::gauss<c_float, n_gauss>::integrate(func, begin, end);
         }
 	};
+
+    class MomentumIterator {
+        MomentumRanges const * const _parent;
+    public:
+        c_float k{};
+        int i{};
+
+        MomentumIterator(MomentumRanges const * const parent, int init = 0) 
+            : _parent(parent), k(_parent->index_to_momentum(init)), i(init) {}
+
+        inline MomentumIterator& operator++() {
+            ++i;
+            k = _parent->index_to_momentum(i);
+            return *this;
+        }
+
+        inline auto operator<=>(int other) { return i <=> other; }
+        inline auto operator==(int other) { return i == other; }
+        inline auto operator!=(int other) { return i != other; }
+    };
 }

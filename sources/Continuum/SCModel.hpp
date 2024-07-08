@@ -34,6 +34,8 @@ namespace Continuum {
 		c_float g_lower_bound(c_float k) const;
 		c_float g_upper_bound(c_float k) const;
 
+		c_complex k_infinity_integral() const;
+
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
 		inline c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first) const {
 			return computeCoefficient(coeff, first, fermi_wavevector);
@@ -46,6 +48,7 @@ namespace Continuum {
 		std::vector<c_float> continuum_boundaries() const;
 		std::vector<c_float> phonon_gap() const;
 		std::vector<c_float> coulomb_gap() const;
+		std::vector<c_float> coulomb_corrections() const;
 		const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& get_expectation_values() const;
 
 		void set_new_parameters(ModelInitializer const& parameters);
@@ -99,6 +102,7 @@ namespace Continuum {
 			return phonon_alpha(k) - ALPHA;
 		}
 
+		void set_splines();
 	public:
         ModelAttributes<c_complex> Delta;
         c_float temperature{};

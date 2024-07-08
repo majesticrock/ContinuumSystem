@@ -82,15 +82,15 @@ int main(int argc, char** argv) {
 	if(argc > 4) {
 		const std::string inc_type = argv[2];
 		const double end_param = std::stod(argv[3]);
-		if(inc_type == "T") 
+		if(inc_type == "T" || inc_type == "temperature") 
 			incrementer = std::make_unique<Temperature_Incrementer>((end_param - init.temperature) / n_iter);
-		else if(inc_type == "g")
+		else if(inc_type == "g" || inc_type == "phonon_coupling")
 			incrementer = std::make_unique<PhononCoupling_Incrementer>((end_param - init.phonon_coupling) / n_iter);
-		else if(inc_type == "omega_D")
+		else if(inc_type == "omega_D" || inc_type == "omega_debye")
 			incrementer = std::make_unique<DebyeFrequency_Incrementer>((end_param - init.omega_debye) / n_iter);
-		else if(inc_type == "E_F")
+		else if(inc_type == "E_F" || inc_type == "fermi_energy")
 			incrementer = std::make_unique<FermiEnergy_Incrementer>((end_param - init.fermi_energy) / n_iter);
-		else if(inc_type == "coulomb")
+		else if(inc_type == "coulomb" || inc_type == "coulomb_scaling")
 			incrementer = std::make_unique<CoulombScaling_Incrementer>((end_param - init.coulomb_scaling) / n_iter);
 		else throw std::invalid_argument("Failed incrementer parsing. Syntax: mpirun -n <threads> <executable> <parameter_file> <incrementer_type> <end_increment> <n_increments>");
 	}
@@ -117,7 +117,9 @@ int main(int argc, char** argv) {
 				{ "g", modes.getModel().phonon_coupling },
 				{ "omega_D", modes.getModel().omega_debye },
 				{ "E_F", modes.getModel().fermi_energy },
-				{ "Coulomb scaling", modes.getModel().coulomb_scaling }
+				{ "Coulomb scaling", modes.getModel().coulomb_scaling },
+				{ "k_infinity_factor", 2. * PhysicalConstants::em_factor * modes.getModel().coulomb_scaling * delta_result[2 * DISCRETIZATION] },
+				{ "Internal energy", modes.getModel().internal_energy() }
 			};
 		};
 
@@ -125,11 +127,11 @@ int main(int argc, char** argv) {
 		* Compute and output gap data
 		*/
 		nlohmann::json jDelta = {
-			{"ks", modes.getModel().momentumRanges.get_k_points()},
-			{"Delta_Phonon", modes.getModel().phonon_gap()},
-			{"Delta_Coulomb", modes.getModel().coulomb_gap()},
-			{"Delta_Fock", std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)},
-			{"Internal energy", modes.getModel().internal_energy()}
+			{ "ks", modes.getModel().momentumRanges.get_k_points() },
+			{ "Delta_Phonon", modes.getModel().phonon_gap() },
+			{ "Delta_Coulomb", modes.getModel().coulomb_gap() },
+			{ "Delta_Fock", std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION) },
+			{ "Delta_cut", modes.getModel().coulomb_corrections() }
 		};
 		jDelta.merge_patch(generate_comments());
 		Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
