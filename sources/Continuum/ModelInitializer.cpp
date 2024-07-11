@@ -24,4 +24,16 @@ namespace Continuum {
 	{
 		return 3. * PI * PI / (Utility::constexprPower<3>(fermi_wavevector));
 	}
+
+	std::ostream& operator<<(std::ostream& os, ModelInitializer const& init) 
+	{
+		os << "T=" << init.temperature << " K   "
+		<< "g=" << init.phonon_coupling << " eV   "
+		<< "omega_D=" << init.omega_debye << " eV   "
+		<< "E_F=" << init.fermi_energy << " eV   "
+		<< "alpha=" << init.coulomb_scaling << "   "
+		<< "k_F=" << init.fermi_wavevector << " sqrt(eV)   "
+		<< "V/N=" << init.V_OVER_N << " 1/sqrt(eV)";
+    return os;
+}
 }

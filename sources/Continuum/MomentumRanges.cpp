@@ -1,27 +1,34 @@
 #include "MomentumRanges.hpp"
 #include <iostream>
 
-constexpr Continuum::c_float sc_is_finite_range = 1;
+#ifdef approximate_theta
+constexpr Continuum::c_float inner_offset = 1;
+#else
+constexpr Continuum::c_float inner_offset = 5;
+#endif
 
 namespace Continuum {
     MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye)
-        : K_MAX{ 5 * (*k_F) }, // + sc_is_finite_range * sqrt(2 * omega_debye)
-		K_MIN{ 0 }, //(*k_F) - sc_is_finite_range * sqrt(2 * omega_debye)
-		INNER_K_MAX{ (*k_F) + 5 * omega_debye },
-		INNER_K_MIN{ (*k_F) - 5 * omega_debye },
+        : K_MAX{ 5 * (*k_F) },
+		K_MIN{ 0 },
+		INNER_K_MAX{ (*k_F) + inner_offset * omega_debye },
+		INNER_K_MIN{ (*k_F) - inner_offset * omega_debye },
         LOWER_STEP{ (INNER_K_MIN - K_MIN) / _OUTER_DISC },
 		INNER_STEP{ (INNER_K_MAX - INNER_K_MIN) / _INNER_DISC },
         UPPER_STEP{ (K_MAX - INNER_K_MAX) / _OUTER_DISC },
         K_F{ k_F }
     { 
         assert(index_to_momentum(0) >= 0);
-
+#ifndef _NDEBUG
         for(int i = 0; i < DISCRETIZATION; ++i) {
             const double k = index_to_momentum(i);
             if(i != momentum_to_index(k)){
-                std::cerr << i << " -> " << k << " -> " << momentum_to_index(k) << std::endl;
+                std::cerr << "MomentumRanges.cpp:" << __LINE__ 
+                    << " || " << i << " -> " << k << " -> " << momentum_to_index(k) << std::endl;
+                throw -1;
             } 
         }
+#endif
     }
 
     c_float MomentumRanges::index_to_momentum(int k_idx) const

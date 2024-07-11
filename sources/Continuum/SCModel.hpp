@@ -49,6 +49,7 @@ namespace Continuum {
 		std::vector<c_float> phonon_gap() const;
 		std::vector<c_float> coulomb_gap() const;
 		std::vector<c_float> coulomb_corrections() const;
+		std::vector<c_float> single_particle_dispersion() const;
 		const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& get_expectation_values() const;
 
 		void set_new_parameters(ModelInitializer const& parameters);
@@ -97,6 +98,7 @@ namespace Continuum {
 		c_float occupation_index(int k) const;
 		inline c_float delta_n_index(int k) const;
 
+		// Effectively 2 * ( bare_dispersion + E_fock )
 		c_float phonon_alpha(const c_float k) const;
 		inline auto phonon_beta(const c_float k, const c_float ALPHA) const {
 			return phonon_alpha(k) - ALPHA;
@@ -109,7 +111,7 @@ namespace Continuum {
 		c_float phonon_coupling{};
 		c_float omega_debye{};
 		c_float fermi_energy{};
-		c_float coulomb_scaling;
+		c_float coulomb_scaling{};
 
 		SplineContainer occupation;
 		SplineContainer sc_expectation_value;

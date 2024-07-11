@@ -7,10 +7,6 @@ function(SET_COMPILER_FLAGS TARGET)
         endif()
 
         target_compile_options(${TARGET} PRIVATE -Wall -Wno-sign-compare -fopenmp -march=casecadelake -O3)
-
-        if(NOT USE_MPI)
-            target_compile_definitions(${TARGET} PRIVATE _NO_MPI)
-        endif()
     else()
         message(FATAL_ERROR "Unsupported compiler ${CMAKE_CXX_COMPILER_ID}. Only GCC is supported.")
     endif()

@@ -10,11 +10,13 @@
 #ifndef _NO_MPI
 #include <mpi.h>
 #define EXIT MPI_Finalize()
-#endif
+#else
 #define EXIT 0
+#endif
 
 #include <filesystem>
 #include <algorithm>
+#include <concepts>
 using namespace Continuum;
 
 #include <SymbolicOperators/WickOperator.hpp>
@@ -26,6 +28,19 @@ int Continuum::DISCRETIZATION = 1000;
 c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
 int Continuum::_INNER_DISC = Continuum::DISCRETIZATION / Continuum::REL_INNER_DISCRETIZATION;
 int Continuum::_OUTER_DISC = Continuum::DISCRETIZATION - Continuum::_INNER_DISC;
+
+template<typename number> 
+	requires std::floating_point<number> 
+constexpr number as_meV(number in_eV) {
+	in_eV *= 1e3;
+	return in_eV;
+}
+template<typename number> 
+	requires std::floating_point<number> 
+std::vector<number>&& as_meV(std::vector<number>&& in_eV) {
+	std::ranges::for_each(in_eV, [](number& num) { num *= 1e3; });
+	return std::move(in_eV);
+}
 
 void compute_small_U_gap() {
 	Utility::InputFileReader input("params/params.config");
@@ -48,6 +63,9 @@ void compute_small_U_gap() {
 	Utility::saveData(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
 }
 
+#define RANK_RANGES(x)  const double rank_range = (std::stod(argv[3]) - init.x) / n_ranks; \
+						init.x += rank * rank_range; init.recompute_dependencies();
+
 int main(int argc, char** argv) {
 	if (argc < 2) {
 		std::cerr << "Invalid number of arguments: Use mpirun -n <threads> <path_to_executable> <configfile>" << std::endl;
@@ -58,15 +76,18 @@ int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
 
 	// Get my rank and the number of ranks
-	int rank, numberOfRanks;
+	int rank, n_ranks;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &numberOfRanks);
+	MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
+#else
+	int rank = 0;
+	int n_ranks = 1;
 #endif
 
 	Utility::InputFileReader input(argv[1]);
 	Continuum::set_discretization(input.getInt("discretization_points"));
 
-	if (false) { // compute gap in a range for small U
+	if (false) { // compute gap in a range for small g
 		compute_small_U_gap();
 		return EXIT;
 	}
@@ -75,26 +96,43 @@ int main(int argc, char** argv) {
 	* Setup iterations (if asked for)
 	*/
 	ModelInitializer init(input);
-	ModeHelper modes(init);
 	
-	const int n_iter = argc > 4 ? std::stoi(argv[4]) : 1;
+	int n_iter = argc > 4 ? std::stoi(argv[4]) : 0;
 	std::unique_ptr<Base_Incrementer> incrementer;
 	if(argc > 4) {
 		const std::string inc_type = argv[2];
-		const double end_param = std::stod(argv[3]);
 		if(inc_type == "T" || inc_type == "temperature") 
-			incrementer = std::make_unique<Temperature_Incrementer>((end_param - init.temperature) / n_iter);
+		{
+			RANK_RANGES(temperature);
+			incrementer = std::make_unique<Temperature_Incrementer>(rank_range / n_iter);
+		}
 		else if(inc_type == "g" || inc_type == "phonon_coupling")
-			incrementer = std::make_unique<PhononCoupling_Incrementer>((end_param - init.phonon_coupling) / n_iter);
+		{
+			RANK_RANGES(phonon_coupling);
+			incrementer = std::make_unique<PhononCoupling_Incrementer>(rank_range / n_iter);
+		}
 		else if(inc_type == "omega_D" || inc_type == "omega_debye")
-			incrementer = std::make_unique<DebyeFrequency_Incrementer>((end_param - init.omega_debye) / n_iter);
+		{
+			const double rank_range = 1e-3 * (std::stod(argv[3]) - init.omega_debye) / n_ranks;
+			init.omega_debye += rank * rank_range;
+			incrementer = std::make_unique<DebyeFrequency_Incrementer>(rank_range / n_iter);
+		}
 		else if(inc_type == "E_F" || inc_type == "fermi_energy")
-			incrementer = std::make_unique<FermiEnergy_Incrementer>((end_param - init.fermi_energy) / n_iter);
+		{
+			RANK_RANGES(fermi_energy);
+			incrementer = std::make_unique<FermiEnergy_Incrementer>(rank_range / n_iter);
+		}
 		else if(inc_type == "coulomb" || inc_type == "coulomb_scaling")
-			incrementer = std::make_unique<CoulombScaling_Incrementer>((end_param - init.coulomb_scaling) / n_iter);
+		{
+			RANK_RANGES(coulomb_scaling);
+			incrementer = std::make_unique<CoulombScaling_Incrementer>(rank_range / n_iter);
+		}
 		else throw std::invalid_argument("Failed incrementer parsing. Syntax: mpirun -n <threads> <executable> <parameter_file> <incrementer_type> <end_increment> <n_increments>");
 	}
-
+	//std::cout << "Rank #" << rank << ": " << init << std::endl;
+	ModeHelper modes(init);
+	// We also want the last data point
+	if (rank == n_ranks - 1) ++n_iter;
 	for(int i = 0; i < n_iter; ++i) 
 	{
 		/* 
@@ -105,47 +143,41 @@ int main(int argc, char** argv) {
 		std::filesystem::create_directories(BASE_FOLDER + output_folder);
 		auto generate_comments = [&]() {
 			return nlohmann::json {
-				{ "time", Utility::time_stamp() },
-				{ "Discretization", DISCRETIZATION },
-				{ "Screening lambda", _screening },
-				{ "Delta_max", std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION, 
-					[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs){
-						return std::abs(lhs) < std::abs(rhs);
-					})) },
-				{ "k_F", modes.getModel().fermi_wavevector },
-				{ "T", modes.getModel().temperature },
-				{ "g", modes.getModel().phonon_coupling },
-				{ "omega_D", modes.getModel().omega_debye },
-				{ "E_F", modes.getModel().fermi_energy },
-				{ "Coulomb scaling", modes.getModel().coulomb_scaling },
-				{ "k_infinity_factor", 2. * PhysicalConstants::em_factor * modes.getModel().coulomb_scaling * delta_result[2 * DISCRETIZATION] },
-				{ "Internal energy", modes.getModel().internal_energy() }
+				{ "time", 				Utility::time_stamp() },
+				{ "discretization", 	DISCRETIZATION },
+				{ "lambda_screening", 	_screening },
+				{ "Delta_max", 			as_meV(std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION, 
+											[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs){
+												return std::abs(lhs) < std::abs(rhs); }))) },
+				{ "k_F", 				modes.getModel().fermi_wavevector },
+				{ "T", 					modes.getModel().temperature },
+				{ "g", 					modes.getModel().phonon_coupling },
+				{ "omega_D", 			as_meV(modes.getModel().omega_debye) },
+				{ "E_F", 				modes.getModel().fermi_energy },
+				{ "coulomb_scaling",	modes.getModel().coulomb_scaling },
+				{ "k_infinity_factor", 	2. * PhysicalConstants::em_factor * modes.getModel().coulomb_scaling * delta_result[2 * DISCRETIZATION] },
+				{ "internal_energy", 	modes.getModel().internal_energy() }
 			};
 		};
 
 		/*
 		* Compute and output gap data
 		*/
-		nlohmann::json jDelta = {
-			{ "ks", modes.getModel().momentumRanges.get_k_points() },
-			{ "Delta_Phonon", modes.getModel().phonon_gap() },
-			{ "Delta_Coulomb", modes.getModel().coulomb_gap() },
-			{ "Delta_Fock", std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION) },
-			{ "Delta_cut", modes.getModel().coulomb_corrections() }
-		};
-		jDelta.merge_patch(generate_comments());
-		Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
-		std::cout << "Gap data have been saved!" << std::endl;
-
-		if (false) { // compute and save the single particle energies
-			std::vector<std::vector<double>> data(2, std::vector<double>(Continuum::DISCRETIZATION));
-			const auto step = 2. * modes.getModel().fermi_wavevector / Continuum::DISCRETIZATION;
-			for(size_t i = 0U; i < data[0].size(); ++i){
-				data[0][i] = 1e-6 + i * step;
-				data[1][i] = modes.getModel().energy(data[0][i]);
+		nlohmann::json jDelta = generate_comments();
+		jDelta.update(nlohmann::json {
+			{ "data", {
+					{ "ks", 			modes.getModel().momentumRanges.get_k_points() },
+					{ "Delta_Phonon", 	as_meV(modes.getModel().phonon_gap()) },
+					{ "Delta_Coulomb", 	as_meV(modes.getModel().coulomb_gap()) },
+					{ "Delta_Fock", 	as_meV(std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)) },
+					{ "Delta_cut", 		as_meV(modes.getModel().coulomb_corrections()) },
+					{ "xis", 			modes.getModel().single_particle_dispersion() }
+				}
 			}
-			Utility::saveData(data, BASE_FOLDER + output_folder + "one_particle_energies.dat.dz");
-		}
+		});
+		Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
+		std::cout << "Gap data have been saved! " << modes.getModel().info() << std::endl;
+
 		if (false) { // compute and save the expectation values
 			auto expecs = modes.getModel().get_expectation_values();
 			auto ks = modes.getModel().momentumRanges.get_k_points();
@@ -173,14 +205,14 @@ int main(int argc, char** argv) {
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {
 					{ "resolvents", resolvents },
-					{ "Continuum Boundaries", modes.getModel().continuum_boundaries() }
+					{ "continuum_boundaries", modes.getModel().continuum_boundaries() }
 				};
 				jResolvents.merge_patch(generate_comments());
 				Utility::saveString(jResolvents.dump(4), BASE_FOLDER + output_folder + "resolvents.json.gz");
 			}
 		}
 
-		if (incrementer) {
+		if (incrementer && i < n_iter - 1) {
 			incrementer->increment(init);
 			modes.getModel().set_new_parameters(init);
 		}

@@ -11,10 +11,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_PREFIX_PATH "~/usr/local")
 
 if(CLUSTER_BUILD)
-    option(USE_MPI "Enable MPI support" ON)
     include(${CMAKE_SOURCE_DIR}/cmake/ClusterCompilerFlags.cmake)
 else()
-    option(USE_MPI "Enable MPI support" OFF)
     include(${CMAKE_SOURCE_DIR}/cmake/DefaultCompilerFlags.cmake)
 endif()
 
@@ -37,11 +35,9 @@ target_sources(ContinuumSystem PRIVATE ${ADD_SOURCES})
 
 SET_COMPILER_FLAGS(ContinuumSystem)
 
-if(USE_MPI)
-    find_package(MPI REQUIRED)
-    message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
-    target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX)
-endif()
+find_package(MPI REQUIRED)
+message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
+target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX)
 
 find_package(Boost REQUIRED COMPONENTS serialization iostreams)
 if(NOT Boost_FOUND)
