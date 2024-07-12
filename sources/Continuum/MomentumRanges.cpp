@@ -4,7 +4,7 @@
 #ifdef approximate_theta
 constexpr Continuum::c_float inner_offset = 1;
 #else
-constexpr Continuum::c_float inner_offset = 5;
+constexpr Continuum::c_float inner_offset = 3;
 #endif
 
 namespace Continuum {
