@@ -156,6 +156,7 @@ int main(int argc, char** argv) {
 				{ "E_F", 				modes.getModel().fermi_energy },
 				{ "coulomb_scaling",	modes.getModel().coulomb_scaling },
 				{ "k_infinity_factor", 	2. * PhysicalConstants::em_factor * modes.getModel().coulomb_scaling * delta_result[2 * DISCRETIZATION] },
+				{ "k_zero_factor", 		modes.getModel().k_zero_integral() },
 				{ "internal_energy", 	modes.getModel().internal_energy() }
 			};
 		};

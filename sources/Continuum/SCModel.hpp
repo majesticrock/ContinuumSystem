@@ -35,6 +35,7 @@ namespace Continuum {
 		c_float g_upper_bound(c_float k) const;
 
 		c_complex k_infinity_integral() const;
+		c_complex k_zero_integral() const;
 
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
 		inline c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first) const {
@@ -59,14 +60,14 @@ namespace Continuum {
 		template<class ExpectationValues>
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_screening(ExpectationValues const& expecs, c_float k) const
 		{
+#ifndef mielke_coulomb
 			if(is_zero(k)){
-				auto integrand = [&](c_float q){
+				auto integrand = [&](c_float q) {
 					return expecs(q) * q * q / (_screening * _screening + q * q);
 				};
 				const c_float prefactor = 2. * coulomb_scaling * PhysicalConstants::em_factor;
 				return prefactor * momentumRanges.integrate(integrand);
 			}
-
 			auto integrand = [&](c_float q){
 				const c_float k_diff{ q - k };
 				const c_float k_sum{ q + k };
@@ -74,6 +75,12 @@ namespace Continuum {
 			};
 			const c_float prefactor = 0.5 * coulomb_scaling * PhysicalConstants::em_factor / k;
 			return prefactor * momentumRanges.integrate(integrand);
+#else
+			auto integrand = [&](c_float q) {
+				return expecs(q) * q * q;
+			};
+			return coulomb_scaling * PhysicalConstants::em_factor * momentumRanges.integrate(integrand);
+#endif
 		}
 
 	private:

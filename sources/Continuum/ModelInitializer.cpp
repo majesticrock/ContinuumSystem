@@ -6,7 +6,7 @@ namespace Continuum {
     c_float ModelInitializer::compute_fermi_wavevector() const
 	{
 		c_float kF = coulomb_scaling * PhysicalConstants::em_factor 
-			+ sqrt((coulomb_scaling * PhysicalConstants::em_factor * coulomb_scaling * PhysicalConstants::em_factor) + 2. * fermi_energy);
+			+ sqrt((coulomb_scaling * PhysicalConstants::em_factor * coulomb_scaling * PhysicalConstants::em_factor) + 2. * PhysicalConstants::effective_mass * fermi_energy);
 
 		auto energy_at_fermi_level = [this](c_float kF) {
 			const c_float k_sum{ 2 * kF };

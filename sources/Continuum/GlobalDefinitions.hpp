@@ -13,6 +13,7 @@
 #include <iostream>
 
 //#define approximate_theta
+//#define mielke_coulomb
 //#define _complex
 #define _screening 1e-4
 
@@ -60,11 +61,12 @@ namespace Continuum {
 		constexpr c_float k_B = 8.617333262e-5; // eV / K
 		constexpr c_float vacuum_permitivity = 0.05526349406 * 3.62262628; // 0.2001989859063799115 sqrt(eV)
 		constexpr c_float em_factor = 1. / (4 * PI * PI * vacuum_permitivity); // 1 / (4 * pi * pi * epsilon_0) in sqrt(eV)
+		constexpr c_float effective_mass = 1; // m* / m_e - lead: 2.1
 		// 0.1265255955014166767 sqrt(eV)
 	}
 
 	constexpr c_float bare_dispersion(c_float k) {
-		return 0.5 * k * k;
+		return (0.5 / PhysicalConstants::effective_mass) * k * k;
 	};
 	inline c_float log_expression(c_float k_sum, c_float k_diff) {
 		return std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) );

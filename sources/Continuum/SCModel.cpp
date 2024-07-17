@@ -10,6 +10,12 @@
 
 using Utility::constexprPower;
 
+#ifdef mielke_coulomb
+#define CUT_INTEGRAL 0.0
+#else
+#define CUT_INTEGRAL delta_cut_integral(it.k, momentumRanges.K_MAX, coulomb_scaling, Delta[2 * DISCRETIZATION])
+#endif
+
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(2 * DISCRETIZATION + 1, parameters.phonon_coupling* parameters.omega_debye), 
@@ -92,6 +98,15 @@ namespace Continuum {
 		return momentumRanges.integrate(integrand) / prefactor;
 	}
 
+	c_complex SCModel::k_zero_integral() const
+	{
+		auto integrand = [this](c_float q) {
+			return (q * q / (_screening * _screening + q * q)) * this->sc_expectation_value(q);
+		};
+		const c_float prefactor = 2. * coulomb_scaling * PhysicalConstants::em_factor;
+		return momentumRanges.integrate(integrand) * prefactor;
+	}
+
 	c_float SCModel::fock_energy(c_float k) const 
 	{
 #ifdef _screening
@@ -169,9 +184,10 @@ namespace Continuum {
 
 //#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			result(it.i) = integral_screening(sc_wrapper, it.k) 
-				+ delta_cut_integral(it.k, momentumRanges.K_MAX, coulomb_scaling, Delta[2 * DISCRETIZATION]);
+			result(it.i) = integral_screening(sc_wrapper, it.k) + CUT_INTEGRAL;
+#ifndef mielke_coulomb
 			result(it.i + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
+#endif
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
 			if (std::abs(phonon_alpha(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {
@@ -267,7 +283,7 @@ namespace Continuum {
 	}
 
 	c_float SCModel::phonon_alpha(const c_float k) const {
-		return k * k + 2. * fock_energy(k);
+		return 2. * bare_dispersion(k) + 2. * fock_energy(k);
 	}
 
 	const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
