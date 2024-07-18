@@ -16,6 +16,7 @@
 //#define mielke_coulomb
 //#define _complex
 #define _screening 1e-4
+#define MODE_DISC _INNER_DISC
 
 namespace Continuum {
 	using c_float = double;

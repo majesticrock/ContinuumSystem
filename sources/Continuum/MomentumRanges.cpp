@@ -83,4 +83,8 @@ namespace Continuum {
 		}
 		return ks;
     }
+
+    MomentumIterator MomentumRanges::InnerBegin() const {
+        return MomentumIterator(this, _OUTER_DISC / 2);
+    }
 }

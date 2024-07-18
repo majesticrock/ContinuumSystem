@@ -3,6 +3,7 @@
 #include <boost/math/quadrature/gauss.hpp>
 
 namespace Continuum {
+    class MomentumIterator;
     struct MomentumRanges {
         static constexpr int n_gauss = 60;
 
@@ -33,6 +34,11 @@ namespace Continuum {
         }
 
         std::vector<c_float> get_k_points() const;
+
+        MomentumIterator InnerBegin() const;
+        inline static int InnerEnd() {
+            return _INNER_DISC + _OUTER_DISC / 2
+        }
 
         template<class Function>
         auto integrate(const Function& func, c_float begin, c_float end) const {
@@ -83,19 +89,19 @@ namespace Continuum {
         MomentumRanges const * const _parent;
     public:
         c_float k{};
-        int i{};
+        int idx{};
 
         MomentumIterator(MomentumRanges const * const parent, int init = 0) 
-            : _parent(parent), k(_parent->index_to_momentum(init)), i(init) {}
+            : _parent(parent), k(_parent->index_to_momentum(init)), idx(init) {}
 
         inline MomentumIterator& operator++() {
-            ++i;
-            k = _parent->index_to_momentum(i);
+            ++idx;
+            k = _parent->index_to_momentum(idx);
             return *this;
         }
 
-        inline auto operator<=>(int other) { return i <=> other; }
-        inline auto operator==(int other) { return i == other; }
-        inline auto operator!=(int other) { return i != other; }
+        inline auto operator<=>(int other) { return idx <=> other; }
+        inline auto operator==(int other) { return idx == other; }
+        inline auto operator!=(int other) { return idx != other; }
     };
 }

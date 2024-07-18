@@ -184,9 +184,9 @@ namespace Continuum {
 
 //#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			result(it.i) = integral_screening(sc_wrapper, it.k) + CUT_INTEGRAL;
+			result(it.idx) = integral_screening(sc_wrapper, it.k) + CUT_INTEGRAL;
 #ifndef mielke_coulomb
-			result(it.i + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
+			result(it.idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
 #endif
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
@@ -194,7 +194,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			result(it.i) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
+			result(it.idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
@@ -375,7 +375,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			ret[it.i] = -(V_OVER_N * phonon_coupling / (2. * PI * PI))
+			ret[it.idx] = -(V_OVER_N * phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate( 
 					[this](c_float x) -> c_complex { return x * x * sc_expectation_value(x); }
 					, g_lower_bound(it.k), g_upper_bound(it.k) );
@@ -387,7 +387,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for(MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.i] = integral_screening(
+			ret[it.idx] = integral_screening(
 				[this](c_float q) { return this->sc_expectation_value(q); }, it.k );
 		}
 		return ret;
@@ -397,7 +397,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for(MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.i] = delta_cut_integral(it.k, momentumRanges.K_MAX, coulomb_scaling, Delta[2 * DISCRETIZATION]);
+			ret[it.idx] = delta_cut_integral(it.k, momentumRanges.K_MAX, coulomb_scaling, Delta[2 * DISCRETIZATION]);
 		}
 		return ret;
 	}
@@ -406,7 +406,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for(MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.i] = bare_dispersion_to_fermi_level(it.k) + fock_energy(it.k);
+			ret[it.idx] = bare_dispersion_to_fermi_level(it.k) + fock_energy(it.k);
 		}
 		return ret;
 	}

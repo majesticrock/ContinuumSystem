@@ -10,7 +10,7 @@
 #include <boost/math/quadrature/gauss.hpp>
 
 #define ieom_diag(k) 4. * PI * k * k
-#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->momentumRanges.LOWER_STEP
+#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->momentumRanges.INNER_STEP
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -58,12 +58,12 @@ namespace Continuum {
 	{
 #ifdef _complex
 		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
-		std::fill(starting_states[0].begin(), starting_states[0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.STEP));
-		std::fill(starting_states[1].begin() + 3 * DISCRETIZATION, starting_states[1].end(), sqrt(model->momentumRanges.STEP));
+		std::fill(starting_states[0].begin(), starting_states[0].begin() + MODE_DISC, sqrt(model->momentumRanges.STEP));
+		std::fill(starting_states[1].begin() + 3 * MODE_DISC, starting_states[1].end(), sqrt(model->momentumRanges.STEP));
 #else
 		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
-		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + DISCRETIZATION, sqrt(model->momentumRanges.LOWER_STEP));
-		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + DISCRETIZATION, sqrt(model->momentumRanges.LOWER_STEP));
+		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + MODE_DISC, sqrt(model->momentumRanges.LOWER_STEP));
+		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + MODE_DISC, sqrt(model->momentumRanges.LOWER_STEP));
 #endif
 	}
 
@@ -124,8 +124,7 @@ namespace Continuum {
 	void ModeHelper::fill_block_M(int i, int j)
 	{
 		for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
-			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
-				const c_float k = this->model->momentumRanges.index_to_momentum(k_idx);
+			for(auto it = model->momentumRanges.InnerBegin(); it < MomentumRanges::InnerEnd(); ++it) {
 				if (!term.delta_momenta.empty()) {
 					if (term.sums.momenta.empty()) {
 						if (term.coefficients.front().name == "g" || term.coefficients.front().name == "V") {
@@ -133,14 +132,13 @@ namespace Continuum {
 							continue;
 						}
 					}
-					M(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
-							+= ieom_diag(k) * computeTerm(term, k, k);
+					M(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx)
+							+= ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
-					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
-						const c_float l = this->model->momentumRanges.index_to_momentum(l_idx);
-						M(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
-								+= ieom_offdiag(k, l) * computeTerm(term, k, l);
+					for (auto jt = model->momentumRanges.InnerBegin(); jt < MomentumRanges::InnerEnd(); ++jt) {
+						M(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx)
+								+= ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
 			}
@@ -150,18 +148,16 @@ namespace Continuum {
 	void ModeHelper::fill_block_N(int i, int j)
 	{
 		for (const auto& term : wicks.N[number_of_basis_terms * j + i]) {
-			for (int k_idx = 0; k_idx < DISCRETIZATION; ++k_idx) {
-				const c_float k = this->model->momentumRanges.index_to_momentum(k_idx);
+			for(auto it = model->momentumRanges.InnerBegin(); it < MomentumRanges::InnerEnd(); ++it) {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
-					N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + k_idx)
-						+= ieom_diag(k) * computeTerm(term, k, k);
+					N(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx)
+						+= ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
-					for (int l_idx = 0; l_idx < DISCRETIZATION; ++l_idx) {
-						const c_float l = this->model->momentumRanges.index_to_momentum(l_idx);
-						N(i * DISCRETIZATION + k_idx, j * DISCRETIZATION + l_idx)
-							+= ieom_offdiag(k, l) * computeTerm(term, k, l);
+					for(auto jt = model->momentumRanges.InnerBegin(); jt < MomentumRanges::InnerEnd(); ++jt) {
+						N(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx)
+							+= ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
 			}
@@ -271,13 +267,13 @@ namespace Continuum {
 	ModeHelper::ModeHelper(ModelInitializer const& init)
 		: _parent(this, SQRT_PRECISION, //SQRT_PRECISION
 #ifndef _complex
-		DISCRETIZATION * hermitian_size, DISCRETIZATION * antihermitian_size, false, 
+		MODE_DISC * hermitian_size, MODE_DISC * antihermitian_size, false, 
 #endif
 		false)
 	{
-		hermitian_discretization = DISCRETIZATION * hermitian_size;
-		antihermitian_discretization = DISCRETIZATION * antihermitian_size;
-		total_matrix_size = DISCRETIZATION * number_of_basis_terms;
+		hermitian_discretization = MODE_DISC * hermitian_size;
+		antihermitian_discretization = MODE_DISC * antihermitian_size;
+		total_matrix_size = MODE_DISC * number_of_basis_terms;
 
 		model = std::make_unique<SCModel>(init);
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
