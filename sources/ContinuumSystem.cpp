@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
 			std::cout << "Expectation values have been saved!" << std::endl;
 		}
 
-		if (false) {
+		if (true) {
 			auto resolvents = modes.computeCollectiveModes(150);
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {

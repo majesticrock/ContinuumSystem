@@ -124,7 +124,7 @@ namespace Continuum {
 	void ModeHelper::fill_block_M(int i, int j)
 	{
 		for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
-			for(auto it = model->momentumRanges.InnerBegin(); it < MomentumRanges::InnerEnd(); ++it) {
+			for(InnerIterator it(&model->momentumRanges); it < _INNER_DISC; ++it) {
 				if (!term.delta_momenta.empty()) {
 					if (term.sums.momenta.empty()) {
 						if (term.coefficients.front().name == "g" || term.coefficients.front().name == "V") {
@@ -136,7 +136,7 @@ namespace Continuum {
 							+= ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
-					for (auto jt = model->momentumRanges.InnerBegin(); jt < MomentumRanges::InnerEnd(); ++jt) {
+					for (InnerIterator jt(&model->momentumRanges); jt < _INNER_DISC; ++jt) {
 						M(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx)
 								+= ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
@@ -148,14 +148,14 @@ namespace Continuum {
 	void ModeHelper::fill_block_N(int i, int j)
 	{
 		for (const auto& term : wicks.N[number_of_basis_terms * j + i]) {
-			for(auto it = model->momentumRanges.InnerBegin(); it < MomentumRanges::InnerEnd(); ++it) {
+			for(InnerIterator it(&model->momentumRanges); it < _INNER_DISC; ++it) {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
 					N(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx)
 						+= ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
-					for(auto jt = model->momentumRanges.InnerBegin(); jt < MomentumRanges::InnerEnd(); ++jt) {
+					for(InnerIterator jt(&model->momentumRanges); jt < _INNER_DISC; ++jt) {
 						N(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx)
 							+= ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
@@ -265,7 +265,7 @@ namespace Continuum {
 	int ModeHelper::total_matrix_size = 0;
 
 	ModeHelper::ModeHelper(ModelInitializer const& init)
-		: _parent(this, SQRT_PRECISION, //SQRT_PRECISION
+		: _parent(this, SQRT_PRECISION, 
 #ifndef _complex
 		MODE_DISC * hermitian_size, MODE_DISC * antihermitian_size, false, 
 #endif

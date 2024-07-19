@@ -96,7 +96,7 @@ namespace Continuum {
 	extern int DISCRETIZATION;
 	extern c_float INV_N;
 
-	static constexpr int REL_INNER_DISCRETIZATION = 5;
+	static constexpr int REL_INNER_DISCRETIZATION = 2;
     extern int _INNER_DISC;
     extern int _OUTER_DISC;
 

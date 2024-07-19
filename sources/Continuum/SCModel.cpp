@@ -81,12 +81,24 @@ namespace Continuum {
 
 	std::vector<c_float> SCModel::continuum_boundaries() const
 	{
-		return {
-			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
-				momentumRanges.index_to_momentum(0), momentumRanges.index_to_momentum(DISCRETIZATION - 1), PRECISION, 100)),
-			2 * this->energy(Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
-				momentumRanges.index_to_momentum(0), momentumRanges.index_to_momentum(DISCRETIZATION - 1), PRECISION, 100))
+		const c_float lower[2] = {
+			Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
+				momentumRanges.INNER_K_MIN, fermi_wavevector, PRECISION, 100),
+			Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
+				momentumRanges.INNER_K_MIN, fermi_wavevector, PRECISION, 100)
 		};
+		const c_float upper[2] = {
+			Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
+				fermi_wavevector, momentumRanges.INNER_K_MAX, PRECISION, 100),
+			Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
+				fermi_wavevector, momentumRanges.INNER_K_MAX, PRECISION, 100)
+		};
+
+		std::cout << "Found minimum: lower=" << lower[0] / fermi_wavevector << " E=" << energy(lower[0]) 
+			<< " and upper=" << upper[0] / fermi_wavevector << " E=" << energy(upper[0]) << std::endl; 
+		std::cout << "Compare K_MIN=" << momentumRanges.INNER_K_MIN / fermi_wavevector
+			<< " and K_MAX=" << momentumRanges.INNER_K_MAX/ fermi_wavevector << std::endl;
+		return { 2. * std::min(energy(lower[0]), energy(upper[0])), 2. * std::max(energy(lower[1]), energy(upper[1])) };
 	}
 
 	c_complex SCModel::k_infinity_integral() const

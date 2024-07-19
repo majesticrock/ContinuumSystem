@@ -35,11 +35,6 @@ namespace Continuum {
 
         std::vector<c_float> get_k_points() const;
 
-        MomentumIterator InnerBegin() const;
-        inline static int InnerEnd() {
-            return _INNER_DISC + _OUTER_DISC / 2
-        }
-
         template<class Function>
         auto integrate(const Function& func, c_float begin, c_float end) const {
             decltype(func(begin)) value{ };
@@ -97,6 +92,26 @@ namespace Continuum {
         inline MomentumIterator& operator++() {
             ++idx;
             k = _parent->index_to_momentum(idx);
+            return *this;
+        }
+
+        inline auto operator<=>(int other) { return idx <=> other; }
+        inline auto operator==(int other) { return idx == other; }
+        inline auto operator!=(int other) { return idx != other; }
+    };
+
+    class InnerIterator {
+        MomentumRanges const * const _parent;
+    public:
+        c_float k{};
+        int idx{};
+
+        InnerIterator(MomentumRanges const * const parent, int init = 0) 
+            : _parent(parent), k(_parent->index_to_momentum(init + _OUTER_DISC)), idx(init) {}
+
+        inline InnerIterator& operator++() {
+            ++idx;
+            k = _parent->index_to_momentum(idx + _OUTER_DISC);
             return *this;
         }
 
