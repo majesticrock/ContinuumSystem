@@ -39,6 +39,7 @@ namespace Continuum {
 			return (momentumRanges.index_to_momentum(k) > fermi_wavevector ? -0.001 : 0.001 );
 			}, 2 * DISCRETIZATION + 1);
 
+		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << std::endl;
 		set_splines();
 	}
 
