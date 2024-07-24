@@ -145,6 +145,7 @@ int main(int argc, char** argv) {
 			return nlohmann::json {
 				{ "time", 				Utility::time_stamp() },
 				{ "discretization", 	DISCRETIZATION },
+				{ "inner_discretization", _INNER_DISC },
 				{ "lambda_screening", 	_screening },
 				{ "Delta_max", 			as_meV(std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION, 
 											[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs){
@@ -178,8 +179,6 @@ int main(int argc, char** argv) {
 		});
 		Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
 		std::cout << "Gap data have been saved! " << modes.getModel().info() << std::endl;
-
-		modes.getModel().continuum_boundaries();
 
 		if (false) { // compute and save the expectation values
 			auto expecs = modes.getModel().get_expectation_values();

@@ -12,7 +12,7 @@
 #include <Utility/UnderlyingFloatingPoint.hpp>
 #include <iostream>
 
-//#define approximate_theta
+#define approximate_theta
 //#define mielke_coulomb
 //#define _complex
 #define _screening 1e-4
@@ -62,7 +62,7 @@ namespace Continuum {
 		constexpr c_float k_B = 8.617333262e-5; // eV / K
 		constexpr c_float vacuum_permitivity = 0.05526349406 * 3.62262628; // 0.2001989859063799115 sqrt(eV)
 		constexpr c_float em_factor = 1. / (4 * PI * PI * vacuum_permitivity); // 1 / (4 * pi * pi * epsilon_0) in sqrt(eV)
-		constexpr c_float effective_mass = 1; // m* / m_e - lead: 2.1
+		constexpr c_float effective_mass = 2.1; // m* / m_e - lead: 2.1
 		// 0.1265255955014166767 sqrt(eV)
 	}
 

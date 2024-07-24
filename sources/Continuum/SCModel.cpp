@@ -22,7 +22,6 @@ namespace Continuum {
 		temperature{ parameters.temperature }, phonon_coupling{ parameters.phonon_coupling }, 
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ parameters.fermi_wavevector },
-		V_OVER_N{ parameters.V_OVER_N },
 		momentumRanges(&fermi_wavevector, omega_debye)
 	{
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
@@ -45,7 +44,6 @@ namespace Continuum {
 
 	void SCModel::set_new_parameters(ModelInitializer const& parameters) 
 	{
-		this->V_OVER_N = parameters.V_OVER_N; 
 		this->temperature = parameters.temperature; 
 		this->omega_debye = parameters.omega_debye; 
 		this->fermi_energy = parameters.fermi_energy; 
@@ -207,8 +205,8 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			result(it.idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
+			result(it.idx) -= (phonon_coupling / (2. * PI * PI))
+				* boost::math::quadrature::gauss<double, 60>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
 
@@ -229,12 +227,12 @@ namespace Continuum {
 			return this->phonon_beta(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, fermi_wavevector, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, fermi_wavevector, PRECISION, 200);
 #else
 		const auto lb = func(momentumRanges.K_MIN);
 		const auto ub = func(k);
 		if(lb * ub >= c_float{}) return momentumRanges.K_MIN;
-		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, k, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, k, PRECISION, 200);
 #endif
 	}
 	
@@ -249,12 +247,12 @@ namespace Continuum {
 			return this->phonon_beta(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, fermi_wavevector, momentumRanges.K_MAX, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, fermi_wavevector, momentumRanges.K_MAX, PRECISION, 200);
 #else
 		const auto lb = func(k);
 		const auto ub = func(momentumRanges.K_MAX);
 		if(lb * ub >= c_float{}) return momentumRanges.K_MAX;
-		return Utility::Numerics::Roots::bisection(func, k, momentumRanges.K_MAX, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, k, momentumRanges.K_MAX, PRECISION, 200);
 #endif
 	}
 
@@ -267,17 +265,17 @@ namespace Continuum {
 		else if (coeff.name == "g")
 		{
 #ifdef approximate_theta
-			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first))
-				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second)))
+			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first) + fock_energy(first))
+				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second) + fock_energy(second)))
 #else
 			if (coeff.momenta[0] == coeff.momenta[1])
 			{
-				return this->phonon_coupling * this->V_OVER_N;
+				return this->phonon_coupling;
 			}
-			if (omega_debye > std::abs(bare_dispersion(first) - bare_dispersion(second)))
+			if (2. * omega_debye > std::abs(phonon_alpha(first) - phonon_alpha(second)))
 #endif
 			{
-				return this->phonon_coupling * this->V_OVER_N;
+				return this->phonon_coupling;
 			}
 			else
 			{
@@ -388,8 +386,8 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			ret[it.idx] = -(V_OVER_N * phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 30>::integrate( 
+			ret[it.idx] = -(phonon_coupling / (2. * PI * PI))
+				* boost::math::quadrature::gauss<double, 60>::integrate( 
 					[this](c_float x) -> c_complex { return x * x * sc_expectation_value(x); }
 					, g_lower_bound(it.k), g_upper_bound(it.k) );
 		}
