@@ -205,7 +205,7 @@ namespace Continuum {
 			}
 #endif
 			result(it.idx) -= (phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
+				* boost::math::quadrature::gauss<double, 60>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
 
@@ -226,12 +226,12 @@ namespace Continuum {
 			return this->phonon_beta(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, fermi_wavevector, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, fermi_wavevector, PRECISION, 200);
 #else
 		const auto lb = func(momentumRanges.K_MIN);
 		const auto ub = func(k);
 		if(lb * ub >= c_float{}) return momentumRanges.K_MIN;
-		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, k, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, k, PRECISION, 200);
 #endif
 	}
 	
@@ -246,12 +246,12 @@ namespace Continuum {
 			return this->phonon_beta(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, fermi_wavevector, momentumRanges.K_MAX, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, fermi_wavevector, momentumRanges.K_MAX, PRECISION, 200);
 #else
 		const auto lb = func(k);
 		const auto ub = func(momentumRanges.K_MAX);
 		if(lb * ub >= c_float{}) return momentumRanges.K_MAX;
-		return Utility::Numerics::Roots::bisection(func, k, momentumRanges.K_MAX, 1e-13, 200);
+		return Utility::Numerics::Roots::bisection(func, k, momentumRanges.K_MAX, PRECISION, 200);
 #endif
 	}
 
@@ -386,7 +386,7 @@ namespace Continuum {
 			}
 #endif
 			ret[it.idx] = -(phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 30>::integrate( 
+				* boost::math::quadrature::gauss<double, 60>::integrate( 
 					[this](c_float x) -> c_complex { return x * x * sc_expectation_value(x); }
 					, g_lower_bound(it.k), g_upper_bound(it.k) );
 		}
