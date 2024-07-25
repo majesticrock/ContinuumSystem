@@ -59,11 +59,11 @@ namespace Continuum {
 #ifdef _complex
 		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
 		std::fill(starting_states[0].begin(), starting_states[0].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
-        std::fill(starting_states[1].begin() + 3 * MODE_DISC, starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
+		std::fill(starting_states[1].begin() + 3 * MODE_DISC, starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
 #else
 		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
-        std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
-        std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
+		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
+		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
 
 #endif
 	}
@@ -164,8 +164,8 @@ namespace Continuum {
 	c_complex ModeHelper::compute_phonon_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
 		const int q_dependend = term.whichOperatorDependsOn('q');
-        assert(q_dependend >= 0);
-        SymbolicOperators::WickOperator const * const other = term.isBilinear() ? nullptr : &term.operators[q_dependend == 0];
+		assert(q_dependend >= 0);
+		SymbolicOperators::WickOperator const * const other = term.isBilinear() ? nullptr : &term.operators[q_dependend == 0];
 
 		auto integrand = [&](c_float q) {
 			return q * q * this->get_expectation_value(term.operators[q_dependend], q);
@@ -175,8 +175,8 @@ namespace Continuum {
 		if (k > this->model->g_upper_bound(k)) return 0;
 #endif
 		const c_float prefactor = (static_cast<c_float>(term.multiplicity) * model->phonon_coupling / (2.0 * PI * PI))
-                * ( other == nullptr ? 1.0 : get_expectation_value(*other, k) );
-        return prefactor * boost::math::quadrature::gauss<double, 60>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
+				* ( other == nullptr ? 1.0 : get_expectation_value(*other, k) );
+		return prefactor * boost::math::quadrature::gauss<double, 60>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
 	}
 
 	c_complex ModeHelper::compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
