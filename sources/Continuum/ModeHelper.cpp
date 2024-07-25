@@ -9,8 +9,8 @@
 
 #include <boost/math/quadrature/gauss.hpp>
 
-#define ieom_diag(k) k * k / (4. * PI * PI)
-#define ieom_offdiag(k, l) model->momentumRanges.INNER_STEP * k * k * l * l / (16. * PI * PI * PI * PI)
+#define ieom_diag(k) 4. * PI * k * k
+#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->momentumRanges.INNER_STEP
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
