@@ -26,7 +26,6 @@ namespace Continuum {
     { 
         init.fermi_energy = n * _Delta + init.fermi_energy;
         init.fermi_wavevector = init.compute_fermi_wavevector();
-        init.V_OVER_N = init.compute_v_over_n();
     }
     double FermiEnergy_Incrementer::current(ModelInitializer const& init) const
         { return init.fermi_energy; }
@@ -35,7 +34,6 @@ namespace Continuum {
     { 
         init.coulomb_scaling = n * _Delta + init.coulomb_scaling;
         init.fermi_wavevector = init.compute_fermi_wavevector();
-        init.V_OVER_N = init.compute_v_over_n();
     }
     double CoulombScaling_Incrementer::current(ModelInitializer const& init) const
         { return init.coulomb_scaling; }

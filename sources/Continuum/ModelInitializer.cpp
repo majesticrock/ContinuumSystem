@@ -20,11 +20,6 @@ namespace Continuum {
 		return Utility::Numerics::Roots::bisection(energy_at_fermi_level, 0.95 * kF, 1.05 * kF, PRECISION, 250);
 	}
 
-	c_float ModelInitializer::compute_v_over_n() const 
-	{
-		return 3. * PI * PI / (Utility::constexprPower<3>(fermi_wavevector));
-	}
-
 	std::ostream& operator<<(std::ostream& os, ModelInitializer const& init) 
 	{
 		os << "T=" << init.temperature << " K   "
@@ -32,8 +27,7 @@ namespace Continuum {
 		<< "omega_D=" << init.omega_debye << " eV   "
 		<< "E_F=" << init.fermi_energy << " eV   "
 		<< "alpha=" << init.coulomb_scaling << "   "
-		<< "k_F=" << init.fermi_wavevector << " sqrt(eV)   "
-		<< "V/N=" << init.V_OVER_N << " 1/sqrt(eV)";
+		<< "k_F=" << init.fermi_wavevector << " sqrt(eV)   ";
     return os;
 }
 }
