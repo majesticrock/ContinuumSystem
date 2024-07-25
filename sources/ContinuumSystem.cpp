@@ -145,6 +145,7 @@ int main(int argc, char** argv) {
 			return nlohmann::json {
 				{ "time", 				Utility::time_stamp() },
 				{ "discretization", 	DISCRETIZATION },
+				{ "inner_discretization", _INNER_DISC },
 				{ "lambda_screening", 	_screening },
 				{ "Delta_max", 			as_meV(std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION, 
 											[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs){

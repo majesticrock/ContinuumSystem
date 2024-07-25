@@ -266,17 +266,17 @@ namespace Continuum {
 		else if (coeff.name == "g")
 		{
 #ifdef approximate_theta
-			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first))
-				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second)))
+			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first) + fock_energy(first))
+				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second) + fock_energy(second)))
 #else
 			if (coeff.momenta[0] == coeff.momenta[1])
 			{
-				return this->phonon_coupling * this->V_OVER_N;
+				return this->phonon_coupling;
 			}
-			if (omega_debye > std::abs(bare_dispersion(first) - bare_dispersion(second)))
+			if (2. * omega_debye > std::abs(phonon_alpha(first) - phonon_alpha(second)))
 #endif
 			{
-				return this->phonon_coupling * this->V_OVER_N;
+				return this->phonon_coupling;
 			}
 			else
 			{
