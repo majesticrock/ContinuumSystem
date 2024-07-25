@@ -51,19 +51,20 @@ namespace Continuum {
 			}
 			return model->sc_expectation_value(momentum);
 		}
-		assert(false && "Expectation value not recognized!");
+		throw std::runtime_error("Expectation value not recognized!");
 	}
 
 	void ModeHelper::createStartingStates()
 	{
 #ifdef _complex
 		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
-		std::fill(starting_states[0].begin(), starting_states[0].begin() + MODE_DISC, sqrt(model->momentumRanges.STEP));
-		std::fill(starting_states[1].begin() + 3 * MODE_DISC, starting_states[1].end(), sqrt(model->momentumRanges.STEP));
+		std::fill(starting_states[0].begin(), starting_states[0].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
+        std::fill(starting_states[1].begin() + 3 * MODE_DISC, starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
 #else
-		starting_states.resize(1, { _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
-		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + MODE_DISC, sqrt(model->momentumRanges.LOWER_STEP));
-		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + MODE_DISC, sqrt(model->momentumRanges.LOWER_STEP));
+		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
+        std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
+        std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
+
 #endif
 	}
 
@@ -128,17 +129,15 @@ namespace Continuum {
 				if (!term.delta_momenta.empty()) {
 					if (term.sums.momenta.empty()) {
 						if (term.coefficients.front().name == "g" || term.coefficients.front().name == "V") {
-							// These kinds of terms scale as 1/N -> 0
+							// These kinds of terms scale as 1/V -> 0
 							continue;
 						}
 					}
-					M(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx)
-							+= ieom_diag(it.k) * computeTerm(term, it.k, it.k);
+					M(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
 					for (InnerIterator jt(&model->momentumRanges); jt < _INNER_DISC; ++jt) {
-						M(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx)
-								+= ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+						M(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
 			}
@@ -151,13 +150,11 @@ namespace Continuum {
 			for(InnerIterator it(&model->momentumRanges); it < _INNER_DISC; ++it) {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
-					N(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx)
-						+= ieom_diag(it.k) * computeTerm(term, it.k, it.k);
+					N(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
 					for(InnerIterator jt(&model->momentumRanges); jt < _INNER_DISC; ++jt) {
-						N(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx)
-							+= ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+						N(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
 			}
@@ -166,21 +163,20 @@ namespace Continuum {
 
 	c_complex ModeHelper::compute_phonon_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
-		auto integrand = [&](c_float q) {
-			c_complex value{ this->get_expectation_value(term.operators.front(),
-				this->compute_momentum(term.operators.front().momentum, k, l, q)) };
+		const int q_dependend = term.whichOperatorDependsOn('q');
+        assert(q_dependend >= 0);
+        SymbolicOperators::WickOperator const * const other = term.isBilinear() ? nullptr : &term.operators[q_dependend == 0];
 
-			for (auto it = term.operators.begin() + 1; it != term.operators.end(); ++it) {
-				value *= this->get_expectation_value(*it, this->compute_momentum(it->momentum, k, l, q));
-			}
-			return q * q * value;
+		auto integrand = [&](c_float q) {
+			return q * q * this->get_expectation_value(term.operators[q_dependend], q);
 			};
 
 #ifdef approximate_theta
 		if (k > this->model->g_upper_bound(k)) return 0;
 #endif
-		return (static_cast<c_float>(term.multiplicity) / (2.0 * PI * PI)) * model->computeCoefficient(term.coefficients.front(), model->fermi_wavevector)
-			* boost::math::quadrature::gauss<double, 30>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
+		const c_float prefactor = (static_cast<c_float>(term.multiplicity) * model->phonon_coupling / (2.0 * PI * PI))
+                * ( other == nullptr ? 1.0 : get_expectation_value(*other, k) );
+        return prefactor * boost::math::quadrature::gauss<double, 60>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
 	}
 
 	c_complex ModeHelper::compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
@@ -222,7 +218,7 @@ namespace Continuum {
 			if(term.coefficients.front().name == "V") return c_complex{};
 		}
 		if (term.sums.momenta.empty()) {
-			c_complex value { static_cast<c_float>(static_cast<c_float>(term.multiplicity)) };
+			c_complex value { static_cast<c_float>(term.multiplicity) };
 			
 			if (!term.coefficients.empty()) {
 				const SymbolicOperators::Coefficient* coeff_ptr = &term.coefficients.front();
