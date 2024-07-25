@@ -124,7 +124,6 @@ namespace Continuum {
 		SplineContainer sc_expectation_value;
 
         c_float fermi_wavevector{};
-		c_float V_OVER_N{};
 
 		MomentumRanges momentumRanges;
     private:

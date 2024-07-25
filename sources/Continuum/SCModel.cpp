@@ -22,7 +22,6 @@ namespace Continuum {
 		temperature{ parameters.temperature }, phonon_coupling{ parameters.phonon_coupling }, 
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ parameters.fermi_wavevector },
-		V_OVER_N{ parameters.V_OVER_N },
 		momentumRanges(&fermi_wavevector, omega_debye)
 	{
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
@@ -44,7 +43,6 @@ namespace Continuum {
 
 	void SCModel::set_new_parameters(ModelInitializer const& parameters) 
 	{
-		this->V_OVER_N = parameters.V_OVER_N; 
 		this->temperature = parameters.temperature; 
 		this->omega_debye = parameters.omega_debye; 
 		this->fermi_energy = parameters.fermi_energy; 
@@ -206,7 +204,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			result(it.idx) -= (V_OVER_N * phonon_coupling / (2. * PI * PI))
+			result(it.idx) -= (phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
@@ -387,7 +385,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			ret[it.idx] = -(V_OVER_N * phonon_coupling / (2. * PI * PI))
+			ret[it.idx] = -(phonon_coupling / (2. * PI * PI))
 				* boost::math::quadrature::gauss<double, 30>::integrate( 
 					[this](c_float x) -> c_complex { return x * x * sc_expectation_value(x); }
 					, g_lower_bound(it.k), g_upper_bound(it.k) );
