@@ -3,7 +3,7 @@
 #include <Utility/ConstexprPower.hpp>
 
 namespace Continuum {
-    c_float ModelInitializer::compute_fermi_wavevector() const
+	c_float ModelInitializer::compute_fermi_wavevector() const
 	{
 		c_float kF = coulomb_scaling * PhysicalConstants::em_factor 
 			+ sqrt((coulomb_scaling * PhysicalConstants::em_factor * coulomb_scaling * PhysicalConstants::em_factor) + 2. * PhysicalConstants::effective_mass * fermi_energy);
@@ -28,6 +28,6 @@ namespace Continuum {
 		<< "E_F=" << init.fermi_energy << " eV   "
 		<< "alpha=" << init.coulomb_scaling << "   "
 		<< "k_F=" << init.fermi_wavevector << " sqrt(eV)   ";
-    return os;
+	return os;
 }
 }

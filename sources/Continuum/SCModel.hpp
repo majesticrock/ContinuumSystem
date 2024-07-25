@@ -113,8 +113,8 @@ namespace Continuum {
 
 		void set_splines();
 	public:
-        ModelAttributes<c_complex> Delta;
-        c_float temperature{};
+		ModelAttributes<c_complex> Delta;
+		c_float temperature{};
 		c_float phonon_coupling{};
 		c_float omega_debye{};
 		c_float fermi_energy{};
@@ -123,11 +123,11 @@ namespace Continuum {
 		SplineContainer occupation;
 		SplineContainer sc_expectation_value;
 
-        c_float fermi_wavevector{};
+		c_float fermi_wavevector{};
 
 		MomentumRanges momentumRanges;
-    private:
-        mutable std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> _expecs;
+	private:
+		mutable std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> _expecs;
 	};
 
 	c_float SCModel::delta_n(c_float k) const {

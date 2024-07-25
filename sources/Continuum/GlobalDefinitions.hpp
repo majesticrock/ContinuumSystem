@@ -12,7 +12,7 @@
 #include <Utility/UnderlyingFloatingPoint.hpp>
 #include <iostream>
 
-#define approximate_theta
+//#define approximate_theta
 //#define mielke_coulomb
 //#define _complex
 #define _screening 1e-4
@@ -38,7 +38,7 @@ namespace Continuum {
 	*/
 	inline bool is_zero(double number) {
 		static_assert(std::numeric_limits<double>::is_iec559, "IEEE 754 floating point not verified!");
-		// 9.0949470177292824e-13   <->    0 | 01111101011 | 0000000000000000000000000000000000000000000000000000
+		// 9.0949470177292824e-13   <->	0 | 01111101011 | 0000000000000000000000000000000000000000000000000000
 		uint64_t tmp; // silence compiler warnings (at 0 overhead)
 		std::memcpy(&tmp, &number, sizeof(tmp));
 		return static_cast<uint16_t>((tmp >> 52) & 0x7FF) < 0b01111010111;
@@ -97,8 +97,8 @@ namespace Continuum {
 	extern c_float INV_N;
 
 	static constexpr int REL_INNER_DISCRETIZATION = 2;
-    extern int _INNER_DISC;
-    extern int _OUTER_DISC;
+	extern int _INNER_DISC;
+	extern int _OUTER_DISC;
 
 	inline void set_discretization(int N) {
 		DISCRETIZATION = N;
