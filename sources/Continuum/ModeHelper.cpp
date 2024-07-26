@@ -105,6 +105,17 @@ namespace Continuum {
 #ifndef _complex
 		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm() << std::endl;
 		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << std::endl;
+		constexpr int block_size = 2;
+		Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver;
+		for(int i = 0; i < K_minus.rows() - block_size + 1; ++i) {
+			solver.compute(K_minus.block(i, i, block_size, block_size), false);
+			for(int j = 0; j < block_size; ++j){
+				if(solver.eigenvalues()(j) < 0) {
+					std::cerr << i << ", " << j << " -> " << solver.eigenvalues()(j) << std::endl;
+					std::cout << K_minus.block(i, i, block_size, block_size) << std::endl;
+				}
+			}
+		}
 #else
 		std::cout << "||M - M^+|| = " << (M - M.adjoint()).norm() << std::endl;
 		std::cout << "||N - N^+|| = " << (N - N.adjoint()).norm() << std::endl;
@@ -267,8 +278,8 @@ namespace Continuum {
 		model = std::make_unique<SCModel>(init);
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
-		auto solver = Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
-		//auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
+		//auto solver = Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
+		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
 		solver.compute(true);
 	}
 }

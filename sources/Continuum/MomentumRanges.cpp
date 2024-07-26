@@ -7,7 +7,7 @@ constexpr Continuum::c_float inner_offset = 1. - 1e-5;
 #ifndef mielke_coulomb
 constexpr Continuum::c_float inner_offset = 10;
 #else
-constexpr Continuum::c_float inner_offset = 1;
+constexpr Continuum::c_float inner_offset = 2;
 #endif
 #endif
 
@@ -15,7 +15,7 @@ namespace Continuum {
 	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye)
 		: 
 #ifndef mielke_coulomb
-		K_MAX{ 2 * (*k_F) }, K_MIN{ 0 },
+		K_MAX{ 5 * (*k_F) }, K_MIN{ 0 },
 #else
 		K_MAX{ (*k_F) + (inner_offset * 2) * omega_debye }, K_MIN{ (*k_F) - (inner_offset * 2) * omega_debye },
 #endif
