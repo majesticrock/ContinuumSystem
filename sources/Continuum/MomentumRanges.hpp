@@ -5,7 +5,7 @@
 namespace Continuum {
 	class MomentumIterator;
 	struct MomentumRanges {
-		static constexpr int n_gauss = 60;
+		static constexpr int n_gauss = 120;
 
 		c_float K_MAX{};
 		c_float K_MIN{};

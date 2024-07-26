@@ -30,16 +30,34 @@ int Continuum::_INNER_DISC = Continuum::DISCRETIZATION / Continuum::REL_INNER_DI
 int Continuum::_OUTER_DISC = Continuum::DISCRETIZATION - Continuum::_INNER_DISC;
 
 template<typename number> 
-	requires std::floating_point<number> 
+	requires std::floating_point<number>
 constexpr number as_meV(number in_eV) {
 	in_eV *= 1e3;
 	return in_eV;
 }
-template<typename number> 
-	requires std::floating_point<number> 
+template<typename number>
+	requires std::floating_point<number>
 std::vector<number>&& as_meV(std::vector<number>&& in_eV) {
 	std::ranges::for_each(in_eV, [](number& num) { num *= 1e3; });
 	return std::move(in_eV);
+}
+template<typename number>
+	requires std::floating_point<number>
+std::vector<number> as_meV(std::vector<std::complex<number>> const& in_eV){
+	std::vector<number> ret(in_eV.size());
+	for(size_t i = 0U; i < in_eV.size(); ++i){
+		ret[i] = 1e3 * std::real(in_eV[i]);
+	}
+	return ret;
+}
+template<typename number>
+	requires std::floating_point<number>
+std::vector<number> imag_as_meV(std::vector<std::complex<number>> const& in_eV){
+	std::vector<number> ret(in_eV.size());
+	for(size_t i = 0U; i < in_eV.size(); ++i){
+		ret[i] = 1e3 * std::imag(in_eV[i]);
+	}
+	return ret;
 }
 
 void compute_small_U_gap() {
@@ -156,8 +174,8 @@ int main(int argc, char** argv) {
 				{ "omega_D", 			as_meV(modes.getModel().omega_debye) },
 				{ "E_F", 				modes.getModel().fermi_energy },
 				{ "coulomb_scaling",	modes.getModel().coulomb_scaling },
-				{ "k_infinity_factor", 	2. * PhysicalConstants::em_factor * modes.getModel().coulomb_scaling * delta_result[2 * DISCRETIZATION] },
-				{ "k_zero_factor", 		modes.getModel().k_zero_integral() },
+				{ "k_infinity_factor", 	std::real(2. * PhysicalConstants::em_factor * modes.getModel().coulomb_scaling * delta_result[2 * DISCRETIZATION]) },
+				{ "k_zero_factor", 		std::real(modes.getModel().k_zero_integral()) },
 				{ "internal_energy", 	modes.getModel().internal_energy() }
 			};
 		};
@@ -168,11 +186,14 @@ int main(int argc, char** argv) {
 		nlohmann::json jDelta = generate_comments();
 		jDelta.update(nlohmann::json {
 			{ "data", {
+#ifdef _complex
+					{ "imag_Delta_Phonon", 		imag_as_meV(modes.getModel().phonon_gap()) },
+					{ "imag_Delta_Coulomb", 	imag_as_meV(modes.getModel().coulomb_gap()) },
+#endif
 					{ "ks", 			modes.getModel().momentumRanges.get_k_points() },
 					{ "Delta_Phonon", 	as_meV(modes.getModel().phonon_gap()) },
 					{ "Delta_Coulomb", 	as_meV(modes.getModel().coulomb_gap()) },
 					{ "Delta_Fock", 	as_meV(std::vector<double>(delta_result.begin() + DISCRETIZATION, delta_result.begin() + 2 * DISCRETIZATION)) },
-					{ "Delta_cut", 		as_meV(modes.getModel().coulomb_corrections()) },
 					{ "xis", 			modes.getModel().single_particle_dispersion() }
 				}
 			}

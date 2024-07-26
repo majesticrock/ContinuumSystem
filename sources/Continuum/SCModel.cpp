@@ -10,12 +10,6 @@
 
 using Utility::constexprPower;
 
-#ifdef mielke_coulomb
-#define CUT_INTEGRAL 0.0
-#else
-#define CUT_INTEGRAL delta_cut_integral(it.k, momentumRanges.K_MAX, coulomb_scaling, Delta[2 * DISCRETIZATION])
-#endif
-
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(2 * DISCRETIZATION + 1, parameters.phonon_coupling* parameters.omega_debye), 
@@ -29,7 +23,7 @@ namespace Continuum {
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
 #ifdef _complex
-				return magnitude; //std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
+				return std::polar(magnitude, PI * (static_cast<double>(i) / static_cast<double>(DISCRETIZATION)));
 #else
 				return magnitude * std::cos(PI * (static_cast<double>(i) / static_cast<double>(DISCRETIZATION) - 0.5));
 #endif
@@ -63,7 +57,7 @@ namespace Continuum {
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
 #ifdef _complex
-				return magnitude; //std::polar(magnitude, i * 2.0 * PI / (DISCRETIZATION) + 0.5 * PI);
+				return std::polar(magnitude, 1.3 + PI * (static_cast<double>(i) / static_cast<double>(DISCRETIZATION)));
 #else
 				return magnitude * std::cos(PI * (static_cast<double>(i) / static_cast<double>(DISCRETIZATION) - 0.5));
 #endif
@@ -168,7 +162,7 @@ namespace Continuum {
 			}
 			return 1. / (1 + std::exp(eps_mu / temperature));
 		}
-		const c_float E = sqrt(eps_mu * eps_mu + Delta[k] * Delta[k]);
+		const c_float E = sqrt(eps_mu * eps_mu + std::norm(Delta[k]));
 		if (is_zero(temperature)) {
 			return 0.5 * (1 - (eps_mu / E));
 		}
@@ -195,7 +189,7 @@ namespace Continuum {
 
 //#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			result(it.idx) = integral_screening(sc_wrapper, it.k) + CUT_INTEGRAL;
+			result(it.idx) = integral_screening(sc_wrapper, it.k);
 #ifndef mielke_coulomb
 			result(it.idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
 #endif
@@ -283,9 +277,7 @@ namespace Continuum {
 			}
 		} 
 		else if(coeff.name == "V") {
-#ifdef _screening
-			return coulomb_scaling * PhysicalConstants::em_factor / (first * first + _screening * _screening);
-#endif
+			return (coulomb_scaling / PhysicalConstants::vacuum_permitivity) / (first * first + _screening * _screening);
 		}
 		else
 		{
@@ -326,7 +318,7 @@ namespace Continuum {
 			return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
 		if (index < 0) // Assuming Delta(k) = const for k->0
 			return c_float{};
-		return Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index), DISCRETIZATION);
+		return std::real(Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index), DISCRETIZATION));
 	}
 
 	c_float SCModel::internal_energy() const 
@@ -377,9 +369,9 @@ namespace Continuum {
 			+ "/omega_D=" + improved_string(1e3 * omega_debye) + "/";		
 	}
 
-	std::vector<c_float> SCModel::phonon_gap() const
+	std::vector<c_complex> SCModel::phonon_gap() const
 	{
-		std::vector<c_float> ret(DISCRETIZATION);
+		std::vector<c_complex> ret(DISCRETIZATION);
 		for(MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
 #ifdef approximate_theta
 			if (std::abs(phonon_alpha(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {
@@ -394,21 +386,11 @@ namespace Continuum {
 		return ret;
 	}
 
-	std::vector<c_float> SCModel::coulomb_gap() const
+	std::vector<c_complex> SCModel::coulomb_gap() const
 	{
-		std::vector<c_float> ret(DISCRETIZATION);
+		std::vector<c_complex> ret(DISCRETIZATION);
 		for(MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = integral_screening(
-				[this](c_float q) { return this->sc_expectation_value(q); }, it.k );
-		}
-		return ret;
-	}
-
-	std::vector<c_float> SCModel::coulomb_corrections() const
-	{
-		std::vector<c_float> ret(DISCRETIZATION);
-		for(MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = delta_cut_integral(it.k, momentumRanges.K_MAX, coulomb_scaling, Delta[2 * DISCRETIZATION]);
+			ret[it.idx] = integral_screening([this](c_float q) { return this->sc_expectation_value(q); }, it.k );
 		}
 		return ret;
 	}

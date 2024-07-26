@@ -21,12 +21,11 @@ namespace Continuum {
 		c_complex interpolate_delta(c_float k) const;
 		c_float interpolate_delta_n(c_float k) const;
 
-		inline c_float energy(c_float k) const {
-			return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
-		};
-		inline c_float energy(int k) const {
-			return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(Delta[k]));
-		};
+		inline c_float bare_dispersion_to_fermi_level(c_float k) const;
+		inline c_float dispersion_to_fermi_level(c_float k) const;
+		inline c_float dispersion_to_fermi_level(int k) const;
+		inline c_float energy(c_float k) const;
+		inline c_float energy(int k) const;
 		c_float fock_energy(c_float k) const;
 
 		inline c_float delta_n(c_float k) const;
@@ -47,9 +46,8 @@ namespace Continuum {
 		std::string to_folder() const;
 		c_float internal_energy() const;
 		std::vector<c_float> continuum_boundaries() const;
-		std::vector<c_float> phonon_gap() const;
-		std::vector<c_float> coulomb_gap() const;
-		std::vector<c_float> coulomb_corrections() const;
+		std::vector<c_complex> phonon_gap() const;
+		std::vector<c_complex> coulomb_gap() const;
 		std::vector<c_float> single_particle_dispersion() const;
 		const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& get_expectation_values() const;
 
@@ -89,18 +87,6 @@ namespace Continuum {
 			return (index > n_interpolate / 2 - 1 ? index + 1 - n_interpolate / 2 : 0);
 		}
 
-		inline c_float bare_dispersion_to_fermi_level(c_float k) const {
-			return bare_dispersion(k) - fermi_energy;
-		}
-		inline c_float dispersion_to_fermi_level(c_float k) const
-		{
-			return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k);
-		}
-		inline c_float dispersion_to_fermi_level(int k) const
-		{
-			return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + fock_energy(momentumRanges.index_to_momentum(k)) + Delta[k + DISCRETIZATION];
-		}
-
 		c_complex sc_expectation_value_index(int k) const;
 		c_float occupation_index(int k) const;
 		inline c_float delta_n_index(int k) const;
@@ -130,14 +116,17 @@ namespace Continuum {
 		mutable std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> _expecs;
 	};
 
+	// /////////// //
+	//   Inlines   //
+	// /////////// //
 	c_float SCModel::delta_n(c_float k) const {
 		if(is_zero(fermi_wavevector - k)) {
-			return 0.5 - occupation(k);
+			return 0.5 - std::real(occupation(k));
 		} 
 		else if(fermi_wavevector - k > 0) {
-			return 1. - occupation(k);
+			return 1. - std::real(occupation(k));
 		}
-		return -occupation(k);
+		return -std::real(occupation(k));
 	}
 	c_float SCModel::delta_n_index(int k) const {
 		if(is_zero(fermi_wavevector - momentumRanges.index_to_momentum(k))) {
@@ -147,5 +136,20 @@ namespace Continuum {
 			return 1. - occupation_index(k);
 		}
 		return -occupation_index(k);
+	}
+	c_float SCModel::bare_dispersion_to_fermi_level(c_float k) const { 
+		return bare_dispersion(k) - fermi_energy; 
+	}
+	c_float SCModel::dispersion_to_fermi_level(c_float k) const { 
+		return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k); 
+	}
+	c_float SCModel::dispersion_to_fermi_level(int k) const { 
+		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + fock_energy(momentumRanges.index_to_momentum(k)) + std::real(Delta[k + DISCRETIZATION]); 
+	}
+	c_float SCModel::energy(c_float k) const { 
+		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k))); 
+	}
+	c_float SCModel::energy(int k) const { 
+		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(Delta[k])); 
 	}
 }
