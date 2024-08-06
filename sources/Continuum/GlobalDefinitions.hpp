@@ -29,8 +29,8 @@ namespace Continuum {
 	constexpr c_float PI = static_cast<c_float>(M_PI);
 	constexpr c_float PI_2 = static_cast<c_float>(M_PI_2);
 
-	constexpr double SQRT_PRECISION = 9.5367431640625e-07;
-	constexpr double PRECISION = 9.0949470177292824e-13; // 0 | 01111101011 | 0000000000000000000000000000000000000000000000000000
+	constexpr c_float SQRT_PRECISION = 9.5367431640625e-07;
+	constexpr c_float PRECISION = 9.0949470177292824e-13; // 0 | 01111101011 | 0000000000000000000000000000000000000000000000000000
 
 	/* This function abuses the structure of our desired precision:
 	*  The mantissa is empty, i.e., we can solely rely on the exponent.

@@ -9,8 +9,8 @@
 
 #include <boost/math/quadrature/gauss.hpp>
 
-#define ieom_diag(k) 4. * PI * k * k
-#define ieom_offdiag(k, l) (2. / PI) * k * k * l * l * model->momentumRanges.INNER_STEP
+#define ieom_diag(k) k * k / (2 * PI * PI)
+#define ieom_offdiag(k, l) k * k * l * l * model->momentumRanges.INNER_STEP / (4 * PI * PI * PI * PI)
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -105,7 +105,7 @@ namespace Continuum {
 #ifndef _complex
 		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm() << std::endl;
 		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << std::endl;
-		constexpr int block_size = 2;
+		/* constexpr int block_size = 2;
 		//Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver;
 		for(int i = MODE_DISC / 2 - 10; i < MODE_DISC / 2 + 10; ++i) {
 			//solver.compute(K_minus.block(i, i, block_size, block_size), false);
@@ -124,7 +124,7 @@ namespace Continuum {
 					std::cout << "##################\n";
 				//}
 			//}
-		}
+		} */
 #else
 		std::cout << "||M - M^+|| = " << (M - M.adjoint()).norm() << std::endl;
 		std::cout << "||N - N^+|| = " << (N - N.adjoint()).norm() << std::endl;
@@ -243,7 +243,7 @@ namespace Continuum {
 					value *= model->computeCoefficient(*coeff_ptr, compute_momentum(coeff_ptr->momenta[0], k, l), compute_momentum(coeff_ptr->momenta[1], k, l));
 				}
 				else if (coeff_ptr->momenta.size() == 1U) {
-					value *= model->computeCoefficient(*coeff_ptr, compute_momentum(coeff_ptr->momenta[0], k, l));
+					value *= model->computeCoefficient(*coeff_ptr, k, l);
 				}
 				else {
 					throw std::runtime_error("Number of momenta of coefficient is not handled! "
@@ -274,7 +274,7 @@ namespace Continuum {
 	int ModeHelper::total_matrix_size = 0;
 
 	ModeHelper::ModeHelper(ModelInitializer const& init)
-		: _parent(this, SQRT_PRECISION, 
+		: _parent(this, PRECISION, 
 #ifndef _complex
 		MODE_DISC * hermitian_size, MODE_DISC * antihermitian_size, false, 
 #endif

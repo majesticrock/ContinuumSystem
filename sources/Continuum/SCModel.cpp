@@ -277,7 +277,9 @@ namespace Continuum {
 			}
 		} 
 		else if(coeff.name == "V") {
-			return (coulomb_scaling / PhysicalConstants::vacuum_permitivity) / (first * first + _screening * _screening);
+			if(coeff.momenta.front().is_zero())
+				return (coulomb_scaling / PhysicalConstants::vacuum_permitivity) / (_screening * _screening);
+			return coulomb_scaling / (2 * first * second * PhysicalConstants::vacuum_permitivity) * log_expression(first + second, first - second);
 		}
 		else
 		{
