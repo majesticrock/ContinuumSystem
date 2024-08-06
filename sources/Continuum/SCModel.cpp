@@ -29,7 +29,7 @@ namespace Continuum {
 #endif
 			}
 			if (i == 2 * DISCRETIZATION) return c_complex{};
-			return (momentumRanges.index_to_momentum(k) > fermi_wavevector ? -0.001 : 0.001 );
+			return c_complex{};
 			}, 2 * DISCRETIZATION + 1);
 
 		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << std::endl;

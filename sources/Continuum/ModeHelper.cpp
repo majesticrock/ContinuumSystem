@@ -106,15 +106,24 @@ namespace Continuum {
 		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm() << std::endl;
 		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << std::endl;
 		constexpr int block_size = 2;
-		Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver;
-		for(int i = 0; i < K_minus.rows() - block_size + 1; ++i) {
-			solver.compute(K_minus.block(i, i, block_size, block_size), false);
-			for(int j = 0; j < block_size; ++j){
-				if(solver.eigenvalues()(j) < 0) {
-					std::cerr << i << ", " << j << " -> " << solver.eigenvalues()(j) << std::endl;
-					std::cout << K_minus.block(i, i, block_size, block_size) << std::endl;
-				}
-			}
+		//Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver;
+		for(int i = MODE_DISC / 2 - 10; i < MODE_DISC / 2 + 10; ++i) {
+			//solver.compute(K_minus.block(i, i, block_size, block_size), false);
+			//for(int j = 0; j < block_size; ++j){
+				//if(solver.eigenvalues()(j) < 0) {
+				//	std::cerr << i << ", " << j << " -> " << solver.eigenvalues()(j) << std::endl;
+					double k = model->momentumRanges.index_to_momentum(_OUTER_DISC + i);
+					double l = model->momentumRanges.index_to_momentum(_OUTER_DISC + i + 1);
+					std::cout << i << "  " << k / model->fermi_wavevector << ": \n" << K_minus.block(i, i, block_size, block_size) << std::endl;
+					
+					double V0 = model->coulomb_scaling / (PhysicalConstants::vacuum_permitivity * (_screening * _screening));
+					double V = model->coulomb_scaling / (PhysicalConstants::vacuum_permitivity * ((k - l) * (k - l) + _screening * _screening));
+					std::cout << 8 * model->sc_expectation_value(k) * model->sc_expectation_value(l) * (2 * V0 - V)
+						+ 2 * V * (1 - 2 * model->occupation(k)) * (1 - 2 * model->occupation(l)) << std::endl;
+					std::cout << model->occupation(k) << "  " << model->sc_expectation_value(k) << std::endl;
+					std::cout << "##################\n";
+				//}
+			//}
 		}
 #else
 		std::cout << "||M - M^+|| = " << (M - M.adjoint()).norm() << std::endl;

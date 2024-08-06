@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
 			}
 		});
 		Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
-		std::cout << "Gap data have been saved! " << modes.getModel().info() << std::endl;
+		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << " " << modes.getModel().info() << std::endl;
 
 		if (false) { // compute and save the expectation values
 			auto expecs = modes.getModel().get_expectation_values();
