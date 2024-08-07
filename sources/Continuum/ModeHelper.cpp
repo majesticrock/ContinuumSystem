@@ -98,10 +98,6 @@ namespace Continuum {
 			}
 		}
 
-		/* for(InnerIterator it(&model->momentumRanges); it < MODE_DISC; ++it){
-			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, MODE_DISC + it.idx) << "  " << K_plus(MODE_DISC + it.idx, it.idx) << " || " 
-				<< - 2 * model->interpolate_delta(it.k) * model->dispersion_to_fermi_level(it.k) / model->energy(it.k)  << std::endl;
-		} */
 #ifndef _complex
 		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm() << std::endl;
 		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << std::endl;
@@ -195,20 +191,22 @@ namespace Continuum {
 	c_complex ModeHelper::compute_phonon_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
 		const int q_dependend = term.whichOperatorDependsOn('q');
-		assert(q_dependend >= 0);
-		SymbolicOperators::WickOperator const * const other = term.isBilinear() ? nullptr : &term.operators[q_dependend == 0];
-
-		auto integrand = [&](c_float q) {
-			return q * q * this->get_expectation_value(term.operators[q_dependend], q);
-			};
-
-#ifdef approximate_theta
-		if (k > this->model->g_upper_bound(k)) return 0;
+		SymbolicOperators::WickOperator const * const summed_op = &(term.operators[q_dependend]);
+		SymbolicOperators::WickOperator const * const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+		c_complex value{};
+		if(summed_op->type == SymbolicOperators::Number_Type){
+			value = -static_cast<c_float>(term.multiplicity) * model->integral_phonon(model->occupation, k);
+		} 
+		else {
+			value = -static_cast<c_float>(term.multiplicity) * model->integral_phonon(model->sc_expectation_value, k);
+#ifdef _complex
+			if(summed_op->isDaggered) value = std::conj(value);
 #endif
-		
-		const c_complex prefactor = (static_cast<c_float>(term.multiplicity) * model->phonon_coupling / (2.0 * PI * PI))
-			* ( other == nullptr ? 1.0 : get_expectation_value(*other, k) );
-		return prefactor * boost::math::quadrature::gauss<double, 60>::integrate(integrand, model->g_lower_bound(k), model->g_upper_bound(k));
+		}
+		if(other_op){
+			value *= this->get_expectation_value(*other_op, k);
+		}
+		return value;
 	}
 
 	c_complex ModeHelper::compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
@@ -221,10 +219,10 @@ namespace Continuum {
 			value = -static_cast<c_float>(term.multiplicity) * (model->fock_energy(k) + model->interpolate_delta_n(k));
 		} 
 		else {
-			auto sc_wrapper = [this, &summed_op](c_float q) {
-				return this->get_expectation_value(*summed_op, q);
-				};
-			value = static_cast<c_float>(term.multiplicity) * model->integral_screening(sc_wrapper, k);
+			value = static_cast<c_float>(term.multiplicity) * model->integral_screening(model->sc_expectation_value, k);
+#ifdef _complex
+			if(summed_op->isDaggered) value = std::conj(value);
+#endif
 		}
 		if(other_op){
 			value *= this->get_expectation_value(*other_op, k);
