@@ -26,9 +26,12 @@ namespace Continuum {
 	using c_complex = c_float;
 #endif
 
-	constexpr c_float PI = static_cast<c_float>(M_PI);
-	constexpr c_float PI_2 = static_cast<c_float>(M_PI_2);
+	constexpr c_float PI = M_PI;
+	constexpr c_float PI_2 = M_PI_2;
 
+	constexpr c_float SCALE = 1.9191582926775130066248203262466954997424768676841556839303308707; // (9 pi / 4)^(1/3)
+	constexpr c_float SCALE_SQUARED = 3.6831685523528666736627735983987856431407158617538908938924777283; // (9 pi / 4)^(2/3)
+	
 	constexpr c_float SQRT_PRECISION = 9.5367431640625e-07;
 	constexpr c_float PRECISION = 9.0949470177292824e-13; // 0 | 01111101011 | 0000000000000000000000000000000000000000000000000000
 
@@ -63,12 +66,8 @@ namespace Continuum {
 		constexpr c_float vacuum_permitivity = 0.05526349406 * 3.62262628; // 0.2001989859063799115 sqrt(eV)
 		constexpr c_float em_factor = 1. / (4 * PI * PI * vacuum_permitivity); // 1 / (4 * pi * pi * epsilon_0) = 0.12652559550141668 sqrt(eV)
 		constexpr c_float effective_mass = 1; // m* / m_e - lead: 2.1
-		// 0.1265255955014166767 sqrt(eV)
 	}
 
-	constexpr c_float bare_dispersion(c_float k) {
-		return (0.5 / PhysicalConstants::effective_mass) * k * k;
-	};
 	inline c_float log_expression(c_float k_sum, c_float k_diff) {
 		return std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) );
 	}

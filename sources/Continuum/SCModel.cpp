@@ -14,9 +14,9 @@ namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
 		: Delta(2 * DISCRETIZATION + 1, parameters.phonon_coupling* parameters.omega_debye), 
 		temperature{ parameters.temperature }, phonon_coupling{ parameters.phonon_coupling }, 
-		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
-		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ parameters.fermi_wavevector },
-		momentumRanges(&fermi_wavevector, omega_debye)
+		omega_debye{ parameters.omega_debye }, coulomb_scaling{ parameters.coulomb_scaling }, 
+		r_s{ parameters.r_s }, fermi_wavevector{ parameters.fermi_wavevector },
+		fermi_energy{ parameters.fermi_energy }, momentumRanges(&fermi_wavevector, omega_debye)
 	{
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
@@ -32,7 +32,7 @@ namespace Continuum {
 			return c_complex{};
 			}, 2 * DISCRETIZATION + 1);
 
-		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << std::endl;
+		std::cout << "Fock(k_F) = " << fock_energy(1.) << "    xi(k_F) = " << dispersion_to_fermi_level(1.) << std::endl;
 		set_splines();
 	}
 
@@ -99,8 +99,8 @@ namespace Continuum {
 		auto integrand = [this](c_float q) {
 			return q * q * this->sc_expectation_value(q);
 		};
-		const c_float prefactor = 1. + 2. * PhysicalConstants::em_factor * coulomb_scaling / momentumRanges.K_MAX;
-		return momentumRanges.integrate(integrand) / prefactor;
+		const c_float prefactor = 2. * PhysicalConstants::em_factor * coulomb_scaling * fermi_wavevector;
+		return momentumRanges.integrate(integrand) * prefactor;
 	}
 
 	c_complex SCModel::k_zero_integral() const
@@ -108,38 +108,27 @@ namespace Continuum {
 		auto integrand = [this](c_float q) {
 			return (q * q / (_screening * _screening + q * q)) * this->sc_expectation_value(q);
 		};
-		const c_float prefactor = 2. * coulomb_scaling * PhysicalConstants::em_factor;
+		const c_float prefactor = 2. * PhysicalConstants::em_factor * coulomb_scaling * fermi_wavevector;
 		return momentumRanges.integrate(integrand) * prefactor;
 	}
 
 	c_float SCModel::fock_energy(c_float k) const 
 	{
-#ifdef _screening
+		const auto prefactor = -PhysicalConstants::em_factor * coulomb_scaling * fermi_wavevector;
 		if(is_zero(k)) {
-			return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * (
-				3.0 - 2.0 * (_screening / fermi_wavevector) * std::atan(fermi_wavevector / _screening)
+			return prefactor * (
+				3.0 - 2.0 * _screening * std::atan(1. / _screening)
 			);
 		}
 
-		const c_float k_diff{ k - fermi_wavevector };
-		const c_float k_sum{ k + fermi_wavevector };
-		const c_float ln_factor{ (_screening * _screening + fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector) };
-		return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * 
+		const c_float k_diff{ 1. - k };
+		const c_float k_sum{ 1. + k };
+		const c_float ln_factor{ (1. - k * k + _screening * _screening) / (2.0 * k) };
+		return prefactor * 
 		(
 			1.0 + ln_factor * log_expression(k_sum, k_diff) 
-			+ (_screening / fermi_wavevector) * (std::atan(k_diff / _screening) - std::atan(k_sum / _screening))
+			+ _screening * (std::atan(k_diff / _screening) - std::atan(k_sum / _screening))
 		);
-
-#else
-		if(is_zero(k - fermi_wavevector)) {
-			return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector;
-		}
-
-		return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * (
-			1.0 + ((fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector)) 
-				* std::log(std::abs((k + fermi_wavevector) / (k - fermi_wavevector)))
-		);
-#endif
 	}
 
 	c_complex SCModel::sc_expectation_value_index(int k) const
@@ -177,19 +166,13 @@ namespace Continuum {
 		this->occupation.set_new_ys(_expecs[SymbolicOperators::Number_Type]);
 		this->sc_expectation_value.set_new_ys(_expecs[SymbolicOperators::SC_Type]);
 
-		auto phonon_integrand = [this](c_float x) -> c_complex {
-			return x * x * sc_expectation_value(x);
-			};
 		auto delta_n_wrapper = [this](c_float q) {
 				return this->delta_n(q);
 				};
-		auto sc_wrapper = [this](c_float q) {
-			return this->sc_expectation_value(q);
-			};
 
 //#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			result(it.idx) = integral_screening(sc_wrapper, it.k);
+			result(it.idx) = integral_screening(this->sc_expectation_value, it.k);
 #ifndef mielke_coulomb
 			result(it.idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
 #endif
@@ -199,8 +182,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			result(it.idx) -= (phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 60>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
+			result(it.idx) += integral_phonon(this->sc_expectation_value, it.k);
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
 
@@ -366,7 +348,7 @@ namespace Continuum {
 
 		return "T=" + improved_string(temperature) 
 			+ "/coulomb_scaling=" + improved_string(coulomb_scaling)
-			+ "/E_F=" + improved_string(fermi_energy)
+			+ "/r_s=" + improved_string(r_s)
 			+ "/g=" + improved_string(phonon_coupling) 
 			+ "/omega_D=" + improved_string(1e3 * omega_debye) + "/";		
 	}
@@ -380,10 +362,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			ret[it.idx] = -(phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 60>::integrate( 
-					[this](c_float x) -> c_complex { return x * x * sc_expectation_value(x); }
-					, g_lower_bound(it.k), g_upper_bound(it.k) );
+			ret[it.idx] = integral_phonon(this->sc_expectation_value, it.k);
 		}
 		return ret;
 	}
@@ -392,7 +371,7 @@ namespace Continuum {
 	{
 		std::vector<c_complex> ret(DISCRETIZATION);
 		for(MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = integral_screening([this](c_float q) { return this->sc_expectation_value(q); }, it.k );
+			ret[it.idx] = integral_screening(this->sc_expectation_value, it.k );
 		}
 		return ret;
 	}

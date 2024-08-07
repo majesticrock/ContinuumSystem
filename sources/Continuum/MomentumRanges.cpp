@@ -5,7 +5,7 @@
 constexpr Continuum::c_float inner_offset = 1. - 1e-5;
 #else
 #ifndef mielke_coulomb
-constexpr Continuum::c_float inner_offset = 100;
+constexpr Continuum::c_float inner_offset = 1;
 #else
 constexpr Continuum::c_float inner_offset = 2;
 #endif
@@ -15,12 +15,12 @@ namespace Continuum {
 	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye)
 		: 
 #ifndef mielke_coulomb
-		K_MAX{ 5 * (*k_F) }, K_MIN{ 0 },
+		K_MAX{ 5 }, K_MIN{ 0 },
 #else
-		K_MAX{ (*k_F) + (inner_offset * 2) * omega_debye }, K_MIN{ (*k_F) - (inner_offset * 2) * omega_debye },
+		K_MAX{ 1. + (inner_offset * 2) * omega_debye }, K_MIN{ 1. - (inner_offset * 2) * omega_debye },
 #endif
-		INNER_K_MAX{ sqrt((*k_F)*(*k_F) + 2. * inner_offset * omega_debye) },
-		INNER_K_MIN{ sqrt((*k_F)*(*k_F) - 2. * inner_offset * omega_debye) },
+		INNER_K_MAX{ 1. + sqrt(2. * inner_offset * omega_debye / (*k_F * *k_F)) },
+		INNER_K_MIN{ 1. - sqrt(2. * inner_offset * omega_debye / (*k_F * *k_F)) },
 		LOWER_STEP{ (INNER_K_MIN - K_MIN) / _OUTER_DISC },
 		INNER_STEP{ (INNER_K_MAX - INNER_K_MIN) / _INNER_DISC },
 		UPPER_STEP{ (K_MAX - INNER_K_MAX) / _OUTER_DISC },

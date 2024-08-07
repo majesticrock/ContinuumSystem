@@ -45,13 +45,13 @@ namespace Continuum {
 				begin = INNER_K_MIN;
 			}
 
-			if(begin <= (*K_F) && end >= INNER_K_MIN) {
-				value += __integrate(func, std::max(begin, INNER_K_MIN), std::min(end, (*K_F)));
-				begin = (*K_F);
+			if(begin <= 1.0 && end >= INNER_K_MIN) {
+				value += __integrate(func, std::max(begin, INNER_K_MIN), std::min(end, 1.0));
+				begin = 1.0;
 			}
 
-			if(begin <= INNER_K_MAX && end >= (*K_F)){
-				value += __integrate(func, std::max(begin, (*K_F)), std::min(end, INNER_K_MAX));
+			if(begin <= INNER_K_MAX && end >= 1.0){
+				value += __integrate(func, std::max(begin, 1.0), std::min(end, INNER_K_MAX));
 				begin = INNER_K_MAX;
 			}
 
@@ -65,8 +65,8 @@ namespace Continuum {
 		template<class Function>
 		inline auto integrate(const Function& func) const {
 			return __integrate(func, K_MIN, INNER_K_MIN)
-				+ __integrate(func, INNER_K_MIN, (*K_F))
-				+ __integrate(func, (*K_F), INNER_K_MAX)
+				+ __integrate(func, INNER_K_MIN, 1.0)
+				+ __integrate(func, 1.0, INNER_K_MAX)
 				+ __integrate(func, INNER_K_MAX, K_MAX);
 		}
 
