@@ -29,7 +29,7 @@ c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
 int Continuum::_INNER_DISC = Continuum::DISCRETIZATION / Continuum::REL_INNER_DISCRETIZATION;
 int Continuum::_OUTER_DISC = Continuum::DISCRETIZATION - Continuum::_INNER_DISC;
 
-template<typename number> 
+template<typename number>
 	requires std::floating_point<number>
 constexpr number as_meV(number in_eV) {
 	in_eV *= 1e3;
@@ -43,18 +43,18 @@ std::vector<number>&& as_meV(std::vector<number>&& in_eV) {
 }
 template<typename number>
 	requires std::floating_point<number>
-std::vector<number> as_meV(std::vector<std::complex<number>> const& in_eV){
+std::vector<number> as_meV(std::vector<std::complex<number>> const& in_eV) {
 	std::vector<number> ret(in_eV.size());
-	for(size_t i = 0U; i < in_eV.size(); ++i){
+	for (size_t i = 0U; i < in_eV.size(); ++i) {
 		ret[i] = 1e3 * std::real(in_eV[i]);
 	}
 	return ret;
 }
 template<typename number>
 	requires std::floating_point<number>
-std::vector<number> imag_as_meV(std::vector<std::complex<number>> const& in_eV){
+std::vector<number> imag_as_meV(std::vector<std::complex<number>> const& in_eV) {
 	std::vector<number> ret(in_eV.size());
-	for(size_t i = 0U; i < in_eV.size(); ++i){
+	for (size_t i = 0U; i < in_eV.size(); ++i) {
 		ret[i] = 1e3 * std::imag(in_eV[i]);
 	}
 	return ret;
@@ -114,33 +114,33 @@ int main(int argc, char** argv) {
 	* Setup iterations (if asked for)
 	*/
 	ModelInitializer init(input);
-	
+
 	int n_iter = argc > 4 ? std::stoi(argv[4]) : 0;
 	std::unique_ptr<Base_Incrementer> incrementer;
-	if(argc > 4) {
+	if (argc > 4) {
 		const std::string inc_type = argv[2];
-		if(inc_type == "T" || inc_type == "temperature") 
+		if (inc_type == "T" || inc_type == "temperature")
 		{
 			RANK_RANGES(temperature);
 			incrementer = std::make_unique<Temperature_Incrementer>(rank_range / n_iter);
 		}
-		else if(inc_type == "g" || inc_type == "phonon_coupling")
+		else if (inc_type == "g" || inc_type == "phonon_coupling")
 		{
 			RANK_RANGES(phonon_coupling);
 			incrementer = std::make_unique<PhononCoupling_Incrementer>(rank_range / n_iter);
 		}
-		else if(inc_type == "omega_D" || inc_type == "omega_debye")
+		else if (inc_type == "omega_D" || inc_type == "omega_debye")
 		{
 			const double rank_range = 1e-3 * (std::stod(argv[3]) - init.omega_debye) / n_ranks;
 			init.omega_debye += rank * rank_range;
 			incrementer = std::make_unique<DebyeFrequency_Incrementer>(rank_range / n_iter);
 		}
-		else if(inc_type == "E_F" || inc_type == "fermi_energy")
+		else if (inc_type == "E_F" || inc_type == "fermi_energy")
 		{
 			RANK_RANGES(fermi_energy);
 			incrementer = std::make_unique<FermiEnergy_Incrementer>(rank_range / n_iter);
 		}
-		else if(inc_type == "coulomb" || inc_type == "coulomb_scaling")
+		else if (inc_type == "coulomb" || inc_type == "coulomb_scaling")
 		{
 			RANK_RANGES(coulomb_scaling);
 			incrementer = std::make_unique<CoulombScaling_Incrementer>(rank_range / n_iter);
@@ -151,22 +151,22 @@ int main(int argc, char** argv) {
 	ModeHelper modes(init);
 	// We also want the last data point
 	if (rank == n_ranks - 1) ++n_iter;
-	for(int i = 0; i < n_iter; ++i) 
+	for (int i = 0; i < n_iter; ++i)
 	{
-		/* 
+		/*
 		* Generate setup for output
 		*/
 		auto delta_result = modes.getModel().Delta.real().as_vector();
 		const std::string output_folder = input.getString("output_folder") + "/" + modes.getModel().to_folder();
 		std::filesystem::create_directories(BASE_FOLDER + output_folder);
 		auto generate_comments = [&]() {
-			return nlohmann::json {
+			return nlohmann::json{
 				{ "time", 				Utility::time_stamp() },
 				{ "discretization", 	DISCRETIZATION },
 				{ "inner_discretization", _INNER_DISC },
 				{ "lambda_screening", 	_screening },
-				{ "Delta_max", 			as_meV(std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION, 
-											[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs){
+				{ "Delta_max", 			as_meV(std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION,
+											[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs) {
 												return std::abs(lhs) < std::abs(rhs); }))) },
 				{ "k_F", 				modes.getModel().fermi_wavevector },
 				{ "T", 					modes.getModel().temperature },
@@ -178,13 +178,13 @@ int main(int argc, char** argv) {
 				{ "k_zero_factor", 		std::real(modes.getModel().k_zero_integral()) },
 				{ "internal_energy", 	modes.getModel().internal_energy() }
 			};
-		};
+			};
 
 		/*
 		* Compute and output gap data
 		*/
 		nlohmann::json jDelta = generate_comments();
-		jDelta.update(nlohmann::json {
+		jDelta.update(nlohmann::json{
 			{ "data", {
 #ifdef _complex
 					{ "imag_Delta_Phonon", 		imag_as_meV(modes.getModel().phonon_gap()) },
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
 					{ "xis", 			modes.getModel().single_particle_dispersion() }
 				}
 			}
-		});
+			});
 		Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
 		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << " " << modes.getModel().info() << std::endl;
 

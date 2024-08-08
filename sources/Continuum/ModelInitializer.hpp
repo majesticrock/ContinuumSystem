@@ -16,7 +16,7 @@ namespace Continuum {
 		c_float fermi_energy;
 
 		ModelInitializer(Utility::InputFileReader& input)
-			: temperature{ PhysicalConstants::k_B * input.getDouble("T") }, 
+			: temperature{ PhysicalConstants::k_B * input.getDouble("T") },
 			phonon_coupling{ input.getDouble("phonon_coupling") },
 			omega_debye{ 1e-3 * input.getDouble("omega_debye") }, // given in meV in the parameter file
 			coulomb_scaling{ input.getDouble("coulomb_scaling") },

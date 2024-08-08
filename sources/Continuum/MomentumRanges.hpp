@@ -38,24 +38,24 @@ namespace Continuum {
 		template<class Function>
 		auto integrate(const Function& func, c_float begin, c_float end) const {
 			decltype(func(begin)) value{ };
-			if(is_zero(begin - end)) return value;
+			if (is_zero(begin - end)) return value;
 
-			if(begin <= INNER_K_MIN) {
+			if (begin <= INNER_K_MIN) {
 				value += __integrate(func, begin, std::min(end, INNER_K_MIN));
 				begin = INNER_K_MIN;
 			}
 
-			if(begin <= 1.0 && end >= INNER_K_MIN) {
+			if (begin <= 1.0 && end >= INNER_K_MIN) {
 				value += __integrate(func, std::max(begin, INNER_K_MIN), std::min(end, 1.0));
 				begin = 1.0;
 			}
 
-			if(begin <= INNER_K_MAX && end >= 1.0){
+			if (begin <= INNER_K_MAX && end >= 1.0) {
 				value += __integrate(func, std::max(begin, 1.0), std::min(end, INNER_K_MAX));
 				begin = INNER_K_MAX;
 			}
 
-			if(end >= INNER_K_MAX) {
+			if (end >= INNER_K_MAX) {
 				value += __integrate(func, std::max(begin, INNER_K_MAX), end);
 			}
 
@@ -70,10 +70,10 @@ namespace Continuum {
 				+ __integrate(func, INNER_K_MAX, K_MAX);
 		}
 
-		private:
+	private:
 		template<class Function>
 		inline auto __integrate(const Function& func, c_float begin, c_float end) const {
-			if(is_zero(end - begin)) {
+			if (is_zero(end - begin)) {
 				return decltype(func(begin)){ };
 			}
 			return boost::math::quadrature::gauss<c_float, n_gauss>::integrate(func, begin, end);
@@ -81,12 +81,12 @@ namespace Continuum {
 	};
 
 	class MomentumIterator {
-		MomentumRanges const * const _parent;
+		MomentumRanges const* const _parent;
 	public:
 		c_float k{};
 		int idx{};
 
-		MomentumIterator(MomentumRanges const * const parent, int init = 0) 
+		MomentumIterator(MomentumRanges const* const parent, int init = 0)
 			: _parent(parent), k(_parent->index_to_momentum(init)), idx(init) {}
 
 		inline MomentumIterator& operator++() {
@@ -101,12 +101,12 @@ namespace Continuum {
 	};
 
 	class InnerIterator {
-		MomentumRanges const * const _parent;
+		MomentumRanges const* const _parent;
 	public:
 		c_float k{};
 		int idx{};
 
-		InnerIterator(MomentumRanges const * const parent, int init = 0) 
+		InnerIterator(MomentumRanges const* const parent, int init = 0)
 			: _parent(parent), k(_parent->index_to_momentum(init + _OUTER_DISC)), idx(init) {}
 
 		inline InnerIterator& operator++() {

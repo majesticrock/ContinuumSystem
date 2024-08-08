@@ -137,13 +137,13 @@ namespace Continuum {
 		template<class Vector>
 		inline void fill_with(const Vector& vector, RealType weight) {
 			assert(this->size() == vector.size());
-			for(size_t i = 0U; i < this->size(); ++i){
+			for (size_t i = 0U; i < this->size(); ++i) {
 				this->selfconsistency_values[i] = (1. - weight) * this->selfconsistency_values[i] + weight * vector[i];
 			}
 		}
 		inline void clear_noise(RealType precision) {
-			for(auto& val : this->selfconsistency_values){
-				if(std::abs(val) < precision) val = DataType{};
+			for (auto& val : this->selfconsistency_values) {
+				if (std::abs(val) < precision) val = DataType{};
 			}
 		}
 		inline void reset() {

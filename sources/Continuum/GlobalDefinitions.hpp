@@ -31,7 +31,7 @@ namespace Continuum {
 
 	constexpr c_float SCALE = 1.9191582926775130066248203262466954997424768676841556839303308707; // (9 pi / 4)^(1/3)
 	constexpr c_float SCALE_SQUARED = 3.6831685523528666736627735983987856431407158617538908938924777283; // (9 pi / 4)^(2/3)
-	
+
 	constexpr c_float SQRT_PRECISION = 9.5367431640625e-07;
 	constexpr c_float PRECISION = 9.0949470177292824e-13; // 0 | 01111101011 | 0000000000000000000000000000000000000000000000000000
 
@@ -69,23 +69,23 @@ namespace Continuum {
 	}
 
 	inline c_float log_expression(c_float k_sum, c_float k_diff) {
-		return std::log( (_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff) );
+		return std::log((_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff));
 	}
 	inline auto delta_cut_integral(c_float k, c_float k_cut, c_float scaling, c_complex k_infinity_integral) {
 		const auto factor = PhysicalConstants::em_factor * PhysicalConstants::em_factor * scaling * scaling * k_infinity_integral;
-		if(is_zero(k)) {
+		if (is_zero(k)) {
 			return -(4. * factor / (_screening * _screening)) * (
 				(1. / k_cut) - (1. / _screening) * (PI_2 - std::atan(k_cut / _screening))
-			); 
+				);
 		}
-		const auto denom =  _screening * _screening + k * k;
+		const auto denom = _screening * _screening + k * k;
 		const auto denom_2 = denom * denom;
 		const auto I_inf = (-2. * PI * _screening // I_inf + line 2
-				+ 2. * _screening * (std::atan((k_cut + k) / _screening) + std::atan((k_cut - k) / _screening)) 
+			+ 2. * _screening * (std::atan((k_cut + k) / _screening) + std::atan((k_cut - k) / _screening))
 			) / denom_2;
-		
+
 		const auto line_1 = ( // approx = -line_3
-				(_screening * _screening - k * k) / denom_2 + 1. / (k_cut * k_cut)
+			(_screening * _screening - k * k) / denom_2 + 1. / (k_cut * k_cut)
 			) * (log_expression(k_cut + k, k_cut - k) / (2. * k));
 		const auto line_3 = 2. / (denom * k_cut);
 
