@@ -77,20 +77,18 @@ namespace Continuum {
 		const c_float lower[2] = {
 			Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
 				momentumRanges.INNER_K_MIN, 1., PRECISION, 100),
-			Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
-				momentumRanges.INNER_K_MIN, 1., PRECISION, 100)
+			momentumRanges.INNER_K_MIN
 		};
 		const c_float upper[2] = {
 			Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
 				1., momentumRanges.INNER_K_MAX, PRECISION, 100),
-			Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
-				1., momentumRanges.INNER_K_MAX, PRECISION, 100)
+			momentumRanges.INNER_K_MAX
 		};
 
-		std::cout << "Found minimum: lower=" << lower[0] << " E=" << energy(lower[0])
-			<< " and upper=" << upper[0] << " E=" << energy(upper[0]) << std::endl;
-		std::cout << "Compare K_MIN=" << momentumRanges.INNER_K_MIN
-			<< " and K_MAX=" << momentumRanges.INNER_K_MAX << std::endl;
+//		std::cout << "Found minimum: lower=" << lower[0] << " E=" << energy(lower[0])
+//			<< " and upper=" << upper[0] << " E=" << energy(upper[0]) << std::endl;
+//		std::cout << "Compare K_MIN=" << momentumRanges.INNER_K_MIN
+//			<< " and K_MAX=" << momentumRanges.INNER_K_MAX << std::endl;
 		return { 2. * std::min(energy(lower[0]), energy(upper[0])), 2. * std::max(energy(lower[1]), energy(upper[1])) };
 	}
 
