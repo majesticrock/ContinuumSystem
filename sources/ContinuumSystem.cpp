@@ -135,10 +135,10 @@ int main(int argc, char** argv) {
 			init.omega_debye += rank * rank_range;
 			incrementer = std::make_unique<DebyeFrequency_Incrementer>(rank_range / n_iter);
 		}
-		else if(inc_type == "E_F" || inc_type == "fermi_energy")
+		else if(inc_type == "k_F" || inc_type == "fermi_wavevector")
 		{
-			RANK_RANGES(fermi_energy);
-			incrementer = std::make_unique<FermiEnergy_Incrementer>(rank_range / n_iter);
+			RANK_RANGES(fermi_wavevector);
+			incrementer = std::make_unique<FermiWavevector_Incrementer>(rank_range / n_iter);
 		}
 		else if(inc_type == "coulomb" || inc_type == "coulomb_scaling")
 		{

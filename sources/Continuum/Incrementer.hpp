@@ -24,8 +24,8 @@ namespace Continuum {
 		void increment(ModelInitializer& init, int n = 1) const override;
 		double current(ModelInitializer const& init) const override;
 	};
-	struct FermiEnergy_Incrementer : public Base_Incrementer {
-		FermiEnergy_Incrementer(c_float Delta) : Base_Incrementer(Delta) {}
+	struct FermiWavevector_Incrementer : public Base_Incrementer {
+		FermiWavevector_Incrementer(c_float Delta) : Base_Incrementer(Delta) {}
 		void increment(ModelInitializer& init, int n = 1) const override; 
 		double current(ModelInitializer const& init) const override;
 	};

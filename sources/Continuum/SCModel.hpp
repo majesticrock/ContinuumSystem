@@ -56,6 +56,17 @@ namespace Continuum {
 		virtual ~SCModel() = default;
 
 		template<class ExpectationValues>
+		decltype(std::declval<ExpectationValues>()(c_float{})) integral_phonon(ExpectationValues const& expecs, c_float k) const
+		{
+			const c_float prefactor = phonon_coupling / (2. * PI * PI);
+			auto integrand = [&expecs](c_float q) {
+				return q * q * expecs(q);
+			};
+
+			return prefactor * momentumRanges.integrate( integrand, g_lower_bound(k), g_upper_bound(k) );
+		}
+
+		template<class ExpectationValues>
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_screening(ExpectationValues const& expecs, c_float k) const
 		{
 #ifndef mielke_coulomb

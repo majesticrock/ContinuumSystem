@@ -12,12 +12,13 @@ using Utility::constexprPower;
 
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
-		: Delta(2 * DISCRETIZATION + 1, parameters.phonon_coupling* parameters.omega_debye), 
+		: Delta(2 * DISCRETIZATION + 1, c_complex{}), 
 		temperature{ parameters.temperature }, phonon_coupling{ parameters.phonon_coupling }, 
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ parameters.fermi_wavevector },
 		momentumRanges(&fermi_wavevector, omega_debye)
 	{
+		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
@@ -31,8 +32,6 @@ namespace Continuum {
 			if (i == 2 * DISCRETIZATION) return c_complex{};
 			return c_complex{};
 			}, 2 * DISCRETIZATION + 1);
-
-		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << std::endl;
 		set_splines();
 	}
 
@@ -177,19 +176,13 @@ namespace Continuum {
 		this->occupation.set_new_ys(_expecs[SymbolicOperators::Number_Type]);
 		this->sc_expectation_value.set_new_ys(_expecs[SymbolicOperators::SC_Type]);
 
-		auto phonon_integrand = [this](c_float x) -> c_complex {
-			return x * x * sc_expectation_value(x);
-			};
 		auto delta_n_wrapper = [this](c_float q) {
 				return this->delta_n(q);
 				};
-		auto sc_wrapper = [this](c_float q) {
-			return this->sc_expectation_value(q);
-			};
 
 //#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			result(it.idx) = integral_screening(sc_wrapper, it.k);
+			result(it.idx) = integral_screening(sc_expectation_value, it.k);
 #ifndef mielke_coulomb
 			result(it.idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
 #endif
@@ -199,8 +192,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			result(it.idx) -= (phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 60>::integrate( phonon_integrand, g_lower_bound(it.k), g_upper_bound(it.k) );
+			result(it.idx) -= integral_phonon(sc_expectation_value, it.k);
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
 
@@ -366,7 +358,7 @@ namespace Continuum {
 
 		return "T=" + improved_string(temperature) 
 			+ "/coulomb_scaling=" + improved_string(coulomb_scaling)
-			+ "/E_F=" + improved_string(fermi_energy)
+			+ "/k_F=" + improved_string(fermi_wavevector)
 			+ "/g=" + improved_string(phonon_coupling) 
 			+ "/omega_D=" + improved_string(1e3 * omega_debye) + "/";		
 	}
@@ -380,10 +372,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			ret[it.idx] = -(phonon_coupling / (2. * PI * PI))
-				* boost::math::quadrature::gauss<double, 60>::integrate( 
-					[this](c_float x) -> c_complex { return x * x * sc_expectation_value(x); }
-					, g_lower_bound(it.k), g_upper_bound(it.k) );
+			ret[it.idx] = -integral_phonon(sc_expectation_value, it.k);
 		}
 		return ret;
 	}

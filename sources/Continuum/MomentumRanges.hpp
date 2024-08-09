@@ -1,5 +1,6 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
+#include <concepts>
 #include <boost/math/quadrature/gauss.hpp>
 
 namespace Continuum {
@@ -94,10 +95,24 @@ namespace Continuum {
 			k = _parent->index_to_momentum(idx);
 			return *this;
 		}
+		inline MomentumIterator operator++(int) {
+			MomentumIterator tmp = *this;
+			++(*this);
+			return tmp;
+		}
 
-		inline auto operator<=>(int other) { return idx <=> other; }
-		inline auto operator==(int other) { return idx == other; }
-		inline auto operator!=(int other) { return idx != other; }
+		inline MomentumIterator& operator--() {
+			--idx;
+			k = _parent->index_to_momentum(idx);
+			return *this;
+		}
+		inline MomentumIterator operator--(int) {
+			MomentumIterator tmp = *this;
+			--(*this);
+			return tmp;
+		}
+
+		inline auto operator<=>(MomentumIterator const& other) const = default;
 	};
 
 	class InnerIterator {
@@ -114,9 +129,39 @@ namespace Continuum {
 			k = _parent->index_to_momentum(idx + _OUTER_DISC);
 			return *this;
 		}
+		inline InnerIterator operator++(int) {
+			InnerIterator tmp = *this;
+			++(*this);
+			return tmp;
+		}
 
-		inline auto operator<=>(int other) { return idx <=> other; }
-		inline auto operator==(int other) { return idx == other; }
-		inline auto operator!=(int other) { return idx != other; }
+		inline InnerIterator& operator--() {
+			--idx;
+			k = _parent->index_to_momentum(idx);
+			return *this;
+		}
+		inline InnerIterator operator--(int) {
+			InnerIterator tmp = *this;
+			--(*this);
+			return tmp;
+		}
+
+		inline auto operator<=>(InnerIterator const& other) const = default;
 	};
+
+	template<class T>
+	concept is_momentum_iterator = std::same_as<T, MomentumIterator> || std::same_as<T, InnerIterator>;
+
+	template <class MomIt> requires is_momentum_iterator<MomIt>
+	auto operator<=>(MomIt const& it, int i) { return it.idx <=> i; }
+	template <class MomIt> requires is_momentum_iterator<MomIt>
+	bool operator==(MomIt const& it, int i) { return it.idx == i; }
+	template <class MomIt> requires is_momentum_iterator<MomIt>
+	bool operator!=(MomIt const& it, int i) { return it.idx != i; }
+
+	template <class MomIt> requires is_momentum_iterator<MomIt>
+	std::ostream& operator<<(std::ostream& os, const MomIt& it) {
+		os << it.idx << " -> " << it.k;
+		return os;
+	}
 }

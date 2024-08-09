@@ -22,18 +22,18 @@ namespace Continuum {
 	double DebyeFrequency_Incrementer::current(ModelInitializer const& init) const
 		{ return init.omega_debye; }
 
-	void FermiEnergy_Incrementer::increment(ModelInitializer& init, int n/*=1*/) const
+	void FermiWavevector_Incrementer::increment(ModelInitializer& init, int n/*=1*/) const
 	{ 
-		init.fermi_energy = n * _Delta + init.fermi_energy;
-		init.fermi_wavevector = init.compute_fermi_wavevector();
+		init.fermi_wavevector = n * _Delta + init.fermi_wavevector;
+		init.fermi_energy = init.compute_fermi_energy();
 	}
-	double FermiEnergy_Incrementer::current(ModelInitializer const& init) const
-		{ return init.fermi_energy; }
+	double FermiWavevector_Incrementer::current(ModelInitializer const& init) const
+		{ return init.fermi_wavevector; }
 
 	void CoulombScaling_Incrementer::increment(ModelInitializer& init, int n/*=1*/) const
 	{ 
 		init.coulomb_scaling = n * _Delta + init.coulomb_scaling;
-		init.fermi_wavevector = init.compute_fermi_wavevector();
+		init.fermi_energy = init.compute_fermi_energy();
 	}
 	double CoulombScaling_Incrementer::current(ModelInitializer const& init) const
 		{ return init.coulomb_scaling; }
