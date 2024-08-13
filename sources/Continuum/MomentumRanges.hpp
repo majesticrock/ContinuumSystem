@@ -4,7 +4,6 @@
 #include <boost/math/quadrature/gauss.hpp>
 
 namespace Continuum {
-	class MomentumIterator;
 	struct MomentumRanges {
 		static constexpr int n_gauss = 120;
 
@@ -86,9 +85,17 @@ namespace Continuum {
 	public:
 		c_float k{};
 		int idx{};
+		static const int& max_idx;
 
 		MomentumIterator(MomentumRanges const * const parent, int init = 0) 
 			: _parent(parent), k(_parent->index_to_momentum(init)), idx(init) {}
+
+		inline c_float parent_step() const {
+			if( k < _parent->INNER_K_MIN ) return _parent->LOWER_STEP;
+			if( k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
+			return _parent->UPPER_STEP;
+		}
+		inline c_float max_k() const { return _parent->index_to_momentum(max_idx); }
 
 		inline MomentumIterator& operator++() {
 			++idx;
@@ -120,9 +127,17 @@ namespace Continuum {
 	public:
 		c_float k{};
 		int idx{};
+		static const int& max_idx;
 
 		InnerIterator(MomentumRanges const * const parent, int init = 0) 
 			: _parent(parent), k(_parent->index_to_momentum(init + _OUTER_DISC)), idx(init) {}
+
+		inline c_float parent_step() const {
+			if( k < _parent->INNER_K_MIN ) return _parent->LOWER_STEP;
+			if( k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
+			return _parent->UPPER_STEP;
+		}
+		inline c_float max_k() const { return _parent->index_to_momentum(max_idx + _OUTER_DISC); }
 
 		inline InnerIterator& operator++() {
 			++idx;
@@ -149,8 +164,50 @@ namespace Continuum {
 		inline auto operator<=>(InnerIterator const& other) const = default;
 	};
 
+	class IEOMIterator {
+		MomentumRanges const * const _parent;
+	public:
+		c_float k{};
+		int idx{};
+		static const int& max_idx;
+
+		IEOMIterator(MomentumRanges const * const parent, int init = 0) 
+			: _parent(parent), k(_parent->index_to_momentum(init + _OUTER_DISC)), idx(init) {}
+
+		inline c_float parent_step() const {
+			if( k < _parent->INNER_K_MIN ) return _parent->LOWER_STEP;
+			if( k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
+			return _parent->UPPER_STEP;
+		}
+		inline c_float max_k() const { return _parent->index_to_momentum(max_idx + _OUTER_DISC); }
+
+		inline IEOMIterator& operator++() {
+			++idx;
+			k = _parent->index_to_momentum(idx + _OUTER_DISC);
+			return *this;
+		}
+		inline IEOMIterator operator++(int) {
+			IEOMIterator tmp = *this;
+			++(*this);
+			return tmp;
+		}
+
+		inline IEOMIterator& operator--() {
+			--idx;
+			k = _parent->index_to_momentum(idx);
+			return *this;
+		}
+		inline IEOMIterator operator--(int) {
+			IEOMIterator tmp = *this;
+			--(*this);
+			return tmp;
+		}
+
+		inline auto operator<=>(IEOMIterator const& other) const = default;
+	};
+
 	template<class T>
-	concept is_momentum_iterator = std::same_as<T, MomentumIterator> || std::same_as<T, InnerIterator>;
+	concept is_momentum_iterator = std::same_as<T, MomentumIterator> || std::same_as<T, InnerIterator> || std::same_as<T, IEOMIterator>;
 
 	template <class MomIt> requires is_momentum_iterator<MomIt>
 	auto operator<=>(MomIt const& it, int i) { return it.idx <=> i; }

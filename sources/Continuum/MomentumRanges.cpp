@@ -2,7 +2,7 @@
 #include <iostream>
 
 #ifdef approximate_theta
-constexpr Continuum::c_float inner_offset = 1. - 1e-4;
+constexpr Continuum::c_float inner_offset = 1. - 1e-5;
 #else
 #ifndef mielke_coulomb
 constexpr Continuum::c_float inner_offset = 10;
@@ -12,6 +12,9 @@ constexpr Continuum::c_float inner_offset = 2;
 #endif
 
 namespace Continuum {
+	const int& MomentumIterator::max_idx = DISCRETIZATION;
+	const int& InnerIterator::max_idx = _INNER_DISC;
+
 	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye)
 		: 
 #ifndef mielke_coulomb

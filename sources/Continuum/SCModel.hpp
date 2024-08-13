@@ -23,9 +23,9 @@ namespace Continuum {
 
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const;
 		inline c_float dispersion_to_fermi_level(c_float k) const;
-		inline c_float dispersion_to_fermi_level(int k) const;
+		inline c_float dispersion_to_fermi_level_index(int k) const;
 		inline c_float energy(c_float k) const;
-		inline c_float energy(int k) const;
+		inline c_float energy_index(int k) const;
 		c_float fock_energy(c_float k) const;
 
 		inline c_float delta_n(c_float k) const;
@@ -45,7 +45,6 @@ namespace Continuum {
 		std::string info() const;
 		std::string to_folder() const;
 		c_float internal_energy() const;
-		std::vector<c_float> continuum_boundaries() const;
 		std::vector<c_complex> phonon_gap() const;
 		std::vector<c_complex> coulomb_gap() const;
 		std::vector<c_float> single_particle_dispersion() const;
@@ -154,13 +153,13 @@ namespace Continuum {
 	c_float SCModel::dispersion_to_fermi_level(c_float k) const { 
 		return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k); 
 	}
-	c_float SCModel::dispersion_to_fermi_level(int k) const { 
+	c_float SCModel::dispersion_to_fermi_level_index(int k) const { 
 		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + fock_energy(momentumRanges.index_to_momentum(k)) + std::real(Delta[k + DISCRETIZATION]); 
 	}
 	c_float SCModel::energy(c_float k) const { 
 		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k))); 
 	}
-	c_float SCModel::energy(int k) const { 
-		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(Delta[k])); 
+	c_float SCModel::energy_index(int k) const { 
+		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level_index(k)) + std::norm(Delta[k])); 
 	}
 }

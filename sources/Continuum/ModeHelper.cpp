@@ -9,8 +9,8 @@
 
 #include <boost/math/quadrature/gauss.hpp>
 
-#define ieom_diag(k) k * k / (2 * PI * PI)
-#define ieom_offdiag(k, l) k * k * l * l * model->momentumRanges.INNER_STEP / (4 * PI * PI * PI * PI)
+#define ieom_diag(k) k * k / (2 * PI * PI * it.parent_step())
+#define ieom_offdiag(k, l) k * k * l * l / (4 * PI * PI * PI * PI)
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -58,12 +58,14 @@ namespace Continuum {
 	{
 #ifdef _complex
 		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
-		std::fill(starting_states[0].begin(), starting_states[0].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
-		std::fill(starting_states[1].begin() + 3 * MODE_DISC, starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
+		std::fill(starting_states[0].begin(), starting_states[0].begin() + m_iterator::max_idx, sqrt(model->momentumRanges.INNER_STEP));
+		std::fill(starting_states[1].begin() + 3 * m_iterator::max_idx, starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
 #else
 		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
-		std::fill(starting_states[0][0].begin(), starting_states[0][0].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
-		std::fill(starting_states[0][1].begin(), starting_states[0][1].begin() + MODE_DISC, sqrt(model->momentumRanges.INNER_STEP));
+		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it) {
+			starting_states[0][0](it.idx) = (1. / (2. * PI * PI)) * it.k * it.k * it.parent_step();
+			starting_states[0][1](it.idx) = (1. / (2. * PI * PI)) * it.k * it.k * it.parent_step();
+		}
 #endif
 	}
 
@@ -98,21 +100,20 @@ namespace Continuum {
 			}
 		}
 
-		/* for(InnerIterator it(&model->momentumRanges); it < MODE_DISC; ++it){
-			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, MODE_DISC + it.idx) << "  " << K_plus(MODE_DISC + it.idx, it.idx) << " || " 
+		/* for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it){
+			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, m_iterator::max_idx + it.idx) << "  " << K_plus(m_iterator::max_idx + it.idx, it.idx) << " || " 
 				<< - 2 * model->interpolate_delta(it.k) * model->dispersion_to_fermi_level(it.k) / model->energy(it.k)  << std::endl;
 		} */
 #ifndef _complex
 		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm() << std::endl;
 		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << std::endl;
-		/* for(InnerIterator it(&model->momentumRanges); it < _INNER_DISC; ++it) {
-			for(InnerIterator jt(&model->momentumRanges); jt < _INNER_DISC; ++jt) {
-				auto val = K_plus(it.idx, jt.idx);
-				if(model->omega_debye > 0.5 * std::abs(jt.k * jt.k - it.k * it.k))
-					val += 2 * (model->phonon_coupling * (1 - 2 * model->occupation(it.k)) * (1 - 2 * model->occupation(jt.k)));
-				if(! is_zero(val)) std::cerr << it << " || " << jt << ":  " << val << std::endl;
-			}
-		} */
+
+		/* const auto ROD = residual_offdiagonality();
+		std::cout << "ROD(+) = " << ROD.first << "    ROD(-) = " << ROD.second << std::endl;
+		std::cout << model->dispersion_to_fermi_level(model->momentumRanges.index_to_momentum(_OUTER_DISC)) << "  " 
+			<< model->dispersion_to_fermi_level(model->momentumRanges.index_to_momentum(_OUTER_DISC + 1)) << std::endl; */
+
+		std::cout << K_plus.norm() << "   " << K_minus.norm() << std::endl;
 #else
 		std::cout << "||M - M^+|| = " << (M - M.adjoint()).norm() << std::endl;
 		std::cout << "||N - N^+|| = " << (N - N.adjoint()).norm() << std::endl;
@@ -143,7 +144,8 @@ namespace Continuum {
 
 	void ModeHelper::fill_block_M(int i, int j)
 	{
-		for(InnerIterator it(&model->momentumRanges); it < _INNER_DISC; ++it) {
+		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it) {
+			if(is_zero(it.k)) continue;
 			for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
 				if (!term.delta_momenta.empty()) {
 					if (term.sums.momenta.empty()) {
@@ -152,11 +154,12 @@ namespace Continuum {
 							continue;
 						}
 					}
-					M(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
+					M(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
-					for (InnerIterator jt(&model->momentumRanges); jt < _INNER_DISC; ++jt) {
-						M(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+					for (m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx; ++jt) {
+						if(is_zero(jt.k)) continue;
+						M(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
 			}
@@ -165,15 +168,17 @@ namespace Continuum {
 
 	void ModeHelper::fill_block_N(int i, int j)
 	{
-		for(InnerIterator it(&model->momentumRanges); it < _INNER_DISC; ++it) {
+		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it) {
+			if(is_zero(it.k)) continue;
 			for (const auto& term : wicks.N[number_of_basis_terms * j + i]) {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
-					N(i * MODE_DISC + it.idx, j * MODE_DISC + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
+					N(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
-					for(InnerIterator jt(&model->momentumRanges); jt < _INNER_DISC; ++jt) {
-						N(i * MODE_DISC + it.idx, j * MODE_DISC + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+					for(m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx; ++jt) {
+						N(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+						if(is_zero(jt.k)) continue;
 					}
 				}
 			}
@@ -261,6 +266,25 @@ namespace Continuum {
 		throw std::runtime_error("Something went wrong while computing terms...");
 	}
 
+	std::pair<c_float, c_float> ModeHelper::residual_offdiagonality() const 
+	{
+		std::pair<c_float, c_float> ret = {0.0 , 0.0};
+		for(int i = 0; i < hermitian_size; ++i){
+			ret.first += std::norm(K_plus(i * m_iterator::max_idx, i * m_iterator::max_idx + 1));
+		}
+		ret.first = sqrt(ret.first);
+		for(int i = 0; i < antihermitian_size; ++i){
+			ret.second += std::norm(K_minus(i * m_iterator::max_idx, i * m_iterator::max_idx + 1));
+		}
+		ret.second = sqrt(ret.second);
+		return ret;
+	}
+
+	std::vector<c_float> ModeHelper::continuum_boundaries() const
+	{
+		return { 2 * model->energy(model->fermi_wavevector), 2 * model->energy(m_iterator(&model->momentumRanges).max_k()) };
+	}
+
 	int ModeHelper::hermitian_discretization = 0;
 	int ModeHelper::antihermitian_discretization = 0;
 	int ModeHelper::total_matrix_size = 0;
@@ -268,13 +292,13 @@ namespace Continuum {
 	ModeHelper::ModeHelper(ModelInitializer const& init)
 		: _parent(this, SQRT_PRECISION, 
 #ifndef _complex
-		MODE_DISC * hermitian_size, MODE_DISC * antihermitian_size, false, 
+		m_iterator::max_idx * hermitian_size, m_iterator::max_idx * antihermitian_size, false, 
 #endif
 		false)
 	{
-		hermitian_discretization = MODE_DISC * hermitian_size;
-		antihermitian_discretization = MODE_DISC * antihermitian_size;
-		total_matrix_size = MODE_DISC * number_of_basis_terms;
+		hermitian_discretization = m_iterator::max_idx * hermitian_size;
+		antihermitian_discretization = m_iterator::max_idx * antihermitian_size;
+		total_matrix_size = m_iterator::max_idx * number_of_basis_terms;
 
 		model = std::make_unique<SCModel>(init);
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);

@@ -71,28 +71,6 @@ namespace Continuum {
 		solver.compute(true);
 	}
 
-	std::vector<c_float> SCModel::continuum_boundaries() const
-	{
-		const c_float lower[2] = {
-			Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
-				momentumRanges.INNER_K_MIN, fermi_wavevector, PRECISION, 100),
-			Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
-				momentumRanges.INNER_K_MIN, fermi_wavevector, PRECISION, 100)
-		};
-		const c_float upper[2] = {
-			Utility::Numerics::Minimization::bisection([this](c_float k) { return this->energy(k); },
-				fermi_wavevector, momentumRanges.INNER_K_MAX, PRECISION, 100),
-			Utility::Numerics::Minimization::bisection([this](c_float k) { return -this->energy(k); },
-				fermi_wavevector, momentumRanges.INNER_K_MAX, PRECISION, 100)
-		};
-
-		std::cout << "Found minimum: lower=" << lower[0] / fermi_wavevector << " E=" << energy(lower[0]) 
-			<< " and upper=" << upper[0] / fermi_wavevector << " E=" << energy(upper[0]) << std::endl; 
-		std::cout << "Compare K_MIN=" << momentumRanges.INNER_K_MIN / fermi_wavevector
-			<< " and K_MAX=" << momentumRanges.INNER_K_MAX/ fermi_wavevector << std::endl;
-		return { 2. * std::min(energy(lower[0]), energy(upper[0])), 2. * std::max(energy(lower[1]), energy(upper[1])) };
-	}
-
 	c_complex SCModel::k_infinity_integral() const
 	{
 		auto integrand = [this](c_float q) {
@@ -144,7 +122,7 @@ namespace Continuum {
 	c_complex SCModel::sc_expectation_value_index(int k) const
 	{
 		if (is_zero(Delta[k])) return c_complex{};
-		const c_float E = energy(k);
+		const c_float E = energy_index(k);
 		if (is_zero(temperature)) {
 			return -Delta[k] / (2 * E);
 		}
@@ -153,7 +131,7 @@ namespace Continuum {
 
 	c_float SCModel::occupation_index(int k) const
 	{
-		const auto eps_mu = dispersion_to_fermi_level(k);
+		const auto eps_mu = dispersion_to_fermi_level_index(k);
 		if (is_zero(Delta[k])) {
 			if (is_zero(temperature)) {
 				if (is_zero(eps_mu)) return 0.5;
@@ -254,10 +232,6 @@ namespace Continuum {
 			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first) + fock_energy(first))
 				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second) + fock_energy(second)))
 #else
-			if (coeff.momenta[0] == coeff.momenta[1])
-			{
-				return this->phonon_coupling;
-			}
 			if (2. * omega_debye > std::abs(phonon_alpha(first) - phonon_alpha(second)))
 #endif
 			{

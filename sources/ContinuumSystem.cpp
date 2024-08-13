@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {
 					{ "resolvents", resolvents },
-					{ "continuum_boundaries", modes.getModel().continuum_boundaries() }
+					{ "continuum_boundaries", modes.continuum_boundaries() }
 				};
 				jResolvents.merge_patch(generate_comments());
 				Utility::saveString(jResolvents.dump(4), BASE_FOLDER + output_folder + "resolvents.json.gz");
