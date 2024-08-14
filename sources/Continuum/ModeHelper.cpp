@@ -9,8 +9,8 @@
 
 #include <boost/math/quadrature/gauss.hpp>
 
-#define ieom_diag(k) k * k / (2 * PI * PI * it.parent_step())
-#define ieom_offdiag(k, l) k * k * l * l / (4 * PI * PI * PI * PI)
+#define ieom_diag(k) 1e-8 * k * k / (2 * PI * PI * it.parent_step())
+#define ieom_offdiag(k, l) 1e-8 * k * k * l * l / (4 * PI * PI * PI * PI)
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -63,8 +63,8 @@ namespace Continuum {
 #else
 		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
 		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it) {
-			starting_states[0][0](it.idx) = (1. / (2. * PI * PI)) * it.k * it.k * it.parent_step();
-			starting_states[0][1](it.idx) = (1. / (2. * PI * PI)) * it.k * it.k * it.parent_step();
+			starting_states[0][0](it.idx) = (1e4 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
+			starting_states[0][1](it.idx) = (1e4 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
 		}
 #endif
 	}
@@ -282,7 +282,9 @@ namespace Continuum {
 
 	std::vector<c_float> ModeHelper::continuum_boundaries() const
 	{
-		return { 2 * model->energy(model->fermi_wavevector), 2 * model->energy(m_iterator(&model->momentumRanges).max_k()) };
+		const m_iterator buf(&model->momentumRanges);
+		return { 2 * model->energy(model->fermi_wavevector), 
+			2 * std::max(model->energy(buf.max_k()), model->energy(buf.min_k())) };
 	}
 
 	int ModeHelper::hermitian_discretization = 0;
