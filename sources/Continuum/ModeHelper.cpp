@@ -9,8 +9,8 @@
 
 #include <boost/math/quadrature/gauss.hpp>
 
-#define ieom_diag(k) 1e-8 * k * k / (2 * PI * PI * it.parent_step())
-#define ieom_offdiag(k, l) 1e-8 * k * k * l * l / (4 * PI * PI * PI * PI)
+#define ieom_diag(k) 1e-6 * k * k / (2 * PI * PI * it.parent_step())
+#define ieom_offdiag(k, l) 1e-6 * k * k * l * l / (4 * PI * PI * PI * PI)
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -58,13 +58,13 @@ namespace Continuum {
 	{
 #ifdef _complex
 		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
-		std::fill(starting_states[0].begin(), starting_states[0].begin() + m_iterator::max_idx, sqrt(model->momentumRanges.INNER_STEP));
-		std::fill(starting_states[1].begin() + 3 * m_iterator::max_idx, starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
+		std::fill(starting_states[0].begin(), starting_states[0].begin() + m_iterator::max_idx(), sqrt(model->momentumRanges.INNER_STEP));
+		std::fill(starting_states[1].begin() + 3 * m_iterator::max_idx(), starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
 #else
 		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
-		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it) {
-			starting_states[0][0](it.idx) = (1e4 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
-			starting_states[0][1](it.idx) = (1e4 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
+		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
+			starting_states[0][0](it.idx) = (1e3 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
+			starting_states[0][1](it.idx) = (1e3 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
 		}
 #endif
 	}
@@ -100,8 +100,8 @@ namespace Continuum {
 			}
 		}
 
-		/* for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it){
-			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, m_iterator::max_idx + it.idx) << "  " << K_plus(m_iterator::max_idx + it.idx, it.idx) << " || " 
+		/* for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it){
+			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, m_iterator::max_idx() + it.idx) << "  " << K_plus(m_iterator::max_idx() + it.idx, it.idx) << " || " 
 				<< - 2 * model->interpolate_delta(it.k) * model->dispersion_to_fermi_level(it.k) / model->energy(it.k)  << std::endl;
 		} */
 #ifndef _complex
@@ -113,7 +113,7 @@ namespace Continuum {
 		std::cout << model->dispersion_to_fermi_level(model->momentumRanges.index_to_momentum(_OUTER_DISC)) << "  " 
 			<< model->dispersion_to_fermi_level(model->momentumRanges.index_to_momentum(_OUTER_DISC + 1)) << std::endl; */
 
-		std::cout << K_plus.norm() << "   " << K_minus.norm() << std::endl;
+		//std::cout << K_plus.norm() << "   " << K_minus.norm() << std::endl;
 #else
 		std::cout << "||M - M^+|| = " << (M - M.adjoint()).norm() << std::endl;
 		std::cout << "||N - N^+|| = " << (N - N.adjoint()).norm() << std::endl;
@@ -144,8 +144,10 @@ namespace Continuum {
 
 	void ModeHelper::fill_block_M(int i, int j)
 	{
-		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it) {
+		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
 			if(is_zero(it.k)) continue;
+
+			c_complex diag_buffer{};
 			for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
 				if (!term.delta_momenta.empty()) {
 					if (term.sums.momenta.empty()) {
@@ -154,34 +156,38 @@ namespace Continuum {
 							continue;
 						}
 					}
-					M(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
+					diag_buffer += computeTerm(term, it.k, it.k);
+					//M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
-					for (m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx; ++jt) {
+					for (m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx(); ++jt) {
 						if(is_zero(jt.k)) continue;
-						M(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+						M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
 			}
+			M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) += ieom_diag(it.k) * diag_buffer;
 		}
 	}
 
 	void ModeHelper::fill_block_N(int i, int j)
 	{
-		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx; ++it) {
+		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
 			if(is_zero(it.k)) continue;
 			for (const auto& term : wicks.N[number_of_basis_terms * j + i]) {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
-					N(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
+					N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) += computeTerm(term, it.k, it.k);
 				}
 				else {
-					for(m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx; ++jt) {
-						N(i * m_iterator::max_idx + it.idx, j * m_iterator::max_idx + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+					throw std::runtime_error("Offdiagonal term in N!");
+					/* for(m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx(); ++jt) {
+						N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 						if(is_zero(jt.k)) continue;
-					}
+					} */
 				}
 			}
+			N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) *= ieom_diag(it.k);
 		}
 	}
 
@@ -270,11 +276,11 @@ namespace Continuum {
 	{
 		std::pair<c_float, c_float> ret = {0.0 , 0.0};
 		for(int i = 0; i < hermitian_size; ++i){
-			ret.first += std::norm(K_plus(i * m_iterator::max_idx, i * m_iterator::max_idx + 1));
+			ret.first += std::norm(K_plus(i * m_iterator::max_idx(), i * m_iterator::max_idx() + 1));
 		}
 		ret.first = sqrt(ret.first);
 		for(int i = 0; i < antihermitian_size; ++i){
-			ret.second += std::norm(K_minus(i * m_iterator::max_idx, i * m_iterator::max_idx + 1));
+			ret.second += std::norm(K_minus(i * m_iterator::max_idx(), i * m_iterator::max_idx() + 1));
 		}
 		ret.second = sqrt(ret.second);
 		return ret;
@@ -294,13 +300,13 @@ namespace Continuum {
 	ModeHelper::ModeHelper(ModelInitializer const& init)
 		: _parent(this, SQRT_PRECISION, 
 #ifndef _complex
-		m_iterator::max_idx * hermitian_size, m_iterator::max_idx * antihermitian_size, false, 
+		m_iterator::max_idx() * hermitian_size, m_iterator::max_idx() * antihermitian_size, false, 
 #endif
 		false)
 	{
-		hermitian_discretization = m_iterator::max_idx * hermitian_size;
-		antihermitian_discretization = m_iterator::max_idx * antihermitian_size;
-		total_matrix_size = m_iterator::max_idx * number_of_basis_terms;
+		hermitian_discretization = m_iterator::max_idx() * hermitian_size;
+		antihermitian_discretization = m_iterator::max_idx() * antihermitian_size;
+		total_matrix_size = m_iterator::max_idx() * number_of_basis_terms;
 
 		model = std::make_unique<SCModel>(init);
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
@@ -308,5 +314,9 @@ namespace Continuum {
 		//auto solver = Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
 		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
 		solver.compute(true);
+
+		const m_iterator buf(&model->momentumRanges);
+		std::cout << "<f_k>: LB = " << model->sc_expectation_value(buf.min_k())
+			<< "    UB = " << model->sc_expectation_value(buf.max_k()) << std::endl;
 	}
 }

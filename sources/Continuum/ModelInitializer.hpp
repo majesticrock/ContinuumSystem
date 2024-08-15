@@ -10,6 +10,7 @@ namespace Continuum {
 		c_float omega_debye;
 		c_float fermi_wavevector;
 		c_float coulomb_scaling;
+		c_float screening;
 
 		// Members computed depending on set members
 		c_float fermi_energy;
@@ -20,6 +21,7 @@ namespace Continuum {
 			omega_debye{ 1e-3 * input.getDouble("omega_debye") }, // given in meV in the parameter file
 			fermi_wavevector{ input.getDouble("k_F") },
 			coulomb_scaling{ input.getDouble("coulomb_scaling") },
+			screening{ is_zero(input.getDouble("screening")) ? c_float{} : input.getDouble("screening") },
 			fermi_energy{ compute_fermi_energy() }
 		{ };
 

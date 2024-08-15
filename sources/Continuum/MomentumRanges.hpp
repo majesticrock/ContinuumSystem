@@ -125,25 +125,26 @@ namespace Continuum {
 
 	class InnerIterator {
 		MomentumRanges const * const _parent;
+		inline c_float index_to_momentum(int i) const {
+			return (_parent->INNER_K_MIN + i * _parent->INNER_STEP);
+		}
 	public:
 		c_float k{};
 		int idx{};
-		static const int& max_idx;
+		static inline int max_idx() { return _INNER_DISC + 1; }
 
 		InnerIterator(MomentumRanges const * const parent, int init = 0) 
-			: _parent(parent), k(_parent->index_to_momentum(init + _OUTER_DISC)), idx(init) {}
+			: _parent(parent), k(this->index_to_momentum(init)), idx(init) {}
 
 		inline c_float parent_step() const {
-			if( k < _parent->INNER_K_MIN ) return _parent->LOWER_STEP;
-			if( k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
-			return _parent->UPPER_STEP;
+			return _parent->INNER_STEP;
 		}
-		inline c_float max_k() const { return _parent->index_to_momentum(max_idx + _OUTER_DISC); }
-		inline c_float min_k() const { return _parent->index_to_momentum(_OUTER_DISC); }
+		inline c_float max_k() const { return _parent->INNER_K_MAX; }
+		inline c_float min_k() const { return _parent->INNER_K_MIN; }
 
 		inline InnerIterator& operator++() {
 			++idx;
-			k = _parent->index_to_momentum(idx + _OUTER_DISC);
+			k = this->index_to_momentum(idx);
 			return *this;
 		}
 		inline InnerIterator operator++(int) {
@@ -154,7 +155,7 @@ namespace Continuum {
 
 		inline InnerIterator& operator--() {
 			--idx;
-			k = _parent->index_to_momentum(idx);
+			k = this->index_to_momentum(idx);
 			return *this;
 		}
 		inline InnerIterator operator--(int) {

@@ -71,7 +71,7 @@ namespace Continuum {
 #ifndef mielke_coulomb
 			if(is_zero(k)){
 				auto integrand = [&](c_float q) {
-					return expecs(q) * q * q / (_screening * _screening + q * q);
+					return expecs(q) * q * q / (screening * screening + q * q);
 				};
 				const c_float prefactor = 2. * coulomb_scaling * PhysicalConstants::em_factor;
 				return prefactor * momentumRanges.integrate(integrand);
@@ -79,7 +79,7 @@ namespace Continuum {
 			auto integrand = [&](c_float q){
 				const c_float k_diff{ q - k };
 				const c_float k_sum{ q + k };
-				return expecs(q) * q * std::log((_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff));
+				return expecs(q) * q * std::log((screening * screening + k_sum * k_sum) / (screening * screening + k_diff * k_diff));
 			};
 			const c_float prefactor = 0.5 * coulomb_scaling * PhysicalConstants::em_factor / k;
 			return prefactor * momentumRanges.integrate(integrand);
@@ -107,6 +107,11 @@ namespace Continuum {
 			return phonon_alpha(k) - ALPHA;
 		}
 
+		inline c_float log_expression(c_float k_sum, c_float k_diff) const {
+			return std::log( (screening * screening + k_sum * k_sum) / (screening * screening + k_diff * k_diff) );
+		}
+
+
 		void set_splines();
 	public:
 		ModelAttributes<c_complex> Delta;
@@ -114,6 +119,7 @@ namespace Continuum {
 		c_float phonon_coupling{};
 		c_float omega_debye{};
 		c_float fermi_energy{};
+		c_float screening{};
 		c_float coulomb_scaling{};
 
 		SplineContainer occupation;

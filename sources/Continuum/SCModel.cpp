@@ -15,7 +15,8 @@ namespace Continuum {
 		: Delta(2 * DISCRETIZATION + 1, c_complex{}), 
 		temperature{ parameters.temperature }, phonon_coupling{ parameters.phonon_coupling }, 
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
-		coulomb_scaling{ parameters.coulomb_scaling }, fermi_wavevector{ parameters.fermi_wavevector },
+		 screening{ parameters.screening },coulomb_scaling{ parameters.coulomb_scaling },
+		fermi_wavevector{ parameters.fermi_wavevector },
 		momentumRanges(&fermi_wavevector, omega_debye)
 	{
 		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
@@ -83,7 +84,7 @@ namespace Continuum {
 	c_complex SCModel::k_zero_integral() const
 	{
 		auto integrand = [this](c_float q) {
-			return (q * q / (_screening * _screening + q * q)) * this->sc_expectation_value(q);
+			return (q * q / (screening * screening + q * q)) * this->sc_expectation_value(q);
 		};
 		const c_float prefactor = 2. * coulomb_scaling * PhysicalConstants::em_factor;
 		return momentumRanges.integrate(integrand) * prefactor;
@@ -91,20 +92,20 @@ namespace Continuum {
 
 	c_float SCModel::fock_energy(c_float k) const 
 	{
-#ifdef _screening
+#ifdef screening
 		if(is_zero(k)) {
 			return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * (
-				3.0 - 2.0 * (_screening / fermi_wavevector) * std::atan(fermi_wavevector / _screening)
+				3.0 - 2.0 * (screening / fermi_wavevector) * std::atan(fermi_wavevector / screening)
 			);
 		}
 
 		const c_float k_diff{ k - fermi_wavevector };
 		const c_float k_sum{ k + fermi_wavevector };
-		const c_float ln_factor{ (_screening * _screening + fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector) };
+		const c_float ln_factor{ (screening * screening + fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector) };
 		return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * 
 		(
 			1.0 + ln_factor * log_expression(k_sum, k_diff) 
-			+ (_screening / fermi_wavevector) * (std::atan(k_diff / _screening) - std::atan(k_sum / _screening))
+			+ (screening / fermi_wavevector) * (std::atan(k_diff / screening) - std::atan(k_sum / screening))
 		);
 
 #else
@@ -244,7 +245,7 @@ namespace Continuum {
 		} 
 		else if(coeff.name == "V") {
 			if(coeff.momenta.front().is_zero())
-				return (coulomb_scaling / PhysicalConstants::vacuum_permitivity) / (_screening * _screening);
+				return (coulomb_scaling / PhysicalConstants::vacuum_permitivity) / (screening * screening);
 			return coulomb_scaling / (2 * first * second * PhysicalConstants::vacuum_permitivity) * log_expression(first + second, first - second);
 		}
 		else
@@ -310,6 +311,7 @@ namespace Continuum {
 			+ std::to_string(phonon_coupling) + "eV   omega_D=" 
 			+ std::to_string(1e3 * omega_debye) + "meV   E_F="
 			+ std::to_string(fermi_energy) + "eV   alpha=" + std::to_string(coulomb_scaling);
+			+ "lambda=" + std::to_string(screening) + "sqrt(eV)";
 	}
 
 	std::string SCModel::to_folder() const {
@@ -332,6 +334,7 @@ namespace Continuum {
 
 		return "T=" + improved_string(temperature) 
 			+ "/coulomb_scaling=" + improved_string(coulomb_scaling)
+			+ "/screening=" + improved_string(screening)
 			+ "/k_F=" + improved_string(fermi_wavevector)
 			+ "/g=" + improved_string(phonon_coupling) 
 			+ "/omega_D=" + improved_string(1e3 * omega_debye) + "/";		
