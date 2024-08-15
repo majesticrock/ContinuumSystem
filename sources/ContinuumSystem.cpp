@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
 		* Generate setup for output
 		*/
 		auto delta_result = modes.getModel().Delta.real().as_vector();
-		const std::string output_folder = input.getString("output_folder") + "/" + modes.getModel().to_folder();
+		const std::string output_folder = input.getString("output_folder") + "/" + "disc_" + std::to_string(DISCRETIZATION) + "/" + modes.getModel().to_folder();
 		std::filesystem::create_directories(BASE_FOLDER + output_folder);
 		auto generate_comments = [&]() {
 			return nlohmann::json {

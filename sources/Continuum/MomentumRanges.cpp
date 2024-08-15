@@ -5,7 +5,7 @@
 constexpr Continuum::c_float inner_offset = 1. - 1e-5;
 #else
 #ifndef mielke_coulomb
-constexpr Continuum::c_float inner_offset = 12;
+constexpr Continuum::c_float inner_offset = 20;
 #else
 constexpr Continuum::c_float inner_offset = 2;
 #endif

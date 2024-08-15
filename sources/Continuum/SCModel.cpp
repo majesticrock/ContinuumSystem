@@ -15,7 +15,7 @@ namespace Continuum {
 		: Delta(2 * DISCRETIZATION + 1, c_complex{}), 
 		temperature{ parameters.temperature }, phonon_coupling{ parameters.phonon_coupling }, 
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
-		 screening{ parameters.screening },coulomb_scaling{ parameters.coulomb_scaling },
+		screening{ parameters.screening },coulomb_scaling{ parameters.coulomb_scaling },
 		fermi_wavevector{ parameters.fermi_wavevector },
 		momentumRanges(&fermi_wavevector, omega_debye)
 	{
