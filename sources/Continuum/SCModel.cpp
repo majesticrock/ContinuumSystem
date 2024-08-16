@@ -92,7 +92,7 @@ namespace Continuum {
 
 	c_float SCModel::fock_energy(c_float k) const 
 	{
-#ifdef screening
+		if(is_zero(coulomb_scaling)) return c_float{};
 		if(is_zero(k)) {
 			return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * (
 				3.0 - 2.0 * (screening / fermi_wavevector) * std::atan(fermi_wavevector / screening)
@@ -107,17 +107,6 @@ namespace Continuum {
 			1.0 + ln_factor * log_expression(k_sum, k_diff) 
 			+ (screening / fermi_wavevector) * (std::atan(k_diff / screening) - std::atan(k_sum / screening))
 		);
-
-#else
-		if(is_zero(k - fermi_wavevector)) {
-			return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector;
-		}
-
-		return -coulomb_scaling * PhysicalConstants::em_factor * fermi_wavevector * (
-			1.0 + ((fermi_wavevector * fermi_wavevector - k * k) / (2.0 * k * fermi_wavevector)) 
-				* std::log(std::abs((k + fermi_wavevector) / (k - fermi_wavevector)))
-		);
-#endif
 	}
 
 	c_complex SCModel::sc_expectation_value_index(int k) const
@@ -244,6 +233,7 @@ namespace Continuum {
 			}
 		} 
 		else if(coeff.name == "V") {
+			if(is_zero(coulomb_scaling)) return c_float{};
 			if(coeff.momenta.front().is_zero())
 				return (coulomb_scaling / PhysicalConstants::vacuum_permitivity) / (screening * screening);
 			return coulomb_scaling / (2 * first * second * PhysicalConstants::vacuum_permitivity) * log_expression(first + second, first - second);
