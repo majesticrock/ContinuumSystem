@@ -21,6 +21,7 @@ namespace Continuum {
 	private:
 		friend struct __ieom_algorithm;
 		using _parent = __ieom_algorithm;
+		using m_iterator = InnerIterator;
 
 		c_float compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q = 0) const;
 		c_complex get_expectation_value(SymbolicOperators::WickOperator const& op, c_float momentum) const;
@@ -30,7 +31,7 @@ namespace Continuum {
 	protected:
 		SymbolicOperators::TermLoader wicks;
 		//size_t TOTAL_BASIS{};
-		constexpr static int hermitian_size = 3;
+		constexpr static int hermitian_size = 2;
 		constexpr static int antihermitian_size = 1;
 		constexpr static int number_of_basis_terms = hermitian_size + antihermitian_size;
 
@@ -49,6 +50,9 @@ namespace Continuum {
 
 		c_complex computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
 	public:
+		std::pair<c_float, c_float> residual_offdiagonality() const;
+		std::vector<c_float> continuum_boundaries() const;
+		
 		SCModel& getModel() {
 			return *model;
 		};

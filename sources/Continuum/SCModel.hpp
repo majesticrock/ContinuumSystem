@@ -21,12 +21,11 @@ namespace Continuum {
 		c_complex interpolate_delta(c_float k) const;
 		c_float interpolate_delta_n(c_float k) const;
 
-		inline c_float bare_dispersion(c_float k) const;
 		inline c_float bare_dispersion_to_fermi_level(c_float k) const;
 		inline c_float dispersion_to_fermi_level(c_float k) const;
-		inline c_float dispersion_to_fermi_level(int k) const;
+		inline c_float dispersion_to_fermi_level_index(int k) const;
 		inline c_float energy(c_float k) const;
-		inline c_float energy(int k) const;
+		inline c_float energy_index(int k) const;
 		c_float fock_energy(c_float k) const;
 
 		inline c_float delta_n(c_float k) const;
@@ -46,7 +45,6 @@ namespace Continuum {
 		std::string info() const;
 		std::string to_folder() const;
 		c_float internal_energy() const;
-		std::vector<c_float> continuum_boundaries() const;
 		std::vector<c_complex> phonon_gap() const;
 		std::vector<c_complex> coulomb_gap() const;
 		std::vector<c_float> single_particle_dispersion() const;
@@ -59,35 +57,37 @@ namespace Continuum {
 		template<class ExpectationValues>
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_phonon(ExpectationValues const& expecs, c_float k) const
 		{
-			auto integrand = [&](c_float q) {
+			const c_float prefactor = phonon_coupling / (2. * PI * PI);
+			auto integrand = [&expecs](c_float q) {
 				return q * q * expecs(q);
-				};
-			return -(phonon_coupling / (2. * PI * PI)) * fermi_wavevector * fermi_wavevector * fermi_wavevector
-				* boost::math::quadrature::gauss<double, 60>::integrate(integrand, g_lower_bound(k), g_upper_bound(k));
+			};
+
+			return prefactor * momentumRanges.integrate( integrand, g_lower_bound(k), g_upper_bound(k) );
 		}
 
 		template<class ExpectationValues>
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_screening(ExpectationValues const& expecs, c_float k) const
 		{
+			if(is_zero(coulomb_scaling)) return decltype(std::declval<ExpectationValues>()(c_float{})){};
 #ifndef mielke_coulomb
-			if (is_zero(k)) {
+			if(is_zero(k)){
 				auto integrand = [&](c_float q) {
-					return expecs(q) * q * q / (_screening * _screening + q * q);
-					};
-				const c_float prefactor = 2. * PhysicalConstants::em_factor * coulomb_scaling * fermi_wavevector;
+					return expecs(q) * q * q / (screening * screening + q * q);
+				};
+				const c_float prefactor = 2. * coulomb_scaling * PhysicalConstants::em_factor;
 				return prefactor * momentumRanges.integrate(integrand);
 			}
-			auto integrand = [&](c_float q) {
+			auto integrand = [&](c_float q){
 				const c_float k_diff{ q - k };
 				const c_float k_sum{ q + k };
-				return expecs(q) * q * std::log((_screening * _screening + k_sum * k_sum) / (_screening * _screening + k_diff * k_diff));
-				};
-			const c_float prefactor = 0.5 * PhysicalConstants::em_factor * coulomb_scaling * fermi_wavevector / k;
+				return expecs(q) * q * std::log((screening * screening + k_sum * k_sum) / (screening * screening + k_diff * k_diff));
+			};
+			const c_float prefactor = 0.5 * coulomb_scaling * PhysicalConstants::em_factor / k;
 			return prefactor * momentumRanges.integrate(integrand);
 #else
 			auto integrand = [&](c_float q) {
 				return expecs(q) * q * q;
-				};
+			};
 			return coulomb_scaling * PhysicalConstants::em_factor * momentumRanges.integrate(integrand);
 #endif
 		}
@@ -108,20 +108,25 @@ namespace Continuum {
 			return phonon_alpha(k) - ALPHA;
 		}
 
+		inline c_float log_expression(c_float k_sum, c_float k_diff) const {
+			return std::log( (screening * screening + k_sum * k_sum) / (screening * screening + k_diff * k_diff) );
+		}
+
+
 		void set_splines();
 	public:
 		ModelAttributes<c_complex> Delta;
 		c_float temperature{};
 		c_float phonon_coupling{};
 		c_float omega_debye{};
-		c_float coulomb_scaling{};
-		c_float r_s{};
-
-		c_float fermi_wavevector{};
 		c_float fermi_energy{};
+		c_float screening{};
+		c_float coulomb_scaling{};
 
 		SplineContainer occupation;
 		SplineContainer sc_expectation_value;
+
+		c_float fermi_wavevector{};
 
 		MomentumRanges momentumRanges;
 	private:
@@ -131,40 +136,37 @@ namespace Continuum {
 	// /////////// //
 	//   Inlines   //
 	// /////////// //
-	c_float SCModel::bare_dispersion(c_float k) const {
-		return (0.5 / PhysicalConstants::effective_mass) * fermi_wavevector * fermi_wavevector * k * k;
-	}
 	c_float SCModel::delta_n(c_float k) const {
-		if (is_zero(1. - k)) {
+		if(is_zero(fermi_wavevector - k)) {
 			return 0.5 - std::real(occupation(k));
-		}
-		else if (1. - k > 0) {
+		} 
+		else if(fermi_wavevector - k > 0) {
 			return 1. - std::real(occupation(k));
 		}
 		return -std::real(occupation(k));
 	}
 	c_float SCModel::delta_n_index(int k) const {
-		if (is_zero(1. - momentumRanges.index_to_momentum(k))) {
+		if(is_zero(fermi_wavevector - momentumRanges.index_to_momentum(k))) {
 			return 0.5 - occupation_index(k);
-		}
-		else if (1. - momentumRanges.index_to_momentum(k) > 0) {
+		} 
+		else if(fermi_wavevector - momentumRanges.index_to_momentum(k) > 0) {
 			return 1. - occupation_index(k);
 		}
 		return -occupation_index(k);
 	}
-	c_float SCModel::bare_dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion(k) - fermi_energy;
+	c_float SCModel::bare_dispersion_to_fermi_level(c_float k) const { 
+		return bare_dispersion(k) - fermi_energy; 
 	}
-	c_float SCModel::dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k);
+	c_float SCModel::dispersion_to_fermi_level(c_float k) const { 
+		return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k); 
 	}
-	c_float SCModel::dispersion_to_fermi_level(int k) const {
-		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + fock_energy(momentumRanges.index_to_momentum(k)) + std::real(Delta[k + DISCRETIZATION]);
+	c_float SCModel::dispersion_to_fermi_level_index(int k) const { 
+		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + fock_energy(momentumRanges.index_to_momentum(k)) + std::real(Delta[k + DISCRETIZATION]); 
 	}
-	c_float SCModel::energy(c_float k) const {
-		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
+	c_float SCModel::energy(c_float k) const { 
+		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k))); 
 	}
-	c_float SCModel::energy(int k) const {
-		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(Delta[k]));
+	c_float SCModel::energy_index(int k) const { 
+		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level_index(k)) + std::norm(Delta[k])); 
 	}
 }
