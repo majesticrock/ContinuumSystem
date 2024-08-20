@@ -6,7 +6,7 @@
 #include <Utility/Selfconsistency/IterativeSolver.hpp>
 #include <Utility/Selfconsistency/BroydenSolver.hpp>
 #include <Utility/ConstexprPower.hpp>
-
+#include <Utility/Numerics/Minimization/Bisection.hpp>
 #include <boost/math/quadrature/gauss.hpp>
 
 #define ieom_diag(k) 1e-6 * k * k / (2 * PI * PI * it.parent_step())
@@ -63,8 +63,8 @@ namespace Continuum {
 #else
 		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
 		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
-			starting_states[0][0](it.idx) = (1e3 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
-			starting_states[0][1](it.idx) = (1e3 / (2. * PI * PI)) * it.k * it.k * it.parent_step();
+			starting_states[0][0](it.idx) = 1e3 * it.parent_step();
+			starting_states[0][1](it.idx) = 1e3 * it.parent_step();
 		}
 #endif
 	}
@@ -289,7 +289,9 @@ namespace Continuum {
 	std::vector<c_float> ModeHelper::continuum_boundaries() const
 	{
 		const m_iterator buf(&model->momentumRanges);
-		return { 2 * model->energy(model->fermi_wavevector), 
+		const auto min = Utility::Numerics::Minimization::bisection([&](c_float x) { return this->model->energy(x); } , model->momentumRanges.INNER_K_MIN, model->momentumRanges.INNER_K_MAX, 1e-14, 400);
+		//std::cout << "Found min at " << min / model->fermi_wavevector << "k_F   E(min)=" << model->energy(min) << "   E(k_F)=" << model->energy(model->fermi_wavevector) << std::endl;
+		return { 2 * model->energy(min), 
 			2 * std::max(model->energy(buf.max_k()), model->energy(buf.min_k())) };
 	}
 
