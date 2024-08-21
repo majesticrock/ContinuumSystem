@@ -47,6 +47,7 @@ namespace Continuum {
 		c_float internal_energy() const;
 		std::vector<c_complex> phonon_gap() const;
 		std::vector<c_complex> coulomb_gap() const;
+		c_complex delta_max() const;
 		std::vector<c_float> single_particle_dispersion() const;
 		const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& get_expectation_values() const;
 

@@ -165,9 +165,7 @@ int main(int argc, char** argv) {
 				{ "discretization", 	DISCRETIZATION },
 				{ "inner_discretization", _INNER_DISC },
 				{ "lambda_screening", 	_screening },
-				{ "Delta_max", 			as_meV(std::abs(*std::max_element(delta_result.begin(), delta_result.begin() + DISCRETIZATION, 
-											[](decltype(delta_result)::const_reference lhs, decltype(delta_result)::const_reference rhs){
-												return std::abs(lhs) < std::abs(rhs); }))) },
+				{ "Delta_max", 			as_meV(modes.getModel().delta_max()) },
 				{ "k_F", 				modes.getModel().fermi_wavevector },
 				{ "T", 					modes.getModel().temperature },
 				{ "g", 					modes.getModel().phonon_coupling },

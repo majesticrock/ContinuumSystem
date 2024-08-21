@@ -219,10 +219,10 @@ namespace Continuum {
 		else if (coeff.name == "g")
 		{
 #ifdef approximate_theta
-			if (omega_debye > std::abs(bare_dispersion_to_fermi_level(first) + fock_energy(first))
-				&& omega_debye > std::abs(bare_dispersion_to_fermi_level(second) + fock_energy(second)))
+			if (omega_debye >= std::abs(bare_dispersion_to_fermi_level(first) + fock_energy(first))
+				&& omega_debye >= std::abs(bare_dispersion_to_fermi_level(second) + fock_energy(second)))
 #else
-			if (2. * omega_debye > std::abs(phonon_alpha(first) - phonon_alpha(second)))
+			if (2. * omega_debye >= std::abs(phonon_alpha(first) - phonon_alpha(second)))
 #endif
 			{
 				return this->phonon_coupling;
@@ -351,6 +351,15 @@ namespace Continuum {
 			ret[it.idx] = integral_screening([this](c_float q) { return this->sc_expectation_value(q); }, it.k );
 		}
 		return ret;
+	}
+
+	c_complex SCModel::delta_max() const
+	{
+		return std::abs(*std::max_element(Delta.begin(), Delta.begin() + DISCRETIZATION, 
+					[](const c_complex& lhs, const c_complex& rhs) {
+						return std::abs(lhs) < std::abs(rhs); 
+					}
+				));
 	}
 
 	std::vector<c_float> SCModel::single_particle_dispersion() const 
