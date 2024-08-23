@@ -13,14 +13,20 @@ namespace Continuum {
 		return kinetic + fock;
 	}
 
+	c_float ModelInitializer::compute_rho_F() const
+	{
+		return fermi_wavevector / (2. * PI * PI);
+	}
+
 	std::ostream& operator<<(std::ostream& os, ModelInitializer const& init) 
 	{
 		os << "T=" << init.temperature << " K   "
-		<< "g=" << init.phonon_coupling << " eV   "
+		<< "g=" << init.phonon_coupling << "   "
 		<< "omega_D=" << init.omega_debye << " eV   "
 		<< "E_F=" << init.fermi_energy << " eV   "
 		<< "alpha=" << init.coulomb_scaling << "   "
-		<< "k_F=" << init.fermi_wavevector << " sqrt(eV)   ";
+		<< "k_F=" << init.fermi_wavevector << " sqrt(eV)   "
+		<< "rho_F=" << init.rho_F << " sqrt(eV)   ";
 	return os;
 }
 }

@@ -58,7 +58,7 @@ namespace Continuum {
 		template<class ExpectationValues>
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_phonon(ExpectationValues const& expecs, c_float k) const
 		{
-			const c_float prefactor = phonon_coupling / (2. * PI * PI);
+			const c_float prefactor = phonon_coupling / (2. * PI * PI * rho_F);
 			auto integrand = [&expecs](c_float q) {
 				return q * q * expecs(q);
 			};
@@ -128,6 +128,7 @@ namespace Continuum {
 		SplineContainer sc_expectation_value;
 
 		c_float fermi_wavevector{};
+		c_float rho_F{};
 
 		MomentumRanges momentumRanges;
 	private:

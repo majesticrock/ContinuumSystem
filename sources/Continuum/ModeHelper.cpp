@@ -9,8 +9,8 @@
 #include <Utility/Numerics/Minimization/Bisection.hpp>
 #include <boost/math/quadrature/gauss.hpp>
 
-#define ieom_diag(k) 1e-6 * k * k / (2 * PI * PI * it.parent_step())
-#define ieom_offdiag(k, l) 1e-6 * k * k * l * l / (4 * PI * PI * PI * PI)
+#define ieom_diag(k) k * k * (DISCRETIZATION * it.parent_step() / (2 * PI * PI))
+#define ieom_offdiag(k, l) k * k * l * l * (DISCRETIZATION * it.parent_step() * jt.parent_step() / (4 * PI * PI * PI * PI))
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -56,22 +56,22 @@ namespace Continuum {
 
 	void ModeHelper::createStartingStates()
 	{
-#ifdef _complex
+#ifndef _XP
 		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
 		std::fill(starting_states[0].begin(), starting_states[0].begin() + m_iterator::max_idx(), sqrt(model->momentumRanges.INNER_STEP));
 		std::fill(starting_states[1].begin() + 3 * m_iterator::max_idx(), starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
 #else
 		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
 		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
-			starting_states[0][0](it.idx) = 1e3 * it.parent_step();
-			starting_states[0][1](it.idx) = 1e3 * it.parent_step();
+			starting_states[0][0](it.idx) = 1. / sqrt((c_float)DISCRETIZATION);
+			starting_states[0][1](it.idx) = 1. / sqrt((c_float)DISCRETIZATION);
 		}
 #endif
 	}
 
 	void ModeHelper::fillMatrices()
 	{
-#ifdef _complex
+#ifndef _XP
 		M.setZero(total_matrix_size, total_matrix_size);
 		N.setZero(total_matrix_size, total_matrix_size);
 #else
@@ -84,7 +84,7 @@ namespace Continuum {
 		{
 			for (int j = 0; j < number_of_basis_terms; ++j)
 			{
-#ifdef _complex
+#ifndef _XP
 				fill_block_M(i, j);
 				fill_block_N(i, j);
 #else
@@ -104,7 +104,7 @@ namespace Continuum {
 			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, m_iterator::max_idx() + it.idx) << "  " << K_plus(m_iterator::max_idx() + it.idx, it.idx) << " || " 
 				<< - 2 * model->interpolate_delta(it.k) * model->dispersion_to_fermi_level(it.k) / model->energy(it.k)  << std::endl;
 		} */
-#ifndef _complex
+#ifdef _XP
 		std::cout << "||K_+ - K_+^+|| = " << (K_plus - K_plus.adjoint()).norm() << std::endl;
 		std::cout << "||K_- - K_-^+|| = " << (K_minus - K_minus.adjoint()).norm() << std::endl;
 
@@ -122,7 +122,7 @@ namespace Continuum {
 
 	void ModeHelper::fill_M()
 	{
-#ifdef _complex
+#ifndef _XP
 		M.setZero(total_matrix_size, total_matrix_size);
 #else
 		K_plus.setZero(hermitian_discretization, hermitian_discretization);
@@ -272,20 +272,6 @@ namespace Continuum {
 		throw std::runtime_error("Something went wrong while computing terms...");
 	}
 
-	std::pair<c_float, c_float> ModeHelper::residual_offdiagonality() const 
-	{
-		std::pair<c_float, c_float> ret = {0.0 , 0.0};
-		for(int i = 0; i < hermitian_size; ++i){
-			ret.first += std::norm(K_plus(i * m_iterator::max_idx(), i * m_iterator::max_idx() + 1));
-		}
-		ret.first = sqrt(ret.first);
-		for(int i = 0; i < antihermitian_size; ++i){
-			ret.second += std::norm(K_minus(i * m_iterator::max_idx(), i * m_iterator::max_idx() + 1));
-		}
-		ret.second = sqrt(ret.second);
-		return ret;
-	}
-
 	std::vector<c_float> ModeHelper::continuum_boundaries() const
 	{
 		const m_iterator buf(&model->momentumRanges);
@@ -301,7 +287,7 @@ namespace Continuum {
 
 	ModeHelper::ModeHelper(ModelInitializer const& init)
 		: _parent(this, SQRT_PRECISION, 
-#ifndef _complex
+#ifdef _XP
 		m_iterator::max_idx() * hermitian_size, m_iterator::max_idx() * antihermitian_size, false, 
 #endif
 		false)
@@ -311,14 +297,16 @@ namespace Continuum {
 		total_matrix_size = m_iterator::max_idx() * number_of_basis_terms;
 
 		model = std::make_unique<SCModel>(init);
-		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
+		wicks.load("../commutators/continuum/", false, number_of_basis_terms, 0);
 
 		//auto solver = Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
 		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
 		solver.compute(true);
 
 		const m_iterator buf(&model->momentumRanges);
-		std::cout << "<f_k>: LB = " << model->sc_expectation_value(buf.min_k())
-			<< "    UB = " << model->sc_expectation_value(buf.max_k()) << std::endl;
+		std::cout << "LB: <f_k> = " << model->sc_expectation_value(buf.min_k()) << "  k_min = " 
+			<< buf.min_k() / model->fermi_wavevector << "  E_min = " << model->energy(buf.min_k())
+			<< "\nUB: <f_k> = " << model->sc_expectation_value(buf.max_k()) << "  k_max = " << buf.max_k() / model->fermi_wavevector 
+			<< "  E_max = " << model->energy(buf.max_k()) << std::endl;
 	}
 }

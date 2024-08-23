@@ -12,14 +12,10 @@ constexpr Continuum::c_float inner_offset = 2;
 #endif
 
 namespace Continuum {
-	const int& MomentumIterator::max_idx = DISCRETIZATION;
-	//const int& InnerIterator::max_idx = _INNER_DISC;
-	const int& IEOMIterator::max_idx = DISCRETIZATION;
-
 	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye)
 		: 
 #ifndef mielke_coulomb
-		K_MAX{ 4 * (*k_F) }, K_MIN{ 0 },
+		K_MAX{ 2 * (*k_F) }, K_MIN{ 0 },
 #else
 		K_MAX{ (*k_F) + (inner_offset * 2) * omega_debye }, K_MIN{ (*k_F) - (inner_offset * 2) * omega_debye },
 #endif

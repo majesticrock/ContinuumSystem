@@ -16,7 +16,7 @@ namespace Continuum {
 		temperature{ parameters.temperature }, phonon_coupling{ parameters.phonon_coupling }, 
 		omega_debye{ parameters.omega_debye }, fermi_energy{ parameters.fermi_energy },
 		screening{ parameters.screening },coulomb_scaling{ parameters.coulomb_scaling },
-		fermi_wavevector{ parameters.fermi_wavevector },
+		fermi_wavevector{ parameters.fermi_wavevector }, rho_F { parameters.rho_F },
 		momentumRanges(&fermi_wavevector, omega_debye)
 	{
 		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
@@ -44,6 +44,7 @@ namespace Continuum {
 		this->phonon_coupling = parameters.phonon_coupling; 
 		this->coulomb_scaling = parameters.coulomb_scaling; 
 		this->fermi_wavevector = parameters.fermi_wavevector;
+		this->rho_F = parameters.rho_F;
 		try {
 			this->momentumRanges = MomentumRanges(&this->fermi_wavevector, parameters.omega_debye);
 		} 
@@ -225,7 +226,7 @@ namespace Continuum {
 			if (2. * omega_debye >= std::abs(phonon_alpha(first) - phonon_alpha(second)))
 #endif
 			{
-				return this->phonon_coupling;
+				return this->phonon_coupling / this->rho_F;
 			}
 			else
 			{
@@ -298,7 +299,7 @@ namespace Continuum {
 
 	std::string SCModel::info() const {
 		return "SCModel // T=" + std::to_string(temperature) + "K   g="
-			+ std::to_string(phonon_coupling) + "eV   omega_D=" 
+			+ std::to_string(phonon_coupling) + "   omega_D=" 
 			+ std::to_string(1e3 * omega_debye) + "meV   E_F="
 			+ std::to_string(fermi_energy) + "eV   alpha=" + std::to_string(coulomb_scaling);
 			+ "lambda=" + std::to_string(screening) + "sqrt(eV)";

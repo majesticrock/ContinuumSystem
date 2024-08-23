@@ -7,7 +7,11 @@
 #include <memory>
 #include <map>
 
-#ifdef _complex
+#ifndef _complex
+#define _XP
+#endif
+
+#ifndef _XP
 #include <Utility/Numerics/iEoM/GeneralResolvent.hpp>
 #define __ieom_algorithm Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_complex>
 #else
@@ -50,7 +54,6 @@ namespace Continuum {
 
 		c_complex computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
 	public:
-		std::pair<c_float, c_float> residual_offdiagonality() const;
 		std::vector<c_float> continuum_boundaries() const;
 		
 		SCModel& getModel() {

@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
 		}
 
 		if (true) {
-			auto resolvents = modes.computeCollectiveModes(150);
+			auto resolvents = modes.computeCollectiveModes(150, "../../data/continuum/test/full_diag");
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {
 					{ "resolvents", resolvents },
