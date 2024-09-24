@@ -22,7 +22,7 @@ namespace Continuum {
 	c_float ModeHelper::compute_momentum(SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
 	{
 		c_float momentum_value{};
-		for(const auto& momentum_pair : momentum.momentum_list) {
+		for (const auto& momentum_pair : momentum.momentum_list) {
 			switch (momentum_pair.second) {
 			case 'k':
 				momentum_value += momentum_pair.first * k;
@@ -46,7 +46,7 @@ namespace Continuum {
 			return model->occupation(momentum);
 		}
 		else if (op.type == SymbolicOperators::SC_Type) {
-			if(op.isDaggered) {
+			if (op.isDaggered) {
 				return __conj(model->sc_expectation_value(momentum));
 			}
 			return model->sc_expectation_value(momentum);
@@ -61,8 +61,8 @@ namespace Continuum {
 		std::fill(starting_states[0].begin(), starting_states[0].begin() + m_iterator::max_idx(), sqrt(model->momentumRanges.INNER_STEP));
 		std::fill(starting_states[1].begin() + 3 * m_iterator::max_idx(), starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
 #else
-		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC"});
-		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
+		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC" });
+		for (m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
 			starting_states[0][0](it.idx) = 1. / sqrt((c_float)DISCRETIZATION);
 			starting_states[0][1](it.idx) = 1. / sqrt((c_float)DISCRETIZATION);
 		}
@@ -101,7 +101,7 @@ namespace Continuum {
 		}
 
 		/* for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it){
-			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, m_iterator::max_idx() + it.idx) << "  " << K_plus(m_iterator::max_idx() + it.idx, it.idx) << " || " 
+			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, m_iterator::max_idx() + it.idx) << "  " << K_plus(m_iterator::max_idx() + it.idx, it.idx) << " || "
 				<< - 2 * model->interpolate_delta(it.k) * model->dispersion_to_fermi_level(it.k) / model->energy(it.k)  << std::endl;
 		} */
 #ifdef _XP
@@ -110,10 +110,10 @@ namespace Continuum {
 
 		/* const auto ROD = residual_offdiagonality();
 		std::cout << "ROD(+) = " << ROD.first << "    ROD(-) = " << ROD.second << std::endl;
-		std::cout << model->dispersion_to_fermi_level(model->momentumRanges.index_to_momentum(_OUTER_DISC)) << "  " 
+		std::cout << model->dispersion_to_fermi_level(model->momentumRanges.index_to_momentum(_OUTER_DISC)) << "  "
 			<< model->dispersion_to_fermi_level(model->momentumRanges.index_to_momentum(_OUTER_DISC + 1)) << std::endl; */
 
-		//std::cout << K_plus.norm() << "   " << K_minus.norm() << std::endl;
+			//std::cout << K_plus.norm() << "   " << K_minus.norm() << std::endl;
 #else
 		std::cout << "||M - M^+|| = " << (M - M.adjoint()).norm() << std::endl;
 		std::cout << "||N - N^+|| = " << (N - N.adjoint()).norm() << std::endl;
@@ -133,9 +133,9 @@ namespace Continuum {
 		{
 			for (int j = 0; j < number_of_basis_terms; ++j)
 			{
-#ifndef _complex
+#ifdef _XP
 				// Ignore the offdiagonal blocks as they are 0
-				if ((i < hermitian_size && j < hermitian_size) || (j >= hermitian_size && i >= hermitian_size)) 
+				if ((i < hermitian_size && j < hermitian_size) || (j >= hermitian_size && i >= hermitian_size))
 #endif
 					fill_block_M(i, j);
 			}
@@ -144,8 +144,8 @@ namespace Continuum {
 
 	void ModeHelper::fill_block_M(int i, int j)
 	{
-		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
-			if(is_zero(it.k)) continue;
+		for (m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
+			if (is_zero(it.k)) continue;
 
 			c_complex diag_buffer{};
 			for (const auto& term : wicks.M[number_of_basis_terms * j + i]) {
@@ -161,7 +161,7 @@ namespace Continuum {
 				}
 				else {
 					for (m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx(); ++jt) {
-						if(is_zero(jt.k)) continue;
+						if (is_zero(jt.k)) continue;
 						M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
@@ -172,8 +172,8 @@ namespace Continuum {
 
 	void ModeHelper::fill_block_N(int i, int j)
 	{
-		for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
-			if(is_zero(it.k)) continue;
+		for (m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
+			if (is_zero(it.k)) continue;
 			for (const auto& term : wicks.N[number_of_basis_terms * j + i]) {
 				if (!term.delta_momenta.empty()) {
 					// only k=l and k=-l should occur. Additionally, only the magntitude should matter
@@ -194,19 +194,19 @@ namespace Continuum {
 	c_complex ModeHelper::compute_phonon_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
 		const int q_dependend = term.whichOperatorDependsOn('q');
-		SymbolicOperators::WickOperator const * const summed_op = &(term.operators[q_dependend]);
-		SymbolicOperators::WickOperator const * const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+		SymbolicOperators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
+		SymbolicOperators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
-		if(summed_op->type == SymbolicOperators::Number_Type){
+		if (summed_op->type == SymbolicOperators::Number_Type) {
 			value = model->integral_phonon(model->occupation, k);
-		} 
+		}
 		else {
 			value = model->integral_phonon(model->sc_expectation_value, k);
 #ifdef _complex
-			if(summed_op.isDaggered) value = std::conj(value);
+			if (summed_op.isDaggered) value = std::conj(value);
 #endif
 		}
-		if(other_op){
+		if (other_op) {
 			value *= this->get_expectation_value(*other_op, k);
 		}
 		value *= static_cast<c_float>(term.multiplicity);
@@ -216,19 +216,19 @@ namespace Continuum {
 	c_complex ModeHelper::compute_em_sum(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
 		const int q_dependend = term.whichOperatorDependsOn('q');
-		SymbolicOperators::WickOperator const * const summed_op = &(term.operators[q_dependend]);
-		SymbolicOperators::WickOperator const * const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+		SymbolicOperators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
+		SymbolicOperators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
-		if(summed_op->type == SymbolicOperators::Number_Type){
+		if (summed_op->type == SymbolicOperators::Number_Type) {
 			value = -(model->fock_energy(k) + model->interpolate_delta_n(k));
-		} 
+		}
 		else {
 			value = model->integral_screening(model->sc_expectation_value, k);
 #ifdef _complex
-			if(summed_op.isDaggered) value = std::conj(value);
+			if (summed_op.isDaggered) value = std::conj(value);
 #endif
 		}
-		if(other_op){
+		if (other_op) {
 			value *= this->get_expectation_value(*other_op, k);
 		}
 		value *= static_cast<c_float>(term.multiplicity);
@@ -238,8 +238,8 @@ namespace Continuum {
 	c_complex ModeHelper::computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const
 	{
 		if (term.sums.momenta.empty()) {
-			c_complex value { static_cast<c_float>(term.multiplicity) };
-			
+			c_complex value{ static_cast<c_float>(term.multiplicity) };
+
 			if (!term.coefficients.empty()) {
 				const SymbolicOperators::Coefficient* coeff_ptr = &term.coefficients.front();
 				if (coeff_ptr->momenta.size() == 2U) {
@@ -262,11 +262,11 @@ namespace Continuum {
 		}
 		assert(term.coefficients.size() == 1U);
 
-		if(term.coefficients.front().name == "g")
+		if (term.coefficients.front().name == "g")
 		{
 			return compute_phonon_sum(term, k, l);
 		}
-		else if(term.coefficients.front().name == "V"){
+		else if (term.coefficients.front().name == "V") {
 			return compute_em_sum(term, k, l);
 		}
 		throw std::runtime_error("Something went wrong while computing terms...");
@@ -275,9 +275,9 @@ namespace Continuum {
 	std::vector<c_float> ModeHelper::continuum_boundaries() const
 	{
 		const m_iterator buf(&model->momentumRanges);
-		const auto min = Utility::Numerics::Minimization::bisection([&](c_float x) { return this->model->energy(x); } , model->momentumRanges.INNER_K_MIN, model->momentumRanges.INNER_K_MAX, 1e-14, 400);
+		const auto min = Utility::Numerics::Minimization::bisection([&](c_float x) { return this->model->energy(x); }, model->momentumRanges.INNER_K_MIN, model->momentumRanges.INNER_K_MAX, 1e-14, 400);
 		//std::cout << "Found min at " << min / model->fermi_wavevector << "k_F   E(min)=" << model->energy(min) << "   E(k_F)=" << model->energy(model->fermi_wavevector) << std::endl;
-		return { 2 * model->energy(min), 
+		return { 2 * model->energy(min),
 			2 * std::max(model->energy(buf.max_k()), model->energy(buf.min_k())) };
 	}
 
@@ -286,27 +286,27 @@ namespace Continuum {
 	int ModeHelper::total_matrix_size = 0;
 
 	ModeHelper::ModeHelper(ModelInitializer const& init)
-		: _parent(this, SQRT_PRECISION, 
+		: _parent(this, SQRT_PRECISION,
 #ifdef _XP
-		m_iterator::max_idx() * hermitian_size, m_iterator::max_idx() * antihermitian_size, false, 
+			m_iterator::max_idx()* hermitian_size, m_iterator::max_idx()* antihermitian_size, false,
 #endif
-		false)
+			false)
 	{
 		hermitian_discretization = m_iterator::max_idx() * hermitian_size;
 		antihermitian_discretization = m_iterator::max_idx() * antihermitian_size;
 		total_matrix_size = m_iterator::max_idx() * number_of_basis_terms;
 
 		model = std::make_unique<SCModel>(init);
-		wicks.load("../commutators/continuum/", false, number_of_basis_terms, 0);
+		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
 		//auto solver = Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
 		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
 		solver.compute(true);
 
 		const m_iterator buf(&model->momentumRanges);
-		std::cout << "LB: <f_k> = " << model->sc_expectation_value(buf.min_k()) << "  k_min = " 
+		std::cout << "LB: <f_k> = " << model->sc_expectation_value(buf.min_k()) << "  k_min = "
 			<< buf.min_k() / model->fermi_wavevector << "  E_min = " << model->energy(buf.min_k())
-			<< "\nUB: <f_k> = " << model->sc_expectation_value(buf.max_k()) << "  k_max = " << buf.max_k() / model->fermi_wavevector 
+			<< "\nUB: <f_k> = " << model->sc_expectation_value(buf.max_k()) << "  k_max = " << buf.max_k() / model->fermi_wavevector
 			<< "  E_max = " << model->energy(buf.max_k()) << std::endl;
 	}
 }

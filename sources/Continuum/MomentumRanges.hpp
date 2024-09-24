@@ -38,24 +38,24 @@ namespace Continuum {
 		template<class Function>
 		auto integrate(const Function& func, c_float begin, c_float end) const {
 			decltype(func(begin)) value{ };
-			if(is_zero(begin - end)) return value;
+			if (is_zero(begin - end)) return value;
 
-			if(begin <= INNER_K_MIN) {
+			if (begin <= INNER_K_MIN) {
 				value += __integrate(func, begin, std::min(end, INNER_K_MIN));
 				begin = INNER_K_MIN;
 			}
 
-			if(begin <= (*K_F) && end >= INNER_K_MIN) {
+			if (begin <= (*K_F) && end >= INNER_K_MIN) {
 				value += __integrate(func, std::max(begin, INNER_K_MIN), std::min(end, (*K_F)));
 				begin = (*K_F);
 			}
 
-			if(begin <= INNER_K_MAX && end >= (*K_F)){
+			if (begin <= INNER_K_MAX && end >= (*K_F)) {
 				value += __integrate(func, std::max(begin, (*K_F)), std::min(end, INNER_K_MAX));
 				begin = INNER_K_MAX;
 			}
 
-			if(end >= INNER_K_MAX) {
+			if (end >= INNER_K_MAX) {
 				value += __integrate(func, std::max(begin, INNER_K_MAX), end);
 			}
 
@@ -70,10 +70,10 @@ namespace Continuum {
 				+ __integrate(func, INNER_K_MAX, K_MAX);
 		}
 
-		private:
+	private:
 		template<class Function>
 		inline auto __integrate(const Function& func, c_float begin, c_float end) const {
-			if(is_zero(end - begin)) {
+			if (is_zero(end - begin)) {
 				return decltype(func(begin)){ };
 			}
 			return boost::math::quadrature::gauss<c_float, n_gauss>::integrate(func, begin, end);
@@ -81,18 +81,18 @@ namespace Continuum {
 	};
 
 	class MomentumIterator {
-		MomentumRanges const * const _parent;
+		MomentumRanges const* const _parent;
 	public:
 		c_float k{};
 		int idx{};
 		static inline int max_idx() { return DISCRETIZATION; }
 
-		MomentumIterator(MomentumRanges const * const parent, int init = 0) 
+		MomentumIterator(MomentumRanges const* const parent, int init = 0)
 			: _parent(parent), k(_parent->index_to_momentum(init)), idx(init) {}
 
 		inline c_float parent_step() const {
-			if( k < _parent->INNER_K_MIN ) return _parent->LOWER_STEP;
-			if( k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
+			if (k < _parent->INNER_K_MIN) return _parent->LOWER_STEP;
+			if (k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
 			return _parent->UPPER_STEP;
 		}
 		inline c_float max_k() const { return _parent->K_MAX; }
@@ -124,7 +124,7 @@ namespace Continuum {
 	};
 
 	class InnerIterator {
-		MomentumRanges const * const _parent;
+		MomentumRanges const* const _parent;
 		inline c_float index_to_momentum(int i) const {
 			return (_parent->INNER_K_MIN + i * _parent->INNER_STEP);
 		}
@@ -133,7 +133,7 @@ namespace Continuum {
 		int idx{};
 		static inline int max_idx() { return _INNER_DISC + 1; }
 
-		InnerIterator(MomentumRanges const * const parent, int init = 0) 
+		InnerIterator(MomentumRanges const* const parent, int init = 0)
 			: _parent(parent), k(this->index_to_momentum(init)), idx(init) {}
 
 		inline c_float parent_step() const {
@@ -168,7 +168,7 @@ namespace Continuum {
 	};
 
 	class IEOMIterator {
-		MomentumRanges const * const _parent;
+		MomentumRanges const* const _parent;
 		inline c_float index_to_momentum(int i) const {
 			return _parent->index_to_momentum(i + 3 * _OUTER_DISC / 4);
 		}
@@ -177,17 +177,17 @@ namespace Continuum {
 		int idx{};
 		static inline int max_idx() { return _INNER_DISC + 45 * _OUTER_DISC / 100; }
 
-		IEOMIterator(MomentumRanges const * const parent, int init = 0) 
+		IEOMIterator(MomentumRanges const* const parent, int init = 0)
 			: _parent(parent), k(this->index_to_momentum(init)), idx(init) {}
 
 		inline c_float parent_step() const {
-			if( k < _parent->INNER_K_MIN ) return _parent->LOWER_STEP;
-			if( k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
+			if (k < _parent->INNER_K_MIN) return _parent->LOWER_STEP;
+			if (k <= _parent->INNER_K_MAX) return _parent->INNER_STEP;
 			return _parent->UPPER_STEP;
 		}
 		inline c_float max_k() const { return this->index_to_momentum(max_idx()); }
 		inline c_float min_k() const { return this->index_to_momentum(0); }
-		
+
 		inline IEOMIterator& operator++() {
 			++idx;
 			k = this->index_to_momentum(idx);

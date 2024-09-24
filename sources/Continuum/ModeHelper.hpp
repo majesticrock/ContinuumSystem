@@ -55,7 +55,7 @@ namespace Continuum {
 		c_complex computeTerm(const SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
 	public:
 		std::vector<c_float> continuum_boundaries() const;
-		
+
 		SCModel& getModel() {
 			return *model;
 		};

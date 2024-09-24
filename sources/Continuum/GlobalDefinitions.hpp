@@ -69,7 +69,7 @@ namespace Continuum {
 	constexpr c_float bare_dispersion(c_float k) {
 		return (0.5 / PhysicalConstants::effective_mass) * k * k;
 	};
-	
+
 	extern int DISCRETIZATION;
 	extern c_float INV_N;
 
