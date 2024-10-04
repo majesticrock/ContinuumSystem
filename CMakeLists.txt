@@ -36,13 +36,9 @@ target_sources(ContinuumSystem PRIVATE ${ADD_SOURCES})
 SET_COMPILER_FLAGS(ContinuumSystem)
 
 find_package(MPI REQUIRED)
-message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
 target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX)
 
 find_package(Boost REQUIRED COMPONENTS serialization iostreams)
-if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost libraries not found")
-endif()
 target_include_directories(ContinuumSystem PRIVATE ${Boost_INCLUDE_DIRS})
 
 find_package(ZLIB REQUIRED)

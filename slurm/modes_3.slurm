@@ -24,7 +24,7 @@
 #SBATCH --constraint=CascadeLake       ## chose a specific feature, e.g., only nodes with Haswell-architecture
                                 ## Feature-Output by "cat /etc/slurm/slurm.conf | grep Feature"
 module purge
-module load gcc/11.2.0-full
+module load gcc/11.3.0-full
 module load mpi/openmpi3-x86_64
 module load boost/1.71.0
 module load cmake/3.23.2
@@ -34,7 +34,7 @@ date
 echo "--- START ---"
 
 ## execute binary using mpirun on the allocated computation resource; the number of cores is $
-mpirun ./build/ContinuumSystem params/cluster_3.config
+mpirun ./build_cluster/ContinuumSystem params/cluster_3.config
 
 echo "--- END ---"
 date

@@ -13,7 +13,7 @@
 #SBATCH --tasks-per-node=1    ## mpi processes spawned per node
 #SBATCH --cpus-per-task=8       ## logical cores used per mpi process: should be 1, except if you want to combine OpenMP with$
 
-#SBATCH --mem=128gb               ## sets maximum allowed memory per node
+#SBATCH --mem=45gb               ## sets maximum allowed memory per node
 ##SBATCH --mem-per-cpu=100mb    ## sets maximum allowed memory per mpi process
 
 #SBATCH --mail-user=joshua.althueser@tu-dortmund.de     ## replace mail by personal mail address
@@ -24,7 +24,7 @@
 #SBATCH --constraint=CascadeLake       ## chose a specific feature, e.g., only nodes with Haswell-architecture
                                 ## Feature-Output by "cat /etc/slurm/slurm.conf | grep Feature"
 module purge
-module load gcc/11.2.0-full
+module load gcc/11.3.0-full
 module load mpi/openmpi3-x86_64
 module load boost/1.71.0
 module load cmake/3.23.2
@@ -34,7 +34,7 @@ date
 echo "--- START ---"
 
 ## execute binary using mpirun on the allocated computation resource; the number of cores is $
-mpirun ./build/ContinuumSystem params/cluster.config
+mpirun ./build_cluster/ContinuumSystem params/cluster.config
 
 echo "--- END ---"
 date
