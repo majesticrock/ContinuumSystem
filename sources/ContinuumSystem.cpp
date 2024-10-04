@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 				{ "time", 				Utility::time_stamp() },
 				{ "discretization", 	DISCRETIZATION },
 				{ "inner_discretization", _INNER_DISC },
-				{ "lambda_screening", 	_screening },
+				{ "lambda_screening", 	modes.getModel().screening_ratio },
 				{ "Delta_max", 			as_meV(modes.getModel().delta_max()) },
 				{ "k_F", 				modes.getModel().fermi_wavevector },
 				{ "T", 					modes.getModel().temperature },

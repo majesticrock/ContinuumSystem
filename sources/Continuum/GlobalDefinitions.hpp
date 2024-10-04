@@ -15,7 +15,6 @@
 //#define approximate_theta
 //#define mielke_coulomb
 //#define _complex
-#define _screening 1e-4
 
 namespace Continuum {
 	using c_float = double;
