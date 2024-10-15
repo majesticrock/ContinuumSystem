@@ -36,21 +36,9 @@ target_sources(ContinuumSystem PRIVATE ${ADD_SOURCES})
 SET_COMPILER_FLAGS(ContinuumSystem)
 
 find_package(MPI REQUIRED)
-target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX)
-
-find_package(Boost REQUIRED COMPONENTS serialization iostreams)
-target_include_directories(ContinuumSystem PRIVATE ${Boost_INCLUDE_DIRS})
-
-find_package(ZLIB REQUIRED)
 find_package(OpenMP REQUIRED)
-
-find_package(SymbolicOperators REQUIRED CONFIG)
-target_include_directories(ContinuumSystem PRIVATE ${SymbolicOperators_INCLUDE_DIRS})
-target_link_libraries(ContinuumSystem PRIVATE SymbolicOperators::SymbolicOperators)
-
 find_package(Utility REQUIRED)
-target_include_directories(ContinuumSystem PRIVATE ${Utility_INCLUDE_DIRS})
-target_link_libraries(ContinuumSystem PRIVATE Utility::Utility)
+find_package(SymbolicOperators REQUIRED)
 
-target_link_libraries(ContinuumSystem PRIVATE OpenMP::OpenMP_CXX ${Boost_LIBRARIES} ZLIB::ZLIB)
-
+target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX Utility::Utility SymbolicOperators::SymbolicOperators)
+target_include_directories(ContinuumSystem PRIVATE ${SymbolicOperators_INCLUDE_DIRS} ${Utility_INCLUDE_DIRS})
