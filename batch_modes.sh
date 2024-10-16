@@ -6,7 +6,7 @@ input_file="params/for_auto.txt"
 
 # Read the lines of the input file into an array of strings
 readarray -t NEW_VALUES < "${input_file}"
-TOKEN="omega_debye"
+TOKEN="phonon_coupling"
 
 
 for NEW_VALUE in "${NEW_VALUES[@]}"; do
