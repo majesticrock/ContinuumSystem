@@ -12,7 +12,7 @@
 #include <Utility/UnderlyingFloatingPoint.hpp>
 #include <iostream>
 
-//#define approximate_theta
+#define approximate_theta
 //#define mielke_coulomb
 //#define _complex
 
