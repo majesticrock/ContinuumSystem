@@ -12,12 +12,12 @@ constexpr Continuum::c_float inner_offset = 2;
 #endif
 
 namespace Continuum {
-	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye)
+	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye, const c_float g)
 		:
 #ifndef mielke_coulomb
 		K_MAX{ 2 * (*k_F) }, K_MIN{ 0 },
 #else
-		K_MAX{ (*k_F) + (inner_offset * 2) * omega_debye }, K_MIN{ (*k_F) - (inner_offset * 2) * omega_debye },
+		K_MAX{ (*k_F) + (2 * inner_offset) * g * omega_debye }, K_MIN{ (*k_F) - (2 * inner_offset) * g * omega_debye },
 #endif
 #ifndef approximate_theta
 
