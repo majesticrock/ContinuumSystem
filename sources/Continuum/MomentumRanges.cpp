@@ -5,7 +5,7 @@
 constexpr Continuum::c_float inner_offset = 1. - 1e-5;
 #else
 #ifndef mielke_coulomb
-constexpr Continuum::c_float inner_offset = 20;
+constexpr Continuum::c_float inner_offset = 30;
 #else
 constexpr Continuum::c_float inner_offset = 2;
 #endif
@@ -17,7 +17,7 @@ namespace Continuum {
 #ifndef mielke_coulomb
 		K_MAX{ 2 * (*k_F) }, K_MIN{ 0 },
 #else
-		K_MAX{ (*k_F) + (2 * inner_offset) * g * omega_debye }, K_MIN{ (*k_F) - (2 * inner_offset) * g * omega_debye },
+		K_MAX{ (*k_F) + (2 * inner_offset) * omega_debye }, K_MIN{ (*k_F) - (2 * inner_offset) * omega_debye },
 #endif
 #ifndef approximate_theta
 
