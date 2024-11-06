@@ -4,16 +4,16 @@
 ## or look up the slurm documentation under https://slurm.schedmed.com/sbatch.html
 
 ## Mandatory:
-#SBATCH --job-name=modes2
-#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_2_output.txt
-#SBATCH --time=24:00:00         ## maximum runtime; hours:minutes:seconds
-#SBATCH --partition=long       ## choose queue
+#SBATCH --job-name=modes
+#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt
+#SBATCH --time=48:00:00         ## maximum runtime; hours:minutes:seconds
+#SBATCH --partition=ultralong       ## choose queue
 
 #SBATCH --ntasks=1             ## sets number of total mpi processes
 #SBATCH --tasks-per-node=1    ## mpi processes spawned per node
-#SBATCH --cpus-per-task=8       ## logical cores used per mpi process: should be 1, except if you want to combine OpenMP with$
+#SBATCH --cpus-per-task=6       ## logical cores used per mpi process: should be 1, except if you want to combine OpenMP with$
 
-#SBATCH --mem=128gb               ## sets maximum allowed memory per node
+#SBATCH --mem=92gb               ## sets maximum allowed memory per node
 ##SBATCH --mem-per-cpu=100mb    ## sets maximum allowed memory per mpi process
 
 #SBATCH --mail-user=joshua.althueser@tu-dortmund.de     ## replace mail by personal mail address
@@ -34,7 +34,7 @@ date
 echo "--- START ---"
 
 ## execute binary using mpirun on the allocated computation resource; the number of cores is $
-mpirun ./build_cluster/ContinuumSystem params/cluster_2.config
+mpirun ./build_ul/ContinuumSystem params/ul_cluster.config
 
 echo "--- END ---"
 date
