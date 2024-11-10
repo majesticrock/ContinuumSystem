@@ -70,7 +70,6 @@ namespace Continuum {
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_screening(ExpectationValues const& expecs, c_float k) const
 		{
 			if (is_zero(coulomb_scaling)) return decltype(std::declval<ExpectationValues>()(c_float{})){};
-#ifndef mielke_coulomb
 			if (is_zero(k)) {
 				auto integrand = [&](c_float q) {
 					return expecs(q) * q * q / (screening * screening + q * q);
@@ -85,12 +84,6 @@ namespace Continuum {
 				};
 			const c_float prefactor = 0.5 * coulomb_scaling * PhysicalConstants::em_factor / k;
 			return prefactor * momentumRanges.integrate(integrand);
-#else
-			auto integrand = [&](c_float q) {
-				return expecs(q) * q * q;
-				};
-			return coulomb_scaling * PhysicalConstants::em_factor * momentumRanges.integrate(integrand);
-#endif
 		}
 
 	private:

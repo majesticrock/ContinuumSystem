@@ -297,10 +297,14 @@ namespace Continuum {
 		total_matrix_size = m_iterator::max_idx() * number_of_basis_terms;
 
 		model = std::make_unique<SCModel>(init);
+		std::cout << "Working on " << model->info() << std::endl;
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
-		//auto solver = Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
+#ifdef _iterative_selfconsistency
+		auto solver = Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
+#else
 		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
+#endif
 		solver.compute(true);
 
 		const m_iterator buf(&model->momentumRanges);

@@ -19,7 +19,7 @@ namespace Continuum {
 
 		c_float* K_F;
 
-		MomentumRanges(c_float* k_F, const c_float omega_debye, const c_float g);
+		MomentumRanges(c_float* k_F, const c_float omega_debye);
 
 		c_float index_to_momentum(int k_idx) const;
 		int momentum_to_index(c_float k) const;

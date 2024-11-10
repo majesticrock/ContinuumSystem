@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
 			}
 			});
 		Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
-		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << " " << modes.getModel().info() << std::endl;
+		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;
 
 		if (false) { // compute and save the expectation values
 			auto expecs = modes.getModel().get_expectation_values();
@@ -222,9 +222,7 @@ int main(int argc, char** argv) {
 		}
 
 		if (true) {
-			//const std::string full_diag_folder = "../../data/continuum/test/full_diag";
-			//std::filesystem::create_directories(full_diag_folder);
-			auto resolvents = modes.computeCollectiveModes(150); //, full_diag_folder + "/"
+			auto resolvents = modes.computeCollectiveModes(150);
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {
 					{ "resolvents", resolvents },

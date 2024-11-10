@@ -28,9 +28,9 @@ for NEW_VALUE in "${NEW_VALUES[@]}"; do
     fi
   done < params/ul_cluster.config
   cp slurm/ul_modes.slurm auto_generated_ul_2/$NEW_NAME.slurm
-  sed -i "s|#SBATCH --job-name=modes|#SBATCH --job-name=ul$NEW_NAME|" auto_generated_ul_2/$NEW_NAME.slurm
-  sed -i "s|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/output_ul_$NEW_NAME.txt|" auto_generated_ul_2/$NEW_NAME.slurm
-  sed -i "s|mpirun ./build_cluster/ContinuumSystem params/ul_cluster.config|mpirun ./build_cluster/ContinuumSystem auto_generated_ul_2/$NEW_NAME.config|" auto_generated_ul_2/$NEW_NAME.slurm
+  sed -i "s|#SBATCH --job-name=modes|#SBATCH --job-name=ul2_$NEW_NAME|" auto_generated_ul_2/$NEW_NAME.slurm
+  sed -i "s|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/output_ul2_$NEW_NAME.txt|" auto_generated_ul_2/$NEW_NAME.slurm
+  sed -i "s|mpirun ./build_ul/ContinuumSystem params/ul_cluster.config|mpirun ./build_ul/ContinuumSystem auto_generated_ul_2/$NEW_NAME.config|" auto_generated_ul_2/$NEW_NAME.slurm
 
   # Execute the program
   sbatch auto_generated_ul_2/$NEW_NAME.slurm

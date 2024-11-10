@@ -18,7 +18,7 @@ namespace Continuum {
 		screening_ratio{ parameters.screening_ratio }, screening{ parameters.screening },
 		coulomb_scaling{ parameters.coulomb_scaling },
 		fermi_wavevector{ parameters.fermi_wavevector }, rho_F{ parameters.rho_F },
-		momentumRanges(&fermi_wavevector, omega_debye, parameters.phonon_coupling)
+		momentumRanges(&fermi_wavevector, omega_debye)
 	{
 		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
@@ -49,7 +49,7 @@ namespace Continuum {
 		this->fermi_wavevector = parameters.fermi_wavevector;
 		this->rho_F = parameters.rho_F;
 		try {
-			this->momentumRanges = MomentumRanges(&this->fermi_wavevector, parameters.omega_debye, parameters.phonon_coupling);
+			this->momentumRanges = MomentumRanges(&this->fermi_wavevector, parameters.omega_debye);
 		}
 		catch (...) {
 			std::cerr << parameters << std::endl;
@@ -70,9 +70,13 @@ namespace Continuum {
 				return (momentumRanges.index_to_momentum(k) > fermi_wavevector ? -0.001 : 0.001);
 				}, 2 * DISCRETIZATION + 1);
 		}
-
+		std::cout << "Working on " << info() << std::endl;
 		set_splines();
+#ifdef _iterative_selfconsistency
+		auto solver = Utility::Selfconsistency::make_iterative<c_complex>(this, &Delta);
+#else
 		auto solver = Utility::Selfconsistency::make_broyden<c_complex>(this, &Delta, 200);
+#endif
 		solver.compute(true);
 	}
 
@@ -155,9 +159,7 @@ namespace Continuum {
 		//#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
 			result(it.idx) = integral_screening(sc_expectation_value, it.k);
-#ifndef mielke_coulomb
 			result(it.idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
-#endif
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
 			if (std::abs(phonon_alpha(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {

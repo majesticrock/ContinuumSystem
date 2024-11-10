@@ -4,21 +4,13 @@
 #ifdef approximate_theta
 constexpr Continuum::c_float inner_offset = 1. - 1e-5;
 #else
-#ifndef mielke_coulomb
 constexpr Continuum::c_float inner_offset = 25;
-#else
-constexpr Continuum::c_float inner_offset = 2;
-#endif
 #endif
 
 namespace Continuum {
-	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye, const c_float g)
+	MomentumRanges::MomentumRanges(c_float* k_F, const c_float omega_debye)
 		:
-#ifndef mielke_coulomb
 		K_MAX{ 2 * (*k_F) }, K_MIN{ 0 },
-#else
-		K_MAX{ (*k_F) + (2 * inner_offset) * omega_debye }, K_MIN{ (*k_F) - (2 * inner_offset) * omega_debye },
-#endif
 #ifndef approximate_theta
 
 		INNER_K_MAX{ (*k_F) + inner_offset * omega_debye / (*k_F) },
