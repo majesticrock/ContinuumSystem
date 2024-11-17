@@ -3,6 +3,19 @@
 #include <Utility/ConstexprPower.hpp>
 
 namespace Continuum {
+	ModelInitializer::ModelInitializer(Utility::InputFileReader& input)
+		: temperature{ input.getDouble("T") },
+		phonon_coupling{ input.getDouble("phonon_coupling") },
+		omega_debye{ 1e-3 * input.getDouble("omega_debye") }, // given in meV in the parameter file
+		fermi_wavevector{ input.getDouble("k_F") },
+		coulomb_scaling{ input.getDouble("coulomb_scaling") },
+		screening_ratio{ is_zero(coulomb_scaling) ? c_float{} : input.getDouble("screening") },
+		x_cut{ input.getDouble("x_cut") },
+		screening{ compute_screening() },
+		fermi_energy{ compute_fermi_energy() },
+		rho_F{ compute_rho_F() }
+	{ }
+
 	c_float ModelInitializer::compute_screening() const
 	{
 		return screening_ratio * PhysicalConstants::screening_prefactor * sqrt(fermi_wavevector);

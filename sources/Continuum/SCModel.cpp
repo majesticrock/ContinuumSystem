@@ -18,7 +18,7 @@ namespace Continuum {
 		screening_ratio{ parameters.screening_ratio }, screening{ parameters.screening },
 		coulomb_scaling{ parameters.coulomb_scaling },
 		fermi_wavevector{ parameters.fermi_wavevector }, rho_F{ parameters.rho_F },
-		momentumRanges(&fermi_wavevector, omega_debye)
+		momentumRanges(&fermi_wavevector, omega_debye, parameters.x_cut)
 	{
 		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
@@ -49,7 +49,7 @@ namespace Continuum {
 		this->fermi_wavevector = parameters.fermi_wavevector;
 		this->rho_F = parameters.rho_F;
 		try {
-			this->momentumRanges = MomentumRanges(&this->fermi_wavevector, parameters.omega_debye);
+			this->momentumRanges = MomentumRanges(&this->fermi_wavevector, parameters.omega_debye, parameters.x_cut);
 		}
 		catch (...) {
 			std::cerr << parameters << std::endl;

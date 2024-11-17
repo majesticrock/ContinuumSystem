@@ -29,7 +29,7 @@ for NEW_VALUE in "${NEW_VALUES[@]}"; do
   done < params/cluster.config
   cp slurm/modes.slurm auto_generated_4/$NEW_NAME.slurm
   sed -i "s|#SBATCH --job-name=modes|#SBATCH --job-name=$NEW_NAME|" auto_generated_4/$NEW_NAME.slurm
-  sed -i "s|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/output_$NEW_NAME.txt|" auto_generated_4/$NEW_NAME.slurm
+  sed -i "s|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/4_output_$NEW_NAME.txt|" auto_generated_4/$NEW_NAME.slurm
   sed -i "s|mpirun ./build_cluster/ContinuumSystem params/cluster.config|mpirun ./build_cluster/ContinuumSystem auto_generated_4/$NEW_NAME.config|" auto_generated_4/$NEW_NAME.slurm
 
   # Execute the program

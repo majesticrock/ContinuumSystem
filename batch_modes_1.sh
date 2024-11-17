@@ -6,7 +6,7 @@ input_file="params/for_auto.txt"
 
 # Read the lines of the input file into an array of strings
 readarray -t NEW_VALUES < "${input_file}"
-TOKEN="screening"
+TOKEN="phonon_coupling"
 
 
 for NEW_VALUE in "${NEW_VALUES[@]}"; do
@@ -29,7 +29,7 @@ for NEW_VALUE in "${NEW_VALUES[@]}"; do
   done < params/cluster.config
   cp slurm/modes.slurm auto_generated/$NEW_NAME.slurm
   sed -i "s|#SBATCH --job-name=modes|#SBATCH --job-name=$NEW_NAME|" auto_generated/$NEW_NAME.slurm
-  sed -i "s|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/output_$NEW_NAME.txt|" auto_generated/$NEW_NAME.slurm
+  sed -i "s|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/1_output_$NEW_NAME.txt|" auto_generated/$NEW_NAME.slurm
   sed -i "s|mpirun ./build_cluster/ContinuumSystem params/cluster.config|mpirun ./build_cluster/ContinuumSystem auto_generated/$NEW_NAME.config|" auto_generated/$NEW_NAME.slurm
 
   # Execute the program
