@@ -275,8 +275,11 @@ namespace Continuum {
 	std::vector<c_float> ModeHelper::continuum_boundaries() const
 	{
 		const m_iterator buf(&model->momentumRanges);
-		const auto min = Utility::Numerics::Minimization::bisection([&](c_float x) { return this->model->energy(x); }, model->momentumRanges.INNER_K_MIN, model->momentumRanges.INNER_K_MAX, 1e-14, 400);
-		//std::cout << "Found min at " << min / model->fermi_wavevector << "k_F   E(min)=" << model->energy(min) << "   E(k_F)=" << model->energy(model->fermi_wavevector) << std::endl;
+		const auto min = Utility::Numerics::Minimization::bisection([&](c_float x) { return this->model->energy(x); }, 
+			model->momentumRanges.INNER_K_MIN, model->momentumRanges.INNER_K_MAX, 1e-14, 400);
+		std::cout << "Found min at " << min / model->fermi_wavevector 
+			<< "k_F   E(min)=" << model->energy(min) 
+			<< "   E(k_F)=" << model->energy(model->fermi_wavevector) << std::endl;
 		return { 2 * model->energy(min),
 			2 * std::max(model->energy(buf.max_k()), model->energy(buf.min_k())) };
 	}
