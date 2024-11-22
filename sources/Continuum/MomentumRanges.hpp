@@ -142,6 +142,8 @@ namespace Continuum {
 		inline c_float max_k() const { return _parent->INNER_K_MAX; }
 		inline c_float min_k() const { return _parent->INNER_K_MIN; }
 
+		inline c_float operator[](int i) const { return this->index_to_momentum(i); }
+
 		inline InnerIterator& operator++() {
 			++idx;
 			k = this->index_to_momentum(idx);
