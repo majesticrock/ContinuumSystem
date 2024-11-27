@@ -46,7 +46,7 @@ namespace Continuum {
 			return model->occupation(momentum);
 		}
 		else if (op.type == SymbolicOperators::SC_Type) {
-			if (op.isDaggered) {
+			if (op.is_daggered) {
 				return __conj(model->sc_expectation_value(momentum));
 			}
 			return model->sc_expectation_value(momentum);
@@ -203,7 +203,7 @@ namespace Continuum {
 		else {
 			value = model->integral_phonon(model->sc_expectation_value, k);
 #ifdef _complex
-			if (summed_op.isDaggered) value = std::conj(value);
+			if (summed_op.is_daggered) value = std::conj(value);
 #endif
 		}
 		if (other_op) {
@@ -225,7 +225,7 @@ namespace Continuum {
 		else {
 			value = model->integral_screening(model->sc_expectation_value, k);
 #ifdef _complex
-			if (summed_op.isDaggered) value = std::conj(value);
+			if (summed_op.is_daggered) value = std::conj(value);
 #endif
 		}
 		if (other_op) {
