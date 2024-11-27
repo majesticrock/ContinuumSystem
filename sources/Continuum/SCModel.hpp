@@ -69,7 +69,7 @@ namespace Continuum {
 		template<class ExpectationValues>
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_screening(ExpectationValues const& expecs, c_float k) const
 		{
-			if (is_zero(coulomb_scaling)) return decltype(std::declval<ExpectationValues>()(c_float{})){};
+			if (is_zero(coulomb_scaling)) return decltype(std::declval<ExpectationValues>()(c_float{})) {};
 			if (is_zero(k)) {
 				auto integrand = [&](c_float q) {
 					return expecs(q) * q * q / (screening * screening + q * q);

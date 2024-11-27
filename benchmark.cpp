@@ -30,9 +30,9 @@ static inline int momentum_lin(double k) {
 
 
 
-static void __sinh(benchmark::State& state){
-	for(auto _ : state){
-		for(int i = 0; i < N; ++i){
+static void __sinh(benchmark::State& state) {
+	for (auto _ : state) {
+		for (int i = 0; i < N; ++i) {
 			double res = index_sinh(i);
 			int pos = momentum_sinh(res);
 		}
@@ -40,9 +40,9 @@ static void __sinh(benchmark::State& state){
 }
 BENCHMARK(__sinh);
 
-static void __lin(benchmark::State& state){
-	for(auto _ : state){
-		for(int i = 0; i < N; ++i){
+static void __lin(benchmark::State& state) {
+	for (auto _ : state) {
+		for (int i = 0; i < N; ++i) {
 			double res = index_lin(i);
 			int pos = momentum_lin(res);
 		}

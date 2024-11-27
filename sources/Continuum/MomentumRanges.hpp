@@ -74,7 +74,7 @@ namespace Continuum {
 		template<class Function>
 		inline auto __integrate(const Function& func, c_float begin, c_float end) const {
 			if (is_zero(end - begin)) {
-				return decltype(func(begin)){ };
+				return decltype(func(begin)) { };
 			}
 			return boost::math::quadrature::gauss<c_float, n_gauss>::integrate(func, begin, end);
 		}

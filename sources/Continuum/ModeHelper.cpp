@@ -100,7 +100,7 @@ namespace Continuum {
 			}
 		}
 
-		/* for(m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it){
+		/* for (m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
 			std::cout << it.k / model->fermi_wavevector << " -> " << K_plus(it.idx, m_iterator::max_idx() + it.idx) << "  " << K_plus(m_iterator::max_idx() + it.idx, it.idx) << " || "
 				<< - 2 * model->interpolate_delta(it.k) * model->dispersion_to_fermi_level(it.k) / model->energy(it.k)  << std::endl;
 		} */
@@ -181,7 +181,7 @@ namespace Continuum {
 				}
 				else {
 					throw std::runtime_error("Offdiagonal term in N!");
-					/* for(m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx(); ++jt) {
+					/* for (m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx(); ++jt) {
 						N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 						if(is_zero(jt.k)) continue;
 					} */
@@ -277,7 +277,7 @@ namespace Continuum {
 		const m_iterator buf(&model->momentumRanges);
 		c_float prev_min { DBL_MAX };
 		c_float min { DBL_MAX };
-		for(InnerIterator it(&model->momentumRanges); it < InnerIterator::max_idx(); ++it) {
+		for (InnerIterator it(&model->momentumRanges); it < InnerIterator::max_idx(); ++it) {
 			if (this->model->energy(it.k) < prev_min)
 			{
 				prev_min = this->model->energy(it.k);
