@@ -106,6 +106,24 @@ namespace Continuum {
 			return std::log((screening * screening + k_sum * k_sum) / (screening * screening + k_diff * k_diff));
 		}
 
+		// Calls the publically available fock_energy() if we consider the full Coulomb interaction and returns 0 otherwise
+		inline c_float __fock_energy(c_float k) const {
+#ifdef _coulomb_only_in_bcs_channel
+			return c_float{};
+#else
+			return this->fock_energy(k);
+#endif
+		}
+
+		// Calls the publically available interpolate_delta_n() if we consider the full Coulomb interaction and returns 0 otherwise
+		inline c_float __interpolate_delta_n(c_float k) const {
+#ifdef _coulomb_only_in_bcs_channel
+			return c_float{};
+#else
+			return this->interpolate_delta_n(k);
+#endif
+		}
+
 		void set_splines();
 	public:
 		ModelAttributes<c_complex> Delta;
@@ -153,10 +171,14 @@ namespace Continuum {
 		return bare_dispersion(k) - fermi_energy;
 	}
 	c_float SCModel::dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion_to_fermi_level(k) + fock_energy(k) + interpolate_delta_n(k);
+		return bare_dispersion_to_fermi_level(k) + __fock_energy(k) + __interpolate_delta_n(k);
 	}
 	c_float SCModel::dispersion_to_fermi_level_index(int k) const {
-		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + fock_energy(momentumRanges.index_to_momentum(k)) + std::real(Delta[k + DISCRETIZATION]);
+#ifdef _coulomb_only_in_bcs_channel
+		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k));
+#else
+		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + __fock_energy(momentumRanges.index_to_momentum(k)) + std::real(Delta[k + DISCRETIZATION]);
+#endif
 	}
 	c_float SCModel::energy(c_float k) const {
 		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));

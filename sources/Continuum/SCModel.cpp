@@ -20,7 +20,7 @@ namespace Continuum {
 		fermi_wavevector{ parameters.fermi_wavevector }, rho_F{ parameters.rho_F },
 		momentumRanges(&fermi_wavevector, omega_debye, parameters.x_cut)
 	{
-		std::cout << "Fock(k_F) = " << fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
+		std::cout << "Fock(k_F) = " << __fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
@@ -225,8 +225,8 @@ namespace Continuum {
 		else if (coeff.name == "g")
 		{
 #ifdef approximate_theta
-			if (omega_debye >= std::abs(bare_dispersion_to_fermi_level(first) + fock_energy(first))
-				&& omega_debye >= std::abs(bare_dispersion_to_fermi_level(second) + fock_energy(second)))
+			if (omega_debye >= std::abs(bare_dispersion_to_fermi_level(first) + __fock_energy(first))
+				&& omega_debye >= std::abs(bare_dispersion_to_fermi_level(second) + __fock_energy(second)))
 #else
 			if (2. * omega_debye >= std::abs(phonon_alpha(first) - phonon_alpha(second)))
 #endif
@@ -251,7 +251,7 @@ namespace Continuum {
 	}
 
 	c_float SCModel::phonon_alpha(const c_float k) const {
-		return 2. * bare_dispersion(k) + 2. * fock_energy(k);
+		return 2. * bare_dispersion(k) + 2. * __fock_energy(k);
 	}
 
 	const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
@@ -372,7 +372,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = bare_dispersion_to_fermi_level(it.k) + fock_energy(it.k);
+			ret[it.idx] = bare_dispersion_to_fermi_level(it.k) + __fock_energy(it.k);
 		}
 		return ret;
 	}

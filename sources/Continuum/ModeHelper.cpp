@@ -283,7 +283,6 @@ namespace Continuum {
 				prev_min = this->model->energy(it.k);
 				min = it.k;
 			}
-			std::cout << it.k / model->fermi_wavevector << " -> " << this->model->energy(it.k) << std::endl;
 		}
 
 		std::cout << "Found min at " << min / model->fermi_wavevector 
