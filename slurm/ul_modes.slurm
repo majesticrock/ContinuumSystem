@@ -7,7 +7,7 @@
 #SBATCH --job-name=modes
 #SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt
 #SBATCH --time=48:00:00         ## maximum runtime; hours:minutes:seconds
-#SBATCH --partition=ultralong       ## choose queue
+#SBATCH --partition=long       ## choose queue
 
 #SBATCH --ntasks=1             ## sets number of total mpi processes
 #SBATCH --tasks-per-node=1    ## mpi processes spawned per node

@@ -16,7 +16,7 @@
 //#define _complex
 
 #define _iterative_selfconsistency
-//#define _coulomb_only_in_bcs_channel
+#define _coulomb_only_in_bcs_channel
 
 namespace Continuum {
 	using c_float = double;
