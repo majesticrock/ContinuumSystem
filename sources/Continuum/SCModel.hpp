@@ -14,6 +14,8 @@
 #include <Utility/Numerics/Interpolation.hpp>
 #include <boost/math/quadrature/gauss.hpp>
 #include <Utility/ConstexprPower.hpp>
+#include "PhononInteraction.hpp"
+//#include "SharedAttributes.hpp"
 
 namespace Continuum {
 	class SCModel {
@@ -21,17 +23,26 @@ namespace Continuum {
 		c_complex interpolate_delta(c_float k) const;
 		c_float interpolate_delta_n(c_float k) const;
 
-		inline c_float bare_dispersion_to_fermi_level(c_float k) const;
+		// epsilon_infinity (k)
+		inline c_float renormalized_dispersion(c_float k) const;
+		// epsilon_0 + epsilon_fock^Coulomb
 		inline c_float dispersion_to_fermi_level(c_float k) const;
 		inline c_float dispersion_to_fermi_level_index(int k) const;
+		// Energy of system including superconductivity
 		inline c_float energy(c_float k) const;
 		inline c_float energy_index(int k) const;
-		c_float fock_energy(c_float k) const;
+		// epsilon(k) - epsilon(k'), where epsilon(k) refers to the unrenormalized single particle dispersion
+		 inline c_float delta_epsilon(c_float k, c_float k_prime) const;
+		// Fock energy originating from the Coulomb interaction
+		c_float fock_coulomb(c_float k) const;
 
 		inline c_float delta_n(c_float k) const;
 
-		c_float g_lower_bound(c_float k) const;
-		c_float g_upper_bound(c_float k) const;
+		// Effectively 2 * ( bare_dispersion + epsilon_fock^coulomb )
+		c_float phonon_boundary_a(const c_float k) const;
+		inline auto phonon_boundary_b(const c_float k, const c_float ALPHA) const {
+			return phonon_boundary_a(k) - ALPHA;
+		}
 
 		c_complex k_infinity_integral() const;
 		c_complex k_zero_integral() const;
@@ -54,17 +65,6 @@ namespace Continuum {
 		void set_new_parameters(ModelInitializer const& parameters);
 		SCModel(ModelInitializer const& parameters);
 		virtual ~SCModel() = default;
-
-		template<class ExpectationValues>
-		decltype(std::declval<ExpectationValues>()(c_float{})) integral_phonon(ExpectationValues const& expecs, c_float k) const
-		{
-			const c_float prefactor = phonon_coupling / (2. * PI * PI * rho_F);
-			auto integrand = [&expecs](c_float q) {
-				return q * q * expecs(q);
-				};
-
-			return prefactor * momentumRanges.integrate(integrand, g_lower_bound(k), g_upper_bound(k));
-		}
 
 		template<class ExpectationValues>
 		decltype(std::declval<ExpectationValues>()(c_float{})) integral_screening(ExpectationValues const& expecs, c_float k) const
@@ -96,28 +96,22 @@ namespace Continuum {
 		c_float occupation_index(int k) const;
 		inline c_float delta_n_index(int k) const;
 
-		// Effectively 2 * ( bare_dispersion + E_fock )
-		c_float phonon_alpha(const c_float k) const;
-		inline auto phonon_beta(const c_float k, const c_float ALPHA) const {
-			return phonon_alpha(k) - ALPHA;
-		}
-
 		inline c_float log_expression(c_float k_sum, c_float k_diff) const {
 			return std::log((screening * screening + k_sum * k_sum) / (screening * screening + k_diff * k_diff));
 		}
 
-		// Calls the publically available fock_energy() if we consider the full Coulomb interaction and returns 0 otherwise
-		inline c_float __fock_energy(c_float k) const {
-#ifdef _coulomb_only_in_bcs_channel
+		// Calls the publically available fock_coulomb() if we consider the full Coulomb interaction and returns 0 otherwise
+		inline c_float __fock_coulomb(c_float k) const {
+#ifdef COULOMB_SC_CHANNEL_ONLY
 			return c_float{};
 #else
-			return this->fock_energy(k);
+			return this->fock_coulomb(k);
 #endif
 		}
 
 		// Calls the publically available interpolate_delta_n() if we consider the full Coulomb interaction and returns 0 otherwise
 		inline c_float __interpolate_delta_n(c_float k) const {
-#ifdef _coulomb_only_in_bcs_channel
+#ifdef COULOMB_SC_CHANNEL_ONLY
 			return c_float{};
 #else
 			return this->interpolate_delta_n(k);
@@ -142,6 +136,8 @@ namespace Continuum {
 		c_float rho_F{};
 
 		MomentumRanges momentumRanges;
+		PhononInteraction phononInteraction;
+
 	private:
 		mutable std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> _expecs;
 	};
@@ -167,17 +163,21 @@ namespace Continuum {
 		}
 		return -occupation_index(k);
 	}
-	c_float SCModel::bare_dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion(k) - fermi_energy;
-	}
-	c_float SCModel::dispersion_to_fermi_level(c_float k) const {
-		return bare_dispersion_to_fermi_level(k) + __fock_energy(k) + __interpolate_delta_n(k);
-	}
-	c_float SCModel::dispersion_to_fermi_level_index(int k) const {
-#ifdef _coulomb_only_in_bcs_channel
-		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k));
+
+    c_float SCModel::renormalized_dispersion(c_float k) const
+    {
+        return  bare_dispersion(k) + phononInteraction.renormalization_infinity(k) - fermi_energy ;
+    }
+    c_float SCModel::dispersion_to_fermi_level(c_float k) const
+    {
+        return renormalized_dispersion(k) + __fock_coulomb(k) + __interpolate_delta_n(k) + phononInteraction.renormalization_fock(k);
+    }
+    c_float SCModel::dispersion_to_fermi_level_index(int k) const {
+#ifdef COULOMB_SC_CHANNEL_ONLY
+		return renormalized_dispersion(momentumRanges.index_to_momentum(k));
 #else
-		return bare_dispersion_to_fermi_level(momentumRanges.index_to_momentum(k)) + __fock_energy(momentumRanges.index_to_momentum(k)) + std::real(Delta[k + DISCRETIZATION]);
+		return renormalized_dispersion(momentumRanges.index_to_momentum(k)) + __fock_coulomb(momentumRanges.index_to_momentum(k)) 
+			+ phononInteraction.renormalization_cache[k][1] + std::real(Delta[k + DISCRETIZATION]);
 #endif
 	}
 	c_float SCModel::energy(c_float k) const {
@@ -185,5 +185,8 @@ namespace Continuum {
 	}
 	c_float SCModel::energy_index(int k) const {
 		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level_index(k)) + std::norm(Delta[k]));
+	}
+	c_float SCModel::delta_epsilon(c_float k, c_float k_prime) const {
+		return bare_dispersion(k) + __fock_coulomb(k) - bare_dispersion(k_prime) - __fock_coulomb(k_prime);
 	}
 }

@@ -1,4 +1,5 @@
 #pragma once
+//#define _NO_MPI
 #define _USE_MATH_DEFINES
 //#define BOOST_MATH_GAUSS_NO_COMPUTE_ON_DEMAND
 
@@ -16,7 +17,8 @@
 //#define _complex
 
 #define _iterative_selfconsistency
-#define _coulomb_only_in_bcs_channel
+//#define COULOMB_SC_CHANNEL_ONLY
+#define PHONON_SC_CHANNEL_ONLY
 
 namespace Continuum {
 	using c_float = double;
@@ -30,6 +32,8 @@ namespace Continuum {
 
 	constexpr c_float SQRT_PRECISION = 2.384185791015625e-07;
 	constexpr c_float PRECISION = 5.684341886080802e-14; // 0 | 01111010011 | 0000000000000000000000000000000000000000000000000000
+
+	constexpr c_float CUT_REGULARIZATION = 1e-8;
 
 	/* This function abuses the structure of our desired precision:
 	*  The mantissa is empty, i.e., we can solely rely on the exponent.

@@ -6,6 +6,11 @@
 
 #include <iomanip>
 #include <omp.h>
+#include <filesystem>
+#include <algorithm>
+#include <concepts>
+#include <SymbolicOperators/WickOperator.hpp>
+#include <nlohmann/json.hpp>
 
 #ifndef _NO_MPI
 #include <mpi.h>
@@ -14,14 +19,7 @@
 #define EXIT 0
 #endif
 
-#include <filesystem>
-#include <algorithm>
-#include <concepts>
 using namespace Continuum;
-
-#include <SymbolicOperators/WickOperator.hpp>
-#include <nlohmann/json.hpp>
-
 const std::string BASE_FOLDER = "../../data/continuum/";
 
 int Continuum::DISCRETIZATION = 1000;

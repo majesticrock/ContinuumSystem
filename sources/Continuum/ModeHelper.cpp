@@ -198,10 +198,10 @@ namespace Continuum {
 		SymbolicOperators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
 		if (summed_op->type == SymbolicOperators::Number_Type) {
-			value = model->integral_phonon(model->occupation, k);
+			value = model->phononInteraction.sc_channel_integral(model->occupation, k);
 		}
 		else {
-			value = model->integral_phonon(model->sc_expectation_value, k);
+			value = model->phononInteraction.sc_channel_integral(model->sc_expectation_value, k);
 #ifdef _complex
 			if (summed_op.is_daggered) value = std::conj(value);
 #endif
@@ -220,7 +220,7 @@ namespace Continuum {
 		SymbolicOperators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
 		if (summed_op->type == SymbolicOperators::Number_Type) {
-			value = -(model->fock_energy(k) + model->interpolate_delta_n(k));
+			value = -(model->fock_coulomb(k) + model->interpolate_delta_n(k));
 		}
 		else {
 			value = model->integral_screening(model->sc_expectation_value, k);

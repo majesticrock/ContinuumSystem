@@ -20,7 +20,8 @@ namespace Continuum {
 		fermi_wavevector{ parameters.fermi_wavevector }, rho_F{ parameters.rho_F },
 		momentumRanges(&fermi_wavevector, omega_debye, parameters.x_cut)
 	{
-		std::cout << "Fock(k_F) = " << __fock_energy(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
+		phononInteraction.set_parent(this);
+		std::cout << "Fock(k_F) = " << __fock_coulomb(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
@@ -98,7 +99,7 @@ namespace Continuum {
 		return momentumRanges.integrate(integrand) * prefactor;
 	}
 
-	c_float SCModel::fock_energy(c_float k) const
+	c_float SCModel::fock_coulomb(c_float k) const
 	{
 		if (is_zero(coulomb_scaling)) return c_float{};
 		if (is_zero(k)) {
@@ -155,18 +156,18 @@ namespace Continuum {
 		auto delta_n_wrapper = [this](c_float q) {
 			return this->delta_n(q);
 			};
-
 		//#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
 			result(it.idx) = integral_screening(sc_expectation_value, it.k);
 			result(it.idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
-			if (std::abs(phonon_alpha(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {
+			if (std::abs(phonon_boundary_a(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {
 				continue;
 			}
 #endif
-			result(it.idx) -= integral_phonon(sc_expectation_value, it.k);
+			result(it.idx + DISCRETIZATION) -= phononInteraction.fock_channel_integral(delta_n_wrapper, it.k);
+			result(it.idx) -= phononInteraction.sc_channel_integral(sc_expectation_value, it.k);
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
 
@@ -176,59 +177,19 @@ namespace Continuum {
 		++step_num;
 	}
 
-	c_float SCModel::g_lower_bound(c_float k) const
-	{
-#ifdef approximate_theta
-		const c_float ALPHA = 2. * fermi_energy - 2. * omega_debye;
-#else
-		const c_float ALPHA = phonon_alpha(k) - 2. * omega_debye;
-#endif
-		auto func = [&](c_float l) {
-			return this->phonon_beta(l, ALPHA);
-			};
-#ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, fermi_wavevector, PRECISION, 200);
-#else
-		const auto lb = func(momentumRanges.K_MIN);
-		const auto ub = func(k);
-		if (lb * ub >= c_float{}) return momentumRanges.K_MIN;
-		return Utility::Numerics::Roots::bisection(func, momentumRanges.K_MIN, k, PRECISION, 200);
-#endif
-	}
-
-	c_float SCModel::g_upper_bound(c_float k) const
-	{
-#ifdef approximate_theta
-		const c_float ALPHA = 2. * fermi_energy + 2. * omega_debye;
-#else
-		const c_float ALPHA = phonon_alpha(k) + 2. * omega_debye;
-#endif
-		auto func = [&](c_float l) {
-			return this->phonon_beta(l, ALPHA);
-			};
-#ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, fermi_wavevector, momentumRanges.K_MAX, PRECISION, 200);
-#else
-		const auto lb = func(k);
-		const auto ub = func(momentumRanges.K_MAX);
-		if (lb * ub >= c_float{}) return momentumRanges.K_MAX;
-		return Utility::Numerics::Roots::bisection(func, k, momentumRanges.K_MAX, PRECISION, 200);
-#endif
-	}
-
 	c_float SCModel::computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const
 	{
 		if (coeff.name == "\\epsilon_0")
 		{
-			return bare_dispersion_to_fermi_level(first);
+			return renormalized_dispersion(first);
 		}
 		else if (coeff.name == "g")
 		{
 #ifdef approximate_theta
-			if (omega_debye >= std::abs(bare_dispersion_to_fermi_level(first) + __fock_energy(first))
-				&& omega_debye >= std::abs(bare_dispersion_to_fermi_level(second) + __fock_energy(second)))
+			if (omega_debye >= std::abs(renormalized_dispersion(first) + __fock_coulomb(first))
+				&& omega_debye >= std::abs(renormalized_dispersion(second) + __fock_coulomb(second)))
 #else
-			if (2. * omega_debye >= std::abs(phonon_alpha(first) - phonon_alpha(second)))
+			if (2. * omega_debye >= std::abs(phonon_boundary_a(first) - phonon_boundary_a(second)))
 #endif
 			{
 				return this->phonon_coupling / this->rho_F;
@@ -250,8 +211,8 @@ namespace Continuum {
 		}
 	}
 
-	c_float SCModel::phonon_alpha(const c_float k) const {
-		return 2. * bare_dispersion(k) + 2. * __fock_energy(k);
+	c_float SCModel::phonon_boundary_a(const c_float k) const {
+		return 2. * bare_dispersion(k) + 2. * __fock_coulomb(k);
 	}
 
 	const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
@@ -286,7 +247,7 @@ namespace Continuum {
 		return std::real(Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index), DISCRETIZATION));
 	}
 
-	c_float SCModel::internal_energy() const
+    c_float SCModel::internal_energy() const
 	{
 		if (!is_zero(Delta[DISCRETIZATION / 2])) {
 			// Order: -62.0978727910253 eV
@@ -341,11 +302,11 @@ namespace Continuum {
 		std::vector<c_complex> ret(DISCRETIZATION);
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
 #ifdef approximate_theta
-			if (std::abs(phonon_alpha(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {
+			if (std::abs(phonon_boundary_a(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {
 				continue;
 			}
 #endif
-			ret[it.idx] = -integral_phonon(sc_expectation_value, it.k);
+			ret[it.idx] = -phononInteraction.sc_channel_integral(sc_expectation_value, it.k);
 		}
 		return ret;
 	}
@@ -372,7 +333,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = bare_dispersion_to_fermi_level(it.k) + __fock_energy(it.k);
+			ret[it.idx] = renormalized_dispersion(it.k) + __fock_coulomb(it.k);
 		}
 		return ret;
 	}

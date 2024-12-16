@@ -30,6 +30,7 @@ set(ADD_SOURCES
     sources/Continuum/SplineContainer.cpp
     sources/Continuum/ModelInitializer.cpp
     sources/Continuum/Incrementer.cpp
+    sources/Continuum/PhononInteraction.cpp
 )
 target_sources(ContinuumSystem PRIVATE ${ADD_SOURCES})
 
@@ -40,5 +41,14 @@ find_package(OpenMP REQUIRED)
 find_package(Utility REQUIRED)
 find_package(SymbolicOperators REQUIRED)
 
-target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX Utility::Utility SymbolicOperators::SymbolicOperators)
+target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX Utility::Utility SymbolicOperators::SymbolicOperators) # 
 target_include_directories(ContinuumSystem PRIVATE ${SymbolicOperators_INCLUDE_DIRS} ${Utility_INCLUDE_DIRS})
+
+# Add debug option
+option(ENABLE_DEBUG "Enable debugging" OFF)
+
+if(ENABLE_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
+    target_compile_definitions(ContinuumSystem PRIVATE DEBUG)
+    target_compile_options(ContinuumSystem PRIVATE -g)
+endif()

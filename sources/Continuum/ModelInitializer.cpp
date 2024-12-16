@@ -23,7 +23,7 @@ namespace Continuum {
 	c_float ModelInitializer::compute_fermi_energy() const
 	{
 		const c_float kinetic = bare_dispersion(fermi_wavevector);
-#ifdef _coulomb_only_in_bcs_channel
+#ifdef COULOMB_SC_CHANNEL_ONLY
 		return kinetic;
 #else
 		if (is_zero(coulomb_scaling)) return kinetic;
