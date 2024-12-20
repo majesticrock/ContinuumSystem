@@ -13,39 +13,31 @@ namespace Continuum {
 #ifdef PHONON_SC_CHANNEL_ONLY
         return;
 #else
+        // Typically around 1e-3
+        const c_float factor = 1;//(*ptr_phonon_coupling) * (*ptr_omega_debye) / (2. * PI * PI * (*ptr_rho_F));
         for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) {
-            auto integrand_infinity = [this, &it](c_float q) -> c_float {
-		    	return -q * q / std::copysign(std::abs(alpha_CUT(q, it.k)) + CUT_REGULARIZATION, alpha_CUT(q, it.k)) ;
+            // First singularity is in alpha, second one in beta
+            const std::array<c_float, 2> singularities = get_singularities(it.k);
+
+            auto integrand_infinity = [this, &it, &singularities](c_float q) -> c_float {
+		    	return q * q * (q - singularities[0]) / std::copysign(std::abs(alpha_CUT(q, it.k)) + CUT_REGULARIZATION, alpha_CUT(q, it.k)) ;
+		    };
+            auto integrand_fock_alpha = [this, &it, &singularities](c_float q) -> c_float {
+                return -q * q * (q - singularities[0]) / alpha_CUT(q, it.k);
+		    };
+            auto integrand_fock_beta = [this, &it, &singularities](c_float q) -> c_float {
+                return q * q * (q - singularities[1])  / beta_CUT(q, it.k);
 		    };
 
-            auto integrand_fock = [this, &it](c_float q) -> c_float {
-		    	return q * q * 
-		    		( 1. / std::copysign(std::abs(beta_CUT(q, it.k)) + CUT_REGULARIZATION, beta_CUT(q, it.k)) 
-		    		- 1. / std::copysign(std::abs(alpha_CUT(q, it.k)) + CUT_REGULARIZATION, alpha_CUT(q, it.k)) );
-		    };
-
-            const auto singularities = get_singularities(it.k);
             // Fock part
-            if (singularities[0] < parent->fermi_wavevector) {
-                renormalization_cache[it.idx][0] = parent->momentumRanges.integrate(integrand_fock, parent->momentumRanges.K_MIN, singularities[0]);
-
-                if (singularities[1] < parent->fermi_wavevector) {
-                    renormalization_cache[it.idx][0] += parent->momentumRanges.integrate(integrand_fock, singularities[0], singularities[1]) +
-                            parent->momentumRanges.integrate(integrand_fock, singularities[1], parent->fermi_wavevector);
-                }
-                else {
-                    renormalization_cache[it.idx][0] += parent->momentumRanges.integrate(integrand_fock, singularities[0], parent->fermi_wavevector);
-                }
-            }
-            else {
-                renormalization_cache[it.idx][0] = parent->momentumRanges.integrate(integrand_fock, parent->momentumRanges.K_MIN, parent->fermi_wavevector);
-            }
-
+            renormalization_cache[it.idx][0] = parent->momentumRanges.cpv_integrate(integrand_fock_alpha, parent->momentumRanges.K_MIN, parent->fermi_wavevector, singularities[0])
+                + parent->momentumRanges.cpv_integrate(integrand_fock_beta, parent->momentumRanges.K_MIN, parent->fermi_wavevector, singularities[1]);
+            renormalization_cache[it.idx][0] *= factor;
+            
             // CUT flow part
-            renormalization_cache[it.idx][1] = parent->momentumRanges.integrate(integrand_infinity, parent->momentumRanges.K_MIN, singularities[0])
-                + parent->momentumRanges.integrate(integrand_infinity, singularities[0], singularities[1])
-                + parent->momentumRanges.integrate(integrand_infinity, singularities[1], parent->momentumRanges.K_MAX);
-
+            renormalization_cache[it.idx][1] = parent->momentumRanges.cpv_integrate(integrand_infinity, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, singularities[0]);
+            renormalization_cache[it.idx][1] *= factor;
+            renormalization_cache[it.idx][1] = renormalization_cache[it.idx][0];
         }
 #endif
     }
@@ -57,19 +49,14 @@ namespace Continuum {
         for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) 
         {
             try {
-			    singularities_cache[it.idx][0] = Utility::Numerics::Roots::bisection([this, &it](c_float q) { return beta_CUT(q, it.k);  }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
+			    singularities_cache[it.idx][0] = Utility::Numerics::Roots::bisection([this, &it](c_float q) { return alpha_CUT(q, it.k);  }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
             } catch (Utility::Numerics::Roots::NoRootException const & e) {
                 singularities_cache[it.idx][0] = 2 * parent->momentumRanges.K_MAX;
             }
             try {
-                singularities_cache[it.idx][1] = Utility::Numerics::Roots::bisection([this, &it](c_float q) { return alpha_CUT(q, it.k); }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
+                singularities_cache[it.idx][1] = Utility::Numerics::Roots::bisection([this, &it](c_float q) { return beta_CUT(q, it.k); }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
             } catch (Utility::Numerics::Roots::NoRootException const & e) {
                 singularities_cache[it.idx][1] = 2 * parent->momentumRanges.K_MAX;
-            }
-
-            // Assure that the singularities are ordered
-            if (singularities_cache[it.idx][0] > singularities_cache[it.idx][1]) {
-                std::swap(singularities_cache[it.idx][0], singularities_cache[it.idx][1]);
             }
 		};
     }

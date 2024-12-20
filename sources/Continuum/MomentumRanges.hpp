@@ -2,6 +2,7 @@
 #include "GlobalDefinitions.hpp"
 #include <concepts>
 #include <boost/math/quadrature/gauss.hpp>
+#include <Utility/Numerics/Integration/CauchyPrincipalValue.hpp>
 
 namespace Continuum {
 	struct MomentumRanges {
@@ -63,6 +64,33 @@ namespace Continuum {
 		}
 
 		template<class Function>
+		auto cpv_integrate(const Function& func, c_float begin, c_float end, c_float singularty) const {
+			decltype(func(begin)) value{ };
+			if (is_zero(begin - end)) return value;
+
+			if (begin <= INNER_K_MIN) {
+				value += __cpv_integrate(func, begin, std::min(end, INNER_K_MIN), singularty);
+				begin = INNER_K_MIN;
+			}
+
+			if (begin <= (*K_F) && end >= INNER_K_MIN) {
+				value += __cpv_integrate(func, std::max(begin, INNER_K_MIN), std::min(end, (*K_F)), singularty);
+				begin = (*K_F);
+			}
+
+			if (begin <= INNER_K_MAX && end >= (*K_F)) {
+				value += __cpv_integrate(func, std::max(begin, (*K_F)), std::min(end, INNER_K_MAX), singularty);
+				begin = INNER_K_MAX;
+			}
+
+			if (end >= INNER_K_MAX) {
+				value += __cpv_integrate(func, std::max(begin, INNER_K_MAX), end, singularty);
+			}
+
+			return value;
+		}
+
+		template<class Function>
 		inline auto integrate(const Function& func) const {
 			return __integrate(func, K_MIN, INNER_K_MIN)
 				+ __integrate(func, INNER_K_MIN, (*K_F))
@@ -70,13 +98,32 @@ namespace Continuum {
 				+ __integrate(func, INNER_K_MAX, K_MAX);
 		}
 
+		template<class Function>
+		inline auto cpv_integrate(const Function& func, c_float singularty) const {
+			return __cpv_integrate(func, K_MIN, INNER_K_MIN, singularty)
+				+ __cpv_integrate(func, INNER_K_MIN, (*K_F), singularty)
+				+ __cpv_integrate(func, (*K_F), INNER_K_MAX, singularty)
+				+ __cpv_integrate(func, INNER_K_MAX, K_MAX,  singularty);
+		}
+
 	private:
+		constexpr bool in_interval(c_float x, c_float lower, c_float upper) const {
+			return ((x > lower) && (x < upper));
+		}
+
 		template<class Function>
 		inline auto __integrate(const Function& func, c_float begin, c_float end) const {
 			if (is_zero(end - begin)) {
-				return decltype(func(begin)) { };
+				return decltype(func(begin)){};
 			}
 			return boost::math::quadrature::gauss<c_float, n_gauss>::integrate(func, begin, end);
+		}
+		template<class Function>
+		inline auto __cpv_integrate(const Function& func, c_float begin, c_float end, c_float singularity) const {
+			if (is_zero(end - begin)) {
+				return decltype(func(begin)){};
+			}
+			return Utility::Numerics::Integration::CauchyPrincipalValue<c_float, n_gauss>::cauchy_principal_value(func, begin, end, singularity);
 		}
 	};
 
