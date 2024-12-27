@@ -9,11 +9,11 @@
 #include <utility>
 #include <map>
 #include <boost/math/special_functions/pow.hpp>
-#include <SymbolicOperators/WickTerm.hpp>
-#include <Utility/InputFileReader.hpp>
-#include <Utility/Numerics/Interpolation.hpp>
+#include <mrock/SymbolicOperators/WickTerm.hpp>
+#include <mrock/Utility/InputFileReader.hpp>
+#include <mrock/Utility/Numerics/Interpolation.hpp>
 #include <boost/math/quadrature/gauss.hpp>
-#include <Utility/ConstexprPower.hpp>
+#include <mrock/Utility/ConstexprPower.hpp>
 #include "PhononInteraction.hpp"
 //#include "SharedAttributes.hpp"
 
@@ -48,10 +48,10 @@ namespace Continuum {
 		c_complex k_zero_integral() const;
 
 		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
-		inline c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first) const {
+		inline c_float computeCoefficient(mrock::SymbolicOperators::Coefficient const& coeff, c_float first) const {
 			return computeCoefficient(coeff, first, fermi_wavevector);
 		}
-		c_float computeCoefficient(SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const;
+		c_float computeCoefficient(mrock::SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const;
 
 		std::string info() const;
 		std::string to_folder() const;
@@ -60,7 +60,7 @@ namespace Continuum {
 		std::vector<c_complex> coulomb_gap() const;
 		c_complex delta_max() const;
 		std::vector<c_float> single_particle_dispersion() const;
-		const std::map<SymbolicOperators::OperatorType, std::vector<c_complex>>& get_expectation_values() const;
+		const std::map<mrock::SymbolicOperators::OperatorType, std::vector<c_complex>>& get_expectation_values() const;
 
 		void set_new_parameters(ModelInitializer const& parameters);
 		SCModel(ModelInitializer const& parameters);
@@ -139,7 +139,7 @@ namespace Continuum {
 		PhononInteraction phononInteraction;
 
 	private:
-		mutable std::map<SymbolicOperators::OperatorType, std::vector<c_complex>> _expecs;
+		mutable std::map<mrock::SymbolicOperators::OperatorType, std::vector<c_complex>> _expecs;
 	};
 
 	// /////////// //

@@ -1,7 +1,7 @@
 #include "PhononInteraction.hpp"
 #include "SCModel.hpp"
-#include <Utility/Numerics/Roots/Bisection.hpp>
-#include <Utility/Numerics/Interpolation.hpp>
+#include <mrock/Utility/Numerics/Roots/Bisection.hpp>
+#include <mrock/Utility/Numerics/Interpolation.hpp>
 #include <cmath>
 
 namespace Continuum {
@@ -49,13 +49,13 @@ namespace Continuum {
         for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) 
         {
             try {
-			    singularities_cache[it.idx][0] = Utility::Numerics::Roots::bisection([this, &it](c_float q) { return alpha_CUT(q, it.k);  }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
-            } catch (Utility::Numerics::Roots::NoRootException const & e) {
+			    singularities_cache[it.idx][0] = mrock::Utility::Numerics::Roots::bisection([this, &it](c_float q) { return alpha_CUT(q, it.k);  }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
+            } catch (mrock::Utility::Numerics::Roots::NoRootException const & e) {
                 singularities_cache[it.idx][0] = 2 * parent->momentumRanges.K_MAX;
             }
             try {
-                singularities_cache[it.idx][1] = Utility::Numerics::Roots::bisection([this, &it](c_float q) { return beta_CUT(q, it.k); }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
-            } catch (Utility::Numerics::Roots::NoRootException const & e) {
+                singularities_cache[it.idx][1] = mrock::Utility::Numerics::Roots::bisection([this, &it](c_float q) { return beta_CUT(q, it.k); }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
+            } catch (mrock::Utility::Numerics::Roots::NoRootException const & e) {
                 singularities_cache[it.idx][1] = 2 * parent->momentumRanges.K_MAX;
             }
 		};
@@ -69,9 +69,9 @@ namespace Continuum {
             index = parent->momentumRanges.size() - 2;
         }
         return {
-            Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
+            mrock::Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 singularities_cache[index][0], singularities_cache[index + 1][0]),
-            Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
+            mrock::Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 singularities_cache[index][1], singularities_cache[index + 1][1])
         };
     }
@@ -110,12 +110,12 @@ namespace Continuum {
 			return parent->phonon_boundary_b(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, parent->momentumRanges.K_MIN, fermi_wavevector, PRECISION, 200);
+		return mrock::Utility::Numerics::Roots::bisection(func, parent->momentumRanges.K_MIN, fermi_wavevector, PRECISION, 200);
 #else
 		const auto lb = func(parent->momentumRanges.K_MIN);
 		const auto ub = func(k);
 		if (lb * ub >= c_float{}) return parent->momentumRanges.K_MIN;
-		return Utility::Numerics::Roots::bisection(func, parent->momentumRanges.K_MIN, k, PRECISION, 200);
+		return mrock::Utility::Numerics::Roots::bisection(func, parent->momentumRanges.K_MIN, k, PRECISION, 200);
 #endif
 	}
 
@@ -131,12 +131,12 @@ namespace Continuum {
 			return parent->phonon_boundary_b(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return Utility::Numerics::Roots::bisection(func, fermi_wavevector, parent->momentumRanges.K_MAX, PRECISION, 200);
+		return mrock::Utility::Numerics::Roots::bisection(func, fermi_wavevector, parent->momentumRanges.K_MAX, PRECISION, 200);
 #else
 		const auto lb = func(k);
 		const auto ub = func(parent->momentumRanges.K_MAX);
 		if (lb * ub >= c_float{}) return parent->momentumRanges.K_MAX;
-		return Utility::Numerics::Roots::bisection(func, k, parent->momentumRanges.K_MAX, PRECISION, 200);
+		return mrock::Utility::Numerics::Roots::bisection(func, k, parent->momentumRanges.K_MAX, PRECISION, 200);
 #endif
 	}
 
@@ -147,7 +147,7 @@ namespace Continuum {
         if(index >= parent->momentumRanges.size() - 1) {
             index = parent->momentumRanges.size() - 2;
         }
-        return Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
+        return mrock::Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 renormalization_cache[index][0], renormalization_cache[index + 1][0]);
     }
     c_float PhononInteraction::renormalization_infinity(c_float k) const
@@ -157,7 +157,7 @@ namespace Continuum {
         if(index >= parent->momentumRanges.size() - 1) {
             index = parent->momentumRanges.size() - 2;
         }
-        return -Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
+        return -mrock::Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 renormalization_cache[index][1], renormalization_cache[index + 1][1]);
     }
     c_float PhononInteraction::fock_correction(c_float k) const
@@ -167,7 +167,7 @@ namespace Continuum {
         if(index >= parent->momentumRanges.size() - 1) {
             index = parent->momentumRanges.size() - 2;
         }
-        return Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
+        return mrock::Utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 renormalization_cache[index][2], renormalization_cache[index + 1][2]);
     }
 }

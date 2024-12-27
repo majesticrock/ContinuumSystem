@@ -1,5 +1,5 @@
 #pragma once
-#include <Utility/IsComplex.hpp>
+#include <mrock/Utility/IsComplex.hpp>
 #include "GlobalDefinitions.hpp"
 #include <vector>
 #include <complex>
@@ -15,7 +15,7 @@ namespace Continuum {
 		bool converged{};
 
 		using value_type = DataType;
-		using RealType = Utility::UnderlyingFloatingPoint_t<DataType>;
+		using RealType = mrock::Utility::UnderlyingFloatingPoint_t<DataType>;
 
 		~ModelAttributes() = default;
 		ModelAttributes() = default;
@@ -33,7 +33,7 @@ namespace Continuum {
 			std::mt19937 rng(dev());
 			std::uniform_real_distribution<> dis(0.0, 2.0 * 3.1415926);
 			for (auto& value : ret) {
-				if constexpr (Utility::is_complex<DataType>()) {
+				if constexpr (mrock::Utility::is_complex<DataType>()) {
 					value = std::polar(dis(rng), dis(rng));
 				}
 				else {
@@ -169,7 +169,7 @@ namespace Continuum {
 		}
 
 		inline ModelAttributes<RealType> real() const {
-			if constexpr (Utility::is_complex<DataType>()) {
+			if constexpr (mrock::Utility::is_complex<DataType>()) {
 				ModelAttributes<RealType> ret;
 				ret.converged = this->converged;
 				ret.selfconsistency_values.resize(this->size());
@@ -184,7 +184,7 @@ namespace Continuum {
 			}
 		};
 		inline ModelAttributes<RealType> imag() const {
-			if constexpr (Utility::is_complex<DataType>()) {
+			if constexpr (mrock::Utility::is_complex<DataType>()) {
 				ModelAttributes<RealType> ret;
 				ret.converged = this->converged;
 				ret.selfconsistency_values.resize(this->size());
@@ -202,7 +202,7 @@ namespace Continuum {
 			}
 		};
 		inline ModelAttributes<RealType> abs() const {
-			if constexpr (Utility::is_complex<DataType>()) {
+			if constexpr (mrock::Utility::is_complex<DataType>()) {
 				return ModelAttributes<RealType>(*this, Magnitude);
 			}
 			else {

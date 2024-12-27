@@ -38,11 +38,10 @@ SET_COMPILER_FLAGS(ContinuumSystem)
 
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)
-find_package(Utility REQUIRED)
-find_package(SymbolicOperators REQUIRED)
+find_package(mrock REQUIRED)
 
-target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX Utility::Utility SymbolicOperators::SymbolicOperators) # 
-target_include_directories(ContinuumSystem PRIVATE ${SymbolicOperators_INCLUDE_DIRS} ${Utility_INCLUDE_DIRS})
+target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX ${mrock_LIBRARIES})
+target_include_directories(ContinuumSystem PRIVATE ${mrock_INCLUDE_DIRS})
 
 # Add debug option
 option(ENABLE_DEBUG "Enable debugging" OFF)

@@ -3,7 +3,7 @@
 		inline auto I_1(ExpectationValues const& expecs, c_float k) const {
 			auto integrand = [&expecs, &k](c_float x) {
 				const c_float tanh_x = std::tanh(0.5 * x);
-				return expecs(k * tanh_x) * x * tanh_x / Utility::constexprPower<2>(std::cosh(0.5 * x));
+				return expecs(k * tanh_x) * x * tanh_x / mrock::Utility::constexprPower<2>(std::cosh(0.5 * x));
 				};
 
 			const c_float alpha{ momentumRanges.K_MIN / k };//
@@ -40,7 +40,7 @@
 		inline auto I_2(ExpectationValues const& expecs, c_float k) const {
 			auto integrand = [&expecs, &k](c_float x) {
 				const c_float coth_x = 1. / std::tanh(0.5 * x);
-				return expecs(k * coth_x) * x * coth_x / Utility::constexprPower<2>(std::sinh(0.5 * x));
+				return expecs(k * coth_x) * x * coth_x / mrock::Utility::constexprPower<2>(std::sinh(0.5 * x));
 				};
 			const c_float beta{ momentumRanges.K_MAX / k };
 			if(is_zero(beta - 1.)) return decltype(expecs(k)) {};

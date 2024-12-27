@@ -1,9 +1,9 @@
 #include "ModelInitializer.hpp"
-#include <Utility/Numerics/Roots/Bisection.hpp>
-#include <Utility/ConstexprPower.hpp>
+#include <mrock/Utility/Numerics/Roots/Bisection.hpp>
+#include <mrock/Utility/ConstexprPower.hpp>
 
 namespace Continuum {
-	ModelInitializer::ModelInitializer(Utility::InputFileReader& input)
+	ModelInitializer::ModelInitializer(mrock::Utility::InputFileReader& input)
 		: temperature{ input.getDouble("T") },
 		phonon_coupling{ input.getDouble("phonon_coupling") },
 		omega_debye{ 1e-3 * input.getDouble("omega_debye") }, // given in meV in the parameter file

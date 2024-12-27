@@ -1,6 +1,6 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
-#include <Utility/InputFileReader.hpp>
+#include <mrock/Utility/InputFileReader.hpp>
 
 namespace Continuum {
 	struct ModelInitializer {
@@ -18,7 +18,7 @@ namespace Continuum {
 		c_float fermi_energy;
 		c_float rho_F;
 
-		ModelInitializer(Utility::InputFileReader& input);
+		ModelInitializer(mrock::Utility::InputFileReader& input);
 
 		c_float compute_screening() const;
 		c_float compute_fermi_energy() const;
