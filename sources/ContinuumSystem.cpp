@@ -1,6 +1,6 @@
 #include "Continuum/SCModel.hpp"
-#include <mrock/Utility/Selfconsistency/IterativeSolver.hpp>
-#include <mrock/Utility/OutputConvenience.hpp>
+#include <mrock/utility/Selfconsistency/IterativeSolver.hpp>
+#include <mrock/utility/OutputConvenience.hpp>
 #include "Continuum/ModeHelper.hpp"
 #include "Continuum/Incrementer.hpp"
 
@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <concepts>
-#include <mrock/SymbolicOperators/WickOperator.hpp>
+#include <mrock/symbolic_operators/WickOperator.hpp>
 #include <nlohmann/json.hpp>
 
 #ifndef _NO_MPI
@@ -59,7 +59,7 @@ std::vector<number> imag_as_meV(std::vector<std::complex<number>> const& in_eV) 
 }
 
 void compute_small_U_gap() {
-	mrock::Utility::InputFileReader input("params/params.config");
+	mrock::utility::InputFileReader input("params/params.config");
 	constexpr int N_points = 200;
 	constexpr c_float step = 0.03;
 	constexpr c_float begin = 1;
@@ -71,12 +71,12 @@ void compute_small_U_gap() {
 		c_float entry = begin + step * U;
 		init.phonon_coupling = entry;
 		SCModel model(init);
-		mrock::Utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
+		mrock::utility::Selfconsistency::IterativeSolver<c_complex, SCModel, ModelAttributes<c_complex>> solver(&model, &model.Delta);
 		solver.compute();
 		const auto buffer = model.Delta.abs().as_vector();
 		gap_data[U] = { entry, *std::max_element(buffer.begin(), buffer.end()) };
 	}
-	mrock::Utility::saveData(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
+	mrock::utility::saveData(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
 }
 
 #define RANK_RANGES(x)  const double rank_range = (std::stod(argv[3]) - init.x) / n_ranks; \
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
 	int n_ranks = 1;
 #endif
 
-	mrock::Utility::InputFileReader input(argv[1]);
+	mrock::utility::InputFileReader input(argv[1]);
 	Continuum::set_discretization(input.getInt("discretization_points"));
 
 	if (false) { // compute gap in a range for small g
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
 		std::filesystem::create_directories(BASE_FOLDER + output_folder);
 		auto generate_comments = [&]() {
 			return nlohmann::json{
-				{ "time", 				mrock::Utility::time_stamp() },
+				{ "time", 				mrock::utility::time_stamp() },
 				{ "discretization", 	DISCRETIZATION },
 				{ "inner_discretization", _INNER_DISC },
 				{ "lambda_screening", 	modes.getModel().screening_ratio },
@@ -194,7 +194,7 @@ int main(int argc, char** argv) {
 				}
 			}
 			});
-		mrock::Utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
+		mrock::utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
 		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;
 
 		if (false) { // compute and save the expectation values
@@ -204,10 +204,10 @@ int main(int argc, char** argv) {
 			std::vector<c_float> occupations, pairs;
 			occupations.reserve(ks.size());
 			pairs.reserve(ks.size());
-			for (const auto& x : expecs[mrock::SymbolicOperators::Number_Type]) {
+			for (const auto& x : expecs[mrock::symbolic_operators::Number_Type]) {
 				occupations.push_back(std::real(x));
 			}
-			for (const auto& x : expecs[mrock::SymbolicOperators::SC_Type]) {
+			for (const auto& x : expecs[mrock::symbolic_operators::SC_Type]) {
 				pairs.push_back(std::real(x));
 			}
 
@@ -215,11 +215,11 @@ int main(int argc, char** argv) {
 				{"ks", ks}, {"n_k", occupations}, {"f_k", pairs}
 			};
 			jExpecs.merge_patch(generate_comments());
-			mrock::Utility::saveString(jExpecs.dump(4), BASE_FOLDER + output_folder + "expecs.json.gz");
+			mrock::utility::saveString(jExpecs.dump(4), BASE_FOLDER + output_folder + "expecs.json.gz");
 			std::cout << "Expectation values have been saved!" << std::endl;
 		}
 
-		if (false) {
+		if (true) {
 			auto resolvents = modes.computeCollectiveModes(150);
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {
@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
 					{ "continuum_boundaries", modes.continuum_boundaries() }
 				};
 				jResolvents.merge_patch(generate_comments());
-				mrock::Utility::saveString(jResolvents.dump(4), BASE_FOLDER + output_folder + "resolvents.json.gz");
+				mrock::utility::saveString(jResolvents.dump(4), BASE_FOLDER + output_folder + "resolvents.json.gz");
 			}
 		}
 

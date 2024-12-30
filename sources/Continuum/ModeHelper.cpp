@@ -1,12 +1,12 @@
 #include "ModeHelper.hpp"
 #include <memory>
 #include <cassert>
-#include <mrock/Utility/Numerics/Interpolation.hpp>
-#include <mrock/Utility/Numerics/Integration/TrapezoidalRule.hpp>
-#include <mrock/Utility/Selfconsistency/IterativeSolver.hpp>
-#include <mrock/Utility/Selfconsistency/BroydenSolver.hpp>
-#include <mrock/Utility/ConstexprPower.hpp>
-#include <mrock/Utility/Numerics/Minimization/Bisection.hpp>
+#include <mrock/utility/Numerics/Interpolation.hpp>
+#include <mrock/utility/Numerics/Integration/TrapezoidalRule.hpp>
+#include <mrock/utility/Selfconsistency/IterativeSolver.hpp>
+#include <mrock/utility/Selfconsistency/BroydenSolver.hpp>
+#include <mrock/utility/ConstexprPower.hpp>
+#include <mrock/utility/Numerics/Minimization/Bisection.hpp>
 #include <boost/math/quadrature/gauss.hpp>
 
 #define ieom_diag(k) k * k * (DISCRETIZATION * it.parent_step() / (2 * PI * PI))
@@ -19,7 +19,7 @@
 #endif
 
 namespace Continuum {
-	c_float ModeHelper::compute_momentum(mrock::SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
+	c_float ModeHelper::compute_momentum(mrock::symbolic_operators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
 	{
 		c_float momentum_value{};
 		for (const auto& momentum_pair : momentum.momentum_list) {
@@ -40,12 +40,12 @@ namespace Continuum {
 		return momentum_value;
 	}
 
-	c_complex ModeHelper::get_expectation_value(mrock::SymbolicOperators::WickOperator const& op, c_float momentum) const
+	c_complex ModeHelper::get_expectation_value(mrock::symbolic_operators::WickOperator const& op, c_float momentum) const
 	{
-		if (op.type == mrock::SymbolicOperators::Number_Type) {
+		if (op.type == mrock::symbolic_operators::Number_Type) {
 			return model->occupation(momentum);
 		}
-		else if (op.type == mrock::SymbolicOperators::SC_Type) {
+		else if (op.type == mrock::symbolic_operators::SC_Type) {
 			if (op.is_daggered) {
 				return __conj(model->sc_expectation_value(momentum));
 			}
@@ -191,13 +191,13 @@ namespace Continuum {
 		}
 	}
 
-	c_complex ModeHelper::compute_phonon_sum(const mrock::SymbolicOperators::WickTerm& term, c_float k, c_float l) const
+	c_complex ModeHelper::compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const
 	{
 		const int q_dependend = term.whichOperatorDependsOn('q');
-		mrock::SymbolicOperators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
-		mrock::SymbolicOperators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
+		mrock::symbolic_operators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
-		if (summed_op->type == mrock::SymbolicOperators::Number_Type) {
+		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
 			value = model->phononInteraction.sc_channel_integral(model->occupation, k);
 		}
 		else {
@@ -213,13 +213,13 @@ namespace Continuum {
 		return value;
 	}
 
-	c_complex ModeHelper::compute_em_sum(const mrock::SymbolicOperators::WickTerm& term, c_float k, c_float l) const
+	c_complex ModeHelper::compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const
 	{
 		const int q_dependend = term.whichOperatorDependsOn('q');
-		mrock::SymbolicOperators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
-		mrock::SymbolicOperators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
+		mrock::symbolic_operators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
-		if (summed_op->type == mrock::SymbolicOperators::Number_Type) {
+		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
 			value = -(model->fock_coulomb(k) + model->interpolate_delta_n(k));
 		}
 		else {
@@ -235,13 +235,13 @@ namespace Continuum {
 		return value;
 	}
 
-	c_complex ModeHelper::computeTerm(const mrock::SymbolicOperators::WickTerm& term, c_float k, c_float l) const
+	c_complex ModeHelper::computeTerm(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const
 	{
 		if (term.sums.momenta.empty()) {
 			c_complex value{ static_cast<c_float>(term.multiplicity) };
 
 			if (!term.coefficients.empty()) {
-				const mrock::SymbolicOperators::Coefficient* coeff_ptr = &term.coefficients.front();
+				const mrock::symbolic_operators::Coefficient* coeff_ptr = &term.coefficients.front();
 				if (coeff_ptr->momenta.size() == 2U) {
 					value *= model->computeCoefficient(*coeff_ptr, compute_momentum(coeff_ptr->momenta[0], k, l), compute_momentum(coeff_ptr->momenta[1], k, l));
 				}
@@ -312,9 +312,9 @@ namespace Continuum {
 		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
 
 #ifdef _iterative_selfconsistency
-		auto solver = mrock::Utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
+		auto solver = mrock::utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
 #else
-		auto solver = mrock::Utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
+		auto solver = mrock::utility::Selfconsistency::make_broyden<c_complex>(model.get(), &model->Delta, 200);
 #endif
 		solver.compute(true);
 

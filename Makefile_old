@@ -7,7 +7,7 @@ INCLUDEFLAGS = -isystem ~/usr/local/include
 CXXFLAGS = $(WARNINGS) -std=c++20 $(OPT) -fopenmp
 
 LDL_DIRS = -L/sw/gcc/5.3.0/rtf/lib64 -L/home/joshua/usr/local/include/boost_lib/
-LDLIBS = $(LDL_DIRS) -lboost_serialization -lboost_iostreams -lz ~/usr/local/lib/libSymbolicOperators.a
+LDLIBS = $(LDL_DIRS) -lboost_serialization -lboost_iostreams -lz ~/usr/local/lib/libsymbolic_operators.a
 
 WARNINGS = -Wall -Wno-sign-compare
 
@@ -15,7 +15,7 @@ OPT = -march=native -O3# -ffast-math
 
 CONT_SRCS=SCModel.cpp ModeHelper.cpp
 PART_SRCS=ContinuumSystem.cpp
-SRCS=$(addprefix SymbolicOperators/, $(COMMUTE_SRCS)) $(addprefix Continuum/, $(CONT_SRCS)) $(PART_SRCS)
+SRCS=$(addprefix symbolic_operators/, $(COMMUTE_SRCS)) $(addprefix Continuum/, $(CONT_SRCS)) $(PART_SRCS)
 
 OBJS=$(addprefix build/, $(subst .cpp,.o,$(SRCS)))
 

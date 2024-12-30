@@ -1,8 +1,8 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
-#include <mrock/SymbolicOperators/TermLoader.hpp>
-#include <mrock/SymbolicOperators/WickTerm.hpp>
-#include <mrock/Utility/better_to_string.hpp>
+#include <mrock/symbolic_operators/TermLoader.hpp>
+#include <mrock/symbolic_operators/WickTerm.hpp>
+#include <mrock/utility/better_to_string.hpp>
 #include "SCModel.hpp"
 #include <memory>
 #include <map>
@@ -12,11 +12,11 @@
 #endif
 
 #ifndef _XP
-#include <mrock/Utility/Numerics/iEoM/GeneralResolvent.hpp>
-#define __ieom_algorithm mrock::Utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_complex>
+#include <mrock/utility/Numerics/iEoM/GeneralResolvent.hpp>
+#define __ieom_algorithm mrock::utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_complex>
 #else
-#include <mrock/Utility/Numerics/iEoM/XPResolvent.hpp>
-#define __ieom_algorithm mrock::Utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>
+#include <mrock/utility/Numerics/iEoM/XPResolvent.hpp>
+#define __ieom_algorithm mrock::utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>
 #endif
 
 namespace Continuum {
@@ -27,13 +27,13 @@ namespace Continuum {
 		using _parent = __ieom_algorithm;
 		using m_iterator = InnerIterator;
 
-		c_float compute_momentum(mrock::SymbolicOperators::Momentum const& momentum, c_float k, c_float l, c_float q = 0) const;
-		c_complex get_expectation_value(mrock::SymbolicOperators::WickOperator const& op, c_float momentum) const;
+		c_float compute_momentum(mrock::symbolic_operators::Momentum const& momentum, c_float k, c_float l, c_float q = 0) const;
+		c_complex get_expectation_value(mrock::symbolic_operators::WickOperator const& op, c_float momentum) const;
 
-		c_complex compute_phonon_sum(const mrock::SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
-		c_complex compute_em_sum(const mrock::SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
+		c_complex compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const;
+		c_complex compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const;
 	protected:
-		mrock::SymbolicOperators::TermLoader wicks;
+		mrock::symbolic_operators::TermLoader wicks;
 		//size_t TOTAL_BASIS{};
 		constexpr static int hermitian_size = 2;
 		constexpr static int antihermitian_size = 1;
@@ -52,7 +52,7 @@ namespace Continuum {
 		void fill_block_M(int i, int j);
 		void fill_block_N(int i, int j);
 
-		c_complex computeTerm(const mrock::SymbolicOperators::WickTerm& term, c_float k, c_float l) const;
+		c_complex computeTerm(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const;
 	public:
 		std::vector<c_float> continuum_boundaries() const;
 

@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
-#include <mrock/Utility/UnderlyingFloatingPoint.hpp>
+#include <mrock/utility/UnderlyingFloatingPoint.hpp>
 #include <iostream>
 
 //#define approximate_theta
@@ -18,7 +18,7 @@
 
 #define _iterative_selfconsistency
 //#define COULOMB_SC_CHANNEL_ONLY
-//#define PHONON_SC_CHANNEL_ONLY
+#define PHONON_SC_CHANNEL_ONLY
 
 namespace Continuum {
 	using c_float = double;

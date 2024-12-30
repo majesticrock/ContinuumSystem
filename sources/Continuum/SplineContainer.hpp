@@ -10,7 +10,7 @@
 
 #include "GlobalDefinitions.hpp"
 #include <vector>
-#include <mrock/Utility/ComplexNumberIterators.hpp>
+#include <mrock/utility/ComplexNumberIterators.hpp>
 
 namespace Continuum {
 	template <class T>
@@ -19,10 +19,10 @@ namespace Continuum {
 		Spline real, imag;
 		ComplexSpline(std::complex<T> const* const data, int length, T left_endpoint, T step_size)
 		{
-			auto real_begin = mrock::Utility::make_real_part_iterator(data);
-			auto imag_begin = mrock::Utility::make_imag_part_iterator(data);
-			auto real_end = mrock::Utility::make_real_part_iterator_end(data, length);
-			auto imag_end = mrock::Utility::make_imag_part_iterator_end(data, length);
+			auto real_begin = mrock::utility::make_real_part_iterator(data);
+			auto imag_begin = mrock::utility::make_imag_part_iterator(data);
+			auto real_end = mrock::utility::make_real_part_iterator_end(data, length);
+			auto imag_end = mrock::utility::make_imag_part_iterator_end(data, length);
 			real = Spline(real_begin, real_end, left_endpoint, step_size);
 			imag = Spline(imag_begin, imag_end, left_endpoint, step_size);
 		}

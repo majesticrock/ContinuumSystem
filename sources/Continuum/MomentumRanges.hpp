@@ -2,7 +2,7 @@
 #include "GlobalDefinitions.hpp"
 #include <concepts>
 #include <boost/math/quadrature/gauss.hpp>
-#include <mrock/Utility/Numerics/Integration/CauchyPrincipalValue.hpp>
+#include <mrock/utility/Numerics/Integration/CauchyPrincipalValue.hpp>
 
 namespace Continuum {
 	struct MomentumRanges {
@@ -123,7 +123,7 @@ namespace Continuum {
 			if (is_zero(end - begin)) {
 				return decltype(func(begin)){};
 			}
-			return mrock::Utility::Numerics::Integration::CauchyPrincipalValue<c_float, n_gauss>::cauchy_principal_value(func, begin, end, singularity);
+			return mrock::utility::Numerics::Integration::CauchyPrincipalValue<c_float, n_gauss>::cauchy_principal_value(func, begin, end, singularity);
 		}
 	};
 

@@ -1,14 +1,14 @@
 #include "SCModel.hpp"
-#include <mrock/Utility/Numerics/Minimization/Bisection.hpp>
-#include <mrock/Utility/Selfconsistency/BroydenSolver.hpp>
+#include <mrock/utility/Numerics/Minimization/Bisection.hpp>
+#include <mrock/utility/Selfconsistency/BroydenSolver.hpp>
 #include <algorithm>
 #include <numeric>
 #include <complex>
-#include <mrock/Utility/Numerics/Roots/Bisection.hpp>
-#include <mrock/Utility/better_to_string.hpp>
+#include <mrock/utility/Numerics/Roots/Bisection.hpp>
+#include <mrock/utility/better_to_string.hpp>
 #include <limits>
 
-using mrock::Utility::constexprPower;
+using mrock::utility::constexprPower;
 
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
@@ -74,9 +74,9 @@ namespace Continuum {
 		std::cout << "Working on " << info() << std::endl;
 		set_splines();
 #ifdef _iterative_selfconsistency
-		auto solver = mrock::Utility::Selfconsistency::make_iterative<c_complex>(this, &Delta);
+		auto solver = mrock::utility::Selfconsistency::make_iterative<c_complex>(this, &Delta);
 #else
-		auto solver = mrock::Utility::Selfconsistency::make_broyden<c_complex>(this, &Delta, 200);
+		auto solver = mrock::utility::Selfconsistency::make_broyden<c_complex>(this, &Delta, 200);
 #endif
 		solver.compute(true);
 	}
@@ -150,8 +150,8 @@ namespace Continuum {
 		result.setZero();
 		this->Delta.fill_with(initial_values);
 		this->get_expectation_values();
-		this->occupation.set_new_ys(_expecs[mrock::SymbolicOperators::Number_Type]);
-		this->sc_expectation_value.set_new_ys(_expecs[mrock::SymbolicOperators::SC_Type]);
+		this->occupation.set_new_ys(_expecs[mrock::symbolic_operators::Number_Type]);
+		this->sc_expectation_value.set_new_ys(_expecs[mrock::symbolic_operators::SC_Type]);
 
 		auto delta_n_wrapper = [this](c_float q) {
 			return this->delta_n(q);
@@ -177,7 +177,7 @@ namespace Continuum {
 		++step_num;
 	}
 
-	c_float SCModel::computeCoefficient(mrock::SymbolicOperators::Coefficient const& coeff, c_float first, c_float second) const
+	c_float SCModel::computeCoefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first, c_float second) const
 	{
 		if (coeff.name == "\\epsilon_0")
 		{
@@ -215,15 +215,15 @@ namespace Continuum {
 		return 2. * bare_dispersion(k) + 2. * __fock_coulomb(k);
 	}
 
-	const std::map<mrock::SymbolicOperators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
+	const std::map<mrock::symbolic_operators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
 	{
 		if (_expecs.empty()) {
-			_expecs.emplace(mrock::SymbolicOperators::Number_Type, std::vector<c_complex>(DISCRETIZATION));
-			_expecs.emplace(mrock::SymbolicOperators::SC_Type, std::vector<c_complex>(DISCRETIZATION));
+			_expecs.emplace(mrock::symbolic_operators::Number_Type, std::vector<c_complex>(DISCRETIZATION));
+			_expecs.emplace(mrock::symbolic_operators::SC_Type, std::vector<c_complex>(DISCRETIZATION));
 		}
 		for (int k = 0; k < DISCRETIZATION; ++k) {
-			_expecs.at(mrock::SymbolicOperators::Number_Type)[k] = this->occupation_index(k);
-			_expecs.at(mrock::SymbolicOperators::SC_Type)[k] = this->sc_expectation_value_index(k);
+			_expecs.at(mrock::symbolic_operators::Number_Type)[k] = this->occupation_index(k);
+			_expecs.at(mrock::symbolic_operators::SC_Type)[k] = this->sc_expectation_value_index(k);
 		}
 
 		return _expecs;
@@ -235,7 +235,7 @@ namespace Continuum {
 			return (index >= DISCRETIZATION ? c_complex{} : Delta[DISCRETIZATION - 1]);
 		if (index < 0) // Assuming Delta(k) = 0 for k->0
 			return c_complex{};
-		return mrock::Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index));
+		return mrock::utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index));
 	}
 
 	c_float SCModel::interpolate_delta_n(c_float k) const {
@@ -244,7 +244,7 @@ namespace Continuum {
 			return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
 		if (index < 0) // Assuming Delta(k) = const for k->0
 			return c_float{};
-		return std::real(mrock::Utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index), DISCRETIZATION));
+		return std::real(mrock::utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index), DISCRETIZATION));
 	}
 
     c_float SCModel::internal_energy() const
@@ -268,7 +268,7 @@ namespace Continuum {
 			+ std::to_string(phonon_coupling) + "   omega_D="
 			+ std::to_string(1e3 * omega_debye) + "meV   E_F="
 			+ std::to_string(fermi_energy) + "eV   alpha=" + std::to_string(coulomb_scaling)
-			+ "lambda=" + std::to_string(screening) + "sqrt(eV)";
+			+ "   lambda=" + std::to_string(screening) + "sqrt(eV)";
 	}
 
 	std::string SCModel::to_folder() const {
@@ -281,7 +281,7 @@ namespace Continuum {
 				return out.str();
 			}
 			else {
-				std::string str = mrock::Utility::better_to_string(number, std::chars_format::fixed);
+				std::string str = mrock::utility::better_to_string(number, std::chars_format::fixed);
 				// Remove trailing zeroes
 				str.erase(str.find_last_not_of('0') + 1, std::string::npos);
 				str.erase(str.find_last_not_of('.') + 1, std::string::npos);
@@ -341,10 +341,10 @@ namespace Continuum {
 	void SCModel::set_splines()
 	{
 		this->get_expectation_values();
-		this->occupation = SplineContainer(_expecs[mrock::SymbolicOperators::Number_Type], momentumRanges.K_MIN,
+		this->occupation = SplineContainer(_expecs[mrock::symbolic_operators::Number_Type], momentumRanges.K_MIN,
 			momentumRanges.LOWER_STEP, momentumRanges.INNER_STEP, momentumRanges.UPPER_STEP,
 			_OUTER_DISC, _INNER_DISC);
-		this->sc_expectation_value = SplineContainer(_expecs[mrock::SymbolicOperators::SC_Type], momentumRanges.K_MIN,
+		this->sc_expectation_value = SplineContainer(_expecs[mrock::symbolic_operators::SC_Type], momentumRanges.K_MIN,
 			momentumRanges.LOWER_STEP, momentumRanges.INNER_STEP, momentumRanges.UPPER_STEP,
 			_OUTER_DISC, _INNER_DISC);
 	}
