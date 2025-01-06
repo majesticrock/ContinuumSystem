@@ -1,16 +1,15 @@
-#include "Continuum/SCModel.hpp"
 #include <mrock/utility/Selfconsistency/IterativeSolver.hpp>
 #include <mrock/utility/OutputConvenience.hpp>
-#include "Continuum/ModeHelper.hpp"
-#include "Continuum/Incrementer.hpp"
+#include <mrock/utility/info_to_json.hpp>
+#include <mrock/symbolic_operators/WickOperator.hpp>
+#include <nlohmann/json.hpp>
+#include <mrock/info.h>
 
 #include <iomanip>
 #include <omp.h>
 #include <filesystem>
 #include <algorithm>
 #include <concepts>
-#include <mrock/symbolic_operators/WickOperator.hpp>
-#include <nlohmann/json.hpp>
 
 #ifndef _NO_MPI
 #include <mpi.h>
@@ -18,6 +17,12 @@
 #else
 #define EXIT 0
 #endif
+
+#include "Continuum/SCModel.hpp"
+#include "Continuum/ModeHelper.hpp"
+#include "Continuum/Incrementer.hpp"
+// File is generated on build by cmake
+#include "../build/info.h"
 
 using namespace Continuum;
 const std::string BASE_FOLDER = "../../data/continuum/";
@@ -175,6 +180,11 @@ int main(int argc, char** argv) {
 				{ "internal_energy", 	modes.getModel().internal_energy() }
 			};
 			};
+
+		// Generate metadata
+		nlohmann::json info_json = mrock::utility::generate_json<ContinuumSystem::info>("continuum_");
+		info_json.update(mrock::utility::generate_json<mrock::info>("mrock_"));
+		mrock::utility::saveString(info_json.dump(4), BASE_FOLDER + output_folder + "metadata.json.gz");
 
 		/*
 		* Compute and output gap data

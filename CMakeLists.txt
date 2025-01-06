@@ -15,6 +15,7 @@ if(CLUSTER_BUILD)
 else()
     include(${CMAKE_SOURCE_DIR}/cmake/DefaultCompilerFlags.cmake)
 endif()
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../PhdUtility/cmake/mrock-information.cmake)
 
 include_directories(
     $ENV{HOME}/usr/local/include
