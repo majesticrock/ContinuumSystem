@@ -8,36 +8,39 @@ namespace Continuum {
     void PhononInteraction::compute_renormalization_table()
     {
         assert(parent != nullptr);
-        renormalization_cache.resize(parent->momentumRanges.size(), std::array<c_float, 3>{ c_float{}, c_float{}, c_float{} });
+        renormalization_cache.resize(parent->momentumRanges.size(), std::array<c_float, 2>{ c_float{}, c_float{} });
 
 #ifdef PHONON_SC_CHANNEL_ONLY
         return;
 #else
-        // Typically around 1e-3
-        const c_float factor = 1;//(*ptr_phonon_coupling) * (*ptr_omega_debye) / (2. * PI * PI * (*ptr_rho_F));
-        for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) {
+        
+        auto compute_at_k = [this](c_float k) {
             // First singularity is in alpha, second one in beta
-            const std::array<c_float, 2> singularities = get_singularities(it.k);
+            const std::array<c_float, 2> singularities = get_singularities(k);
+            auto integrand_fock_alpha = [this, &k, &singularities](c_float q) -> c_float {
+                // for q->infinity the integrand becomes q^2 / (0.5 * q^2) = 2
+                // to avoid giant values we substract this 2
+                // This is essentially just a constant shift in energy, which we simply absorb into the chemical potential
+                return c_float{-2} + q * q / std::copysign(std::abs(alpha_CUT(q, k)) + CUT_REGULARIZATION, alpha_CUT(q, k));
+		    };
+            auto integrand_fock_beta = [this, &k, &singularities](c_float q) -> c_float {
+                return c_float{-2} + q * q / std::copysign(std::abs(beta_CUT(q, k)) + CUT_REGULARIZATION, beta_CUT(q, k));
+		    };
 
-            auto integrand_infinity = [this, &it, &singularities](c_float q) -> c_float {
-		    	return q * q * (q - singularities[0]) / std::copysign(std::abs(alpha_CUT(q, it.k)) + CUT_REGULARIZATION, alpha_CUT(q, it.k)) ;
-		    };
-            auto integrand_fock_alpha = [this, &it, &singularities](c_float q) -> c_float {
-                return -q * q * (q - singularities[0]) / alpha_CUT(q, it.k);
-		    };
-            auto integrand_fock_beta = [this, &it, &singularities](c_float q) -> c_float {
-                return q * q * (q - singularities[1])  / beta_CUT(q, it.k);
-		    };
+            return - mrock::utility::Numerics::Integration::GeneralizedPrincipalValue<c_float, 120>::generalized_principal_value(
+                    integrand_fock_alpha, parent->fermi_wavevector, parent->momentumRanges.K_MAX /* infinity */, singularities[0])
+                - boost::math::quadrature::gauss<c_float, 10000>::integrate(integrand_fock_alpha, parent->momentumRanges.K_MAX, 1e4 /* infinity */)
+                - mrock::utility::Numerics::Integration::GeneralizedPrincipalValue<c_float, 120>::generalized_principal_value(
+                    integrand_fock_beta, parent->momentumRanges.K_MIN, parent->fermi_wavevector, singularities[1]);
+        };
 
-            // Fock part
-            renormalization_cache[it.idx][0] = parent->momentumRanges.cpv_integrate(integrand_fock_alpha, parent->momentumRanges.K_MIN, parent->fermi_wavevector, singularities[0])
-                + parent->momentumRanges.cpv_integrate(integrand_fock_beta, parent->momentumRanges.K_MIN, parent->fermi_wavevector, singularities[1]);
-            renormalization_cache[it.idx][0] *= factor;
-            
-            // CUT flow part
-            renormalization_cache[it.idx][1] = parent->momentumRanges.cpv_integrate(integrand_infinity, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, singularities[0]);
-            renormalization_cache[it.idx][1] *= factor;
-            renormalization_cache[it.idx][1] = renormalization_cache[it.idx][0];
+        const c_float value_at_k_f = compute_at_k(parent->fermi_wavevector);
+        // Typically around 1e-3
+        const c_float M_SQUARED = (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
+        const c_float factor = M_SQUARED / (2. * PI * PI);
+        for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) {
+            // Fock part is initially 0
+            renormalization_cache[it.idx][0] = factor * ( compute_at_k(it.k) - value_at_k_f );
         }
 #endif
     }
@@ -49,12 +52,14 @@ namespace Continuum {
         for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) 
         {
             try {
-			    singularities_cache[it.idx][0] = mrock::utility::Numerics::Roots::bisection([this, &it](c_float q) { return alpha_CUT(q, it.k);  }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
+			    singularities_cache[it.idx][0] = mrock::utility::Numerics::Roots::bisection(
+                    [this, &it](c_float q) { return alpha_CUT(q, it.k);  }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
             } catch (mrock::utility::Numerics::Roots::NoRootException const & e) {
                 singularities_cache[it.idx][0] = 2 * parent->momentumRanges.K_MAX;
             }
             try {
-                singularities_cache[it.idx][1] = mrock::utility::Numerics::Roots::bisection([this, &it](c_float q) { return beta_CUT(q, it.k); }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
+                singularities_cache[it.idx][1] = mrock::utility::Numerics::Roots::bisection(
+                    [this, &it](c_float q) { return beta_CUT(q, it.k); }, parent->momentumRanges.K_MIN, parent->momentumRanges.K_MAX, PRECISION, 200);
             } catch (mrock::utility::Numerics::Roots::NoRootException const & e) {
                 singularities_cache[it.idx][1] = 2 * parent->momentumRanges.K_MAX;
             }
@@ -140,7 +145,7 @@ namespace Continuum {
 #endif
 	}
 
-    c_float PhononInteraction::renormalization_fock(c_float k) const
+    c_float PhononInteraction::renormalization_flow(c_float k) const
     {
         assert(parent != nullptr);
         int index = parent->momentumRanges.momentum_to_floor_index(k);
@@ -150,16 +155,6 @@ namespace Continuum {
         return mrock::utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 renormalization_cache[index][0], renormalization_cache[index + 1][0]);
     }
-    c_float PhononInteraction::renormalization_infinity(c_float k) const
-    {
-        assert(parent != nullptr);
-        int index = parent->momentumRanges.momentum_to_floor_index(k);
-        if(index >= parent->momentumRanges.size() - 1) {
-            index = parent->momentumRanges.size() - 2;
-        }
-        return -mrock::utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
-                                renormalization_cache[index][1], renormalization_cache[index + 1][1]);
-    }
     c_float PhononInteraction::fock_correction(c_float k) const
     {
         assert(parent != nullptr);
@@ -168,6 +163,6 @@ namespace Continuum {
             index = parent->momentumRanges.size() - 2;
         }
         return mrock::utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
-                                renormalization_cache[index][2], renormalization_cache[index + 1][2]);
+                                renormalization_cache[index][1], renormalization_cache[index + 1][1]);
     }
 }

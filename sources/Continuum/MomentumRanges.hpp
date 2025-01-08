@@ -2,7 +2,7 @@
 #include "GlobalDefinitions.hpp"
 #include <concepts>
 #include <boost/math/quadrature/gauss.hpp>
-#include <mrock/utility/Numerics/Integration/CauchyPrincipalValue.hpp>
+#include <mrock/utility/Numerics/Integration/GeneralizedPrincipalValue.hpp>
 
 namespace Continuum {
 	struct MomentumRanges {
@@ -64,30 +64,18 @@ namespace Continuum {
 		}
 
 		template<class Function>
-		auto cpv_integrate(const Function& func, c_float begin, c_float end, c_float singularty) const {
-			decltype(func(begin)) value{ };
-			if (is_zero(begin - end)) return value;
-
-			if (begin <= INNER_K_MIN) {
-				value += __cpv_integrate(func, begin, std::min(end, INNER_K_MIN), singularty);
-				begin = INNER_K_MIN;
-			}
-
-			if (begin <= (*K_F) && end >= INNER_K_MIN) {
-				value += __cpv_integrate(func, std::max(begin, INNER_K_MIN), std::min(end, (*K_F)), singularty);
-				begin = (*K_F);
-			}
-
-			if (begin <= INNER_K_MAX && end >= (*K_F)) {
-				value += __cpv_integrate(func, std::max(begin, (*K_F)), std::min(end, INNER_K_MAX), singularty);
-				begin = INNER_K_MAX;
-			}
-
-			if (end >= INNER_K_MAX) {
-				value += __cpv_integrate(func, std::max(begin, INNER_K_MAX), end, singularty);
-			}
-
-			return value;
+		auto cpv_integrate(const Function& func, c_float begin, c_float end, const c_float& singularity) const {
+			auto distinction = [this, &singularity](c_float comp) {
+				return ((std::abs(singularity - comp) < SINGULARITY_OFFSET) ? -1 : comp);
+			};
+			std::array<c_float, 4> special_points = {
+				distinction(INNER_K_MIN), 
+				distinction(*K_F), 
+				distinction(INNER_K_MAX), 
+				singularity
+				};
+			std::ranges::sort(special_points);
+			return __cpv_integrate(func, begin, end, special_points);
 		}
 
 		template<class Function>
@@ -98,12 +86,19 @@ namespace Continuum {
 				+ __integrate(func, INNER_K_MAX, K_MAX);
 		}
 
-		template<class Function>
-		inline auto cpv_integrate(const Function& func, c_float singularty) const {
-			return __cpv_integrate(func, K_MIN, INNER_K_MIN, singularty)
-				+ __cpv_integrate(func, INNER_K_MIN, (*K_F), singularty)
-				+ __cpv_integrate(func, (*K_F), INNER_K_MAX, singularty)
-				+ __cpv_integrate(func, INNER_K_MAX, K_MAX,  singularty);
+		template<class Function, class c_float>
+		inline auto cpv_integrate(const Function& func, const c_float& singularity) const {
+			auto distinction = [this, &singularity](c_float comp) {
+				return ((std::abs(singularity - comp) < SINGULARITY_OFFSET) ? -1 : comp);
+			};
+			std::array<c_float, 4> special_points = {
+				distinction(INNER_K_MIN), 
+				distinction(*K_F), 
+				distinction(INNER_K_MAX), 
+				singularity
+				};
+			std::ranges::sort(special_points);
+			return __cpv_integrate(func, K_MIN, K_MAX, special_points);
 		}
 
 	private:
@@ -118,12 +113,12 @@ namespace Continuum {
 			}
 			return boost::math::quadrature::gauss<c_float, n_gauss>::integrate(func, begin, end);
 		}
-		template<class Function>
-		inline auto __cpv_integrate(const Function& func, c_float begin, c_float end, c_float singularity) const {
+		template<class Function, class Real_or_RandomAccessContainer>
+		inline auto __cpv_integrate(const Function& func, c_float begin, c_float end, const Real_or_RandomAccessContainer& singularity) const {
 			if (is_zero(end - begin)) {
 				return decltype(func(begin)){};
 			}
-			return mrock::utility::Numerics::Integration::CauchyPrincipalValue<c_float, n_gauss>::cauchy_principal_value(func, begin, end, singularity);
+			return mrock::utility::Numerics::Integration::GeneralizedPrincipalValue<c_float, n_gauss>::generalized_principal_value(func, begin, end, singularity);
 		}
 	};
 

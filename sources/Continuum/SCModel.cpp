@@ -212,7 +212,11 @@ namespace Continuum {
 	}
 
 	c_float SCModel::phonon_boundary_a(const c_float k) const {
+#ifdef CUT_DISPERSION_NO_COULOMB
+		return 2. * bare_dispersion(k);// + 2. * __fock_coulomb(k);
+#else
 		return 2. * bare_dispersion(k) + 2. * __fock_coulomb(k);
+#endif
 	}
 
 	const std::map<mrock::symbolic_operators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
@@ -333,7 +337,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = renormalized_dispersion(it.k) + __fock_coulomb(it.k);
+			ret[it.idx] = renormalized_dispersion(it.k) + __fock_coulomb(fermi_wavevector);
 		}
 		return ret;
 	}

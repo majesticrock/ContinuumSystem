@@ -166,11 +166,11 @@ namespace Continuum {
 
     c_float SCModel::renormalized_dispersion(c_float k) const
     {
-        return  bare_dispersion(k) + phononInteraction.renormalization_infinity(k) - fermi_energy ;
+        return  bare_dispersion(k) + phononInteraction.renormalization_flow(k) - fermi_energy ;
     }
     c_float SCModel::dispersion_to_fermi_level(c_float k) const
     {
-        return renormalized_dispersion(k) + __fock_coulomb(k) + __interpolate_delta_n(k) + phononInteraction.renormalization_fock(k);
+        return renormalized_dispersion(k) + __fock_coulomb(k) + __interpolate_delta_n(k) + phononInteraction.fock_correction(k);
     }
     c_float SCModel::dispersion_to_fermi_level_index(int k) const {
 #ifdef COULOMB_SC_CHANNEL_ONLY
@@ -187,6 +187,10 @@ namespace Continuum {
 		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level_index(k)) + std::norm(Delta[k]));
 	}
 	c_float SCModel::delta_epsilon(c_float k, c_float k_prime) const {
-		return bare_dispersion(k) + __fock_coulomb(k) - bare_dispersion(k_prime) - __fock_coulomb(k_prime);
+#ifdef CUT_DISPERSION_NO_COULOMB
+		return bare_dispersion(k) - bare_dispersion(k_prime);
+#else
+		return bare_dispersion(k) - bare_dispersion(k_prime) + __fock_coulomb(k) - __fock_coulomb(k_prime);
+#endif
 	}
 }

@@ -25,8 +25,7 @@ namespace Continuum {
         c_float sc_channel_lower_bound(c_float k) const;
 		c_float sc_channel_upper_bound(c_float k) const;
 
-        c_float renormalization_fock(c_float k) const;
-        c_float renormalization_infinity(c_float k) const; 
+        c_float renormalization_flow(c_float k) const;
         c_float fock_correction(c_float k) const;
 
         /*template<class ExpectationValues>
@@ -51,9 +50,13 @@ namespace Continuum {
         std::vector<std::array<c_float, 2>> singularities_cache;
     public:
         // [0] up to k_F; [1] up to K_MAX
-        std::vector<std::array<c_float, 3>> renormalization_cache;
+        std::vector<std::array<c_float, 2>> renormalization_cache;
     };
 
+
+    /*
+    *  Template implementations
+    */
     template<class ExpectationValues>
 	decltype(std::declval<ExpectationValues>()(c_float{})) PhononInteraction::sc_channel_integral(ExpectationValues const& expecs, c_float k) const
     {

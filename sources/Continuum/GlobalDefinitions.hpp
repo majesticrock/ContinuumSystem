@@ -19,6 +19,7 @@
 #define _iterative_selfconsistency
 //#define COULOMB_SC_CHANNEL_ONLY
 #define PHONON_SC_CHANNEL_ONLY
+//#define CUT_DISPERSION_NO_COULOMB
 
 namespace Continuum {
 	using c_float = double;
@@ -34,7 +35,7 @@ namespace Continuum {
 	constexpr c_float PRECISION = 5.684341886080802e-14; // 0 | 01111010011 | 0000000000000000000000000000000000000000000000000000
 
 	constexpr c_float CUT_REGULARIZATION = 1e-8;
-	constexpr c_float SINGULARITY_OFFSET = 1e-8;
+	constexpr c_float SINGULARITY_OFFSET = 1e-2;
 
 	/* This function abuses the structure of our desired precision:
 	*  The mantissa is empty, i.e., we can solely rely on the exponent.
@@ -50,6 +51,10 @@ namespace Continuum {
 
 	inline bool is_zero(std::complex<double> number) {
 		return is_zero(std::abs(number));
+	}
+
+	inline bool is_same(double a, double b) {
+		return is_zero(a - b);
 	}
 
 	using SpinorMatrix = Eigen::Matrix<c_complex, Eigen::Dynamic, Eigen::Dynamic>;
