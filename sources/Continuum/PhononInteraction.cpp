@@ -13,35 +13,50 @@ namespace Continuum {
 #ifdef PHONON_SC_CHANNEL_ONLY
         return;
 #else
-        
+#ifdef CUT_DISPERSION_NO_COULOMB
+        // Typically around 1e-3
+        const c_float M_SQUARED = (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
+        const c_float factor = M_SQUARED / (2. * PI * PI);
+        // TODO: Stimmt das Vorzeichen?!
+        for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) {
+            // Fock correction is initially 0
+            const c_float sqrt_minus = sqrt(std::abs(it.k * it.k - *ptr_omega_debye));
+            const c_float sqrt_plus = sqrt(it.k * it.k + *ptr_omega_debye);
+
+            const c_float term_alpha = (it.k * it.k < *ptr_omega_debye 
+                ? sqrt_minus * (std::atan(*ptr_fermi_wavevector / sqrt_minus) - M_PI_2)
+                : sqrt_minus * std::log( (std::abs(*ptr_fermi_wavevector - sqrt_minus) + CUT_REGULARIZATION) / (std::abs(*ptr_fermi_wavevector + sqrt_minus) + CUT_REGULARIZATION) ) );
+            const c_float term_beta = sqrt_plus * std::log( (std::abs(*ptr_fermi_wavevector - sqrt_plus) + CUT_REGULARIZATION) / (std::abs(*ptr_fermi_wavevector + sqrt_plus) + CUT_REGULARIZATION) );
+            renormalization_cache[it.idx][0] = factor * ( term_alpha - term_beta );
+
+        }
+#else
         auto compute_at_k = [this](c_float k) {
             // First singularity is in alpha, second one in beta
             const std::array<c_float, 2> singularities = get_singularities(k);
-            auto integrand_fock_alpha = [this, &k, &singularities](c_float q) -> c_float {
+            auto integrand_fock_alpha = [this, &k](c_float q) -> c_float {
                 // for q->infinity the integrand becomes q^2 / (0.5 * q^2) = 2
                 // to avoid giant values we substract this 2
                 // This is essentially just a constant shift in energy, which we simply absorb into the chemical potential
                 return c_float{-2} + q * q / std::copysign(std::abs(alpha_CUT(q, k)) + CUT_REGULARIZATION, alpha_CUT(q, k));
 		    };
-            auto integrand_fock_beta = [this, &k, &singularities](c_float q) -> c_float {
+            auto integrand_fock_beta = [this, &k](c_float q) -> c_float {
                 return c_float{-2} + q * q / std::copysign(std::abs(beta_CUT(q, k)) + CUT_REGULARIZATION, beta_CUT(q, k));
 		    };
 
-            return - mrock::utility::Numerics::Integration::GeneralizedPrincipalValue<c_float, 120>::generalized_principal_value(
+            return mrock::utility::Numerics::Integration::GeneralizedPrincipalValue<c_float, 120>::generalized_principal_value(
                     integrand_fock_alpha, parent->fermi_wavevector, parent->momentumRanges.K_MAX /* infinity */, singularities[0])
-                - boost::math::quadrature::gauss<c_float, 10000>::integrate(integrand_fock_alpha, parent->momentumRanges.K_MAX, 1e4 /* infinity */)
-                - mrock::utility::Numerics::Integration::GeneralizedPrincipalValue<c_float, 120>::generalized_principal_value(
+                + boost::math::quadrature::gauss<c_float, 10000>::integrate(integrand_fock_alpha, parent->momentumRanges.K_MAX, 1e4 /* infinity */)
+                + mrock::utility::Numerics::Integration::GeneralizedPrincipalValue<c_float, 120>::generalized_principal_value(
                     integrand_fock_beta, parent->momentumRanges.K_MIN, parent->fermi_wavevector, singularities[1]);
         };
 
         const c_float value_at_k_f = compute_at_k(parent->fermi_wavevector);
-        // Typically around 1e-3
-        const c_float M_SQUARED = (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
-        const c_float factor = M_SQUARED / (2. * PI * PI);
         for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) {
-            // Fock part is initially 0
+            // Fock correction is initially 0
             renormalization_cache[it.idx][0] = factor * ( compute_at_k(it.k) - value_at_k_f );
         }
+#endif
 #endif
     }
 

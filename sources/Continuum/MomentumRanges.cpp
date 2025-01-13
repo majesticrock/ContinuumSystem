@@ -17,10 +17,14 @@ namespace Continuum {
 		LOWER_STEP{ (INNER_K_MIN - K_MIN) / _OUTER_DISC },
 		INNER_STEP{ (INNER_K_MAX - INNER_K_MIN) / _INNER_DISC },
 		UPPER_STEP{ (K_MAX - INNER_K_MAX) / _OUTER_DISC },
-		K_F{ k_F }
+		K_F{ k_F },
+		singularities_in_renormalized_dispersion{ sqrt(*k_F * *k_F - 2. * omega_debye), sqrt(*k_F * *k_F + 2. * omega_debye) }
 	{
 		assert(index_to_momentum(0) >= 0);
 #ifndef _NDEBUG
+		for (int i = 1; i < n_dangerous_points; ++i) {
+			assert(dangerous_point(i - 1) <= dangerous_point(i));
+		}
 		for (int i = 0; i < DISCRETIZATION; ++i) {
 			const double k = index_to_momentum(i);
 			if (i != momentum_to_index(k)) {

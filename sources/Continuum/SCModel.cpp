@@ -145,7 +145,7 @@ namespace Continuum {
 		return 0.5 * (1 - (eps_mu / E) * std::tanh(E / (2. * PhysicalConstants::k_B * temperature)));
 	}
 
-	void SCModel::iterationStep(const ParameterVector& initial_values, ParameterVector& result) {
+	void SCModel::iteration_step(const ParameterVector& initial_values, ParameterVector& result) {
 		static int step_num = 0;
 		result.setZero();
 		this->Delta.fill_with(initial_values);

@@ -7,7 +7,11 @@
 namespace Continuum {
 	struct MomentumRanges {
 		static constexpr int n_gauss = 120;
-
+#ifdef PHONON_SC_CHANNEL_ONLY
+		static constexpr int n_dangerous_points = 3;
+#else
+		static constexpr int n_dangerous_points = 5;
+#endif
 		c_float K_MAX{};
 		c_float K_MIN{};
 
@@ -19,6 +23,7 @@ namespace Continuum {
 		c_float UPPER_STEP{};
 
 		c_float const * K_F;
+		std::array<c_float, 2> singularities_in_renormalized_dispersion;
 
 		MomentumRanges(c_float const * k_F, const c_float omega_debye, c_float inner_offset);
 
@@ -40,26 +45,18 @@ namespace Continuum {
 		auto integrate(const Function& func, c_float begin, c_float end) const {
 			decltype(func(begin)) value{ };
 			if (is_zero(begin - end)) return value;
+			if (begin < K_MIN) begin = K_MIN;
+			if (end > K_MAX) end = K_MAX;
 
-			if (begin <= INNER_K_MIN) {
-				value += __integrate(func, begin, std::min(end, INNER_K_MIN));
-				begin = INNER_K_MIN;
+			int n{};
+			while(n < n_dangerous_points && begin > dangerous_point(n)) {
+				++n;
 			}
-
-			if (begin <= (*K_F) && end >= INNER_K_MIN) {
-				value += __integrate(func, std::max(begin, INNER_K_MIN), std::min(end, (*K_F)));
-				begin = (*K_F);
+			while(++n < n_dangerous_points && end > dangerous_point(n)) {
+				value += __integrate(func, begin, dangerous_point(n - 1));
+				begin = dangerous_point(n - 1);
 			}
-
-			if (begin <= INNER_K_MAX && end >= (*K_F)) {
-				value += __integrate(func, std::max(begin, (*K_F)), std::min(end, INNER_K_MAX));
-				begin = INNER_K_MAX;
-			}
-
-			if (end >= INNER_K_MAX) {
-				value += __integrate(func, std::max(begin, INNER_K_MAX), end);
-			}
-
+			value += __integrate(func, begin, end);
 			return value;
 		}
 
@@ -68,12 +65,11 @@ namespace Continuum {
 			auto distinction = [this, &singularity](c_float comp) {
 				return ((std::abs(singularity - comp) < SINGULARITY_OFFSET) ? -1 : comp);
 			};
-			std::array<c_float, 4> special_points = {
-				distinction(INNER_K_MIN), 
-				distinction(*K_F), 
-				distinction(INNER_K_MAX), 
-				singularity
-				};
+			std::array<c_float, n_dangerous_points + 1> special_points;
+			for (int i = 0; i < n_dangerous_points; ++i) {
+				special_points[i] = distinction(dangerous_point(i));
+			}
+			special_points.back() = singularity;
 			std::ranges::sort(special_points);
 			return __cpv_integrate(func, begin, end, special_points);
 		}
@@ -91,12 +87,11 @@ namespace Continuum {
 			auto distinction = [this, &singularity](c_float comp) {
 				return ((std::abs(singularity - comp) < SINGULARITY_OFFSET) ? -1 : comp);
 			};
-			std::array<c_float, 4> special_points = {
-				distinction(INNER_K_MIN), 
-				distinction(*K_F), 
-				distinction(INNER_K_MAX), 
-				singularity
-				};
+			std::array<c_float, n_dangerous_points + 1> special_points;
+			for (int i = 0; i < n_dangerous_points; ++i) {
+				special_points[i] = distinction(dangerous_point(i));
+			}
+			special_points.back() = singularity;
 			std::ranges::sort(special_points);
 			return __cpv_integrate(func, K_MIN, K_MAX, special_points);
 		}
@@ -104,6 +99,34 @@ namespace Continuum {
 	private:
 		constexpr bool in_interval(c_float x, c_float lower, c_float upper) const {
 			return ((x > lower) && (x < upper));
+		}
+
+		inline c_float dangerous_point(int i) const {
+			assert(i < n_dangerous_points);
+#ifdef PHONON_SC_CHANNEL_ONLY
+			switch(i) {
+				case 0:
+					return INNER_K_MIN; break;
+				case 1:
+					return (*K_F); break;
+				case 2:
+					return INNER_K_MAX; break;
+			}
+#else
+			switch(i) {
+				case 0:
+					return INNER_K_MIN; break;
+				case 1:
+					return singularities_in_renormalized_dispersion[0]; break;
+				case 2:
+					return (*K_F); break;
+				case 3:
+					return singularities_in_renormalized_dispersion[1]; break;
+				case 4:
+					return INNER_K_MAX; break;
+			}
+#endif
+			throw std::runtime_error("Reached the end of MomentumRanges::dangerous_point");
 		}
 
 		template<class Function>

@@ -47,7 +47,7 @@ namespace Continuum {
 		c_complex k_infinity_integral() const;
 		c_complex k_zero_integral() const;
 
-		void iterationStep(const ParameterVector& initial_values, ParameterVector& result);
+		void iteration_step(const ParameterVector& initial_values, ParameterVector& result);
 		inline c_float computeCoefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first) const {
 			return computeCoefficient(coeff, first, fermi_wavevector);
 		}

@@ -81,7 +81,7 @@ void compute_small_U_gap() {
 		const auto buffer = model.Delta.abs().as_vector();
 		gap_data[U] = { entry, *std::max_element(buffer.begin(), buffer.end()) };
 	}
-	mrock::utility::saveData(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
+	mrock::utility::save_data(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
 }
 
 #define RANK_RANGES(x)  const double rank_range = (std::stod(argv[3]) - init.x) / n_ranks; \
@@ -229,8 +229,8 @@ int main(int argc, char** argv) {
 			std::cout << "Expectation values have been saved!" << std::endl;
 		}
 
-		if (true) {
-			auto resolvents = modes.computeCollectiveModes(150);
+		if (false) {
+			auto resolvents = modes.compute_collective_modes(150);
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {
 					{ "resolvents", resolvents },

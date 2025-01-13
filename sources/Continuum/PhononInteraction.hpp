@@ -75,28 +75,21 @@ namespace Continuum {
         return decltype(std::declval<ExpectationValues>()(c_float{})){};
 #else
         assert(parent != nullptr);
-        auto integrand_fock = [this, k, &expecs](c_float q) -> c_float {
-	    	return expecs(k) * q * q * 
-	    		( 1. / std::copysign(std::abs(beta_CUT(q, k)) + CUT_REGULARIZATION, beta_CUT(q, k)) 
-	    		- 1. / std::copysign(std::abs(alpha_CUT(q,k)) + CUT_REGULARIZATION, alpha_CUT(q, k)) );
-	    };
-    
-        const auto singularities = get_singularities(k);
-        decltype(std::declval<ExpectationValues>()(c_float{})) result;
-        if (singularities[0] < (*ptr_fermi_wavevector)) {
-            result = ptr_momentumRanges->integrate(integrand_fock, ptr_momentumRanges->K_MIN, singularities[0]);
 
-            if (singularities[1] < (*ptr_fermi_wavevector)) {
-                result += ptr_momentumRanges->integrate(integrand_fock, singularities[0], singularities[1]) +
-                        ptr_momentumRanges->integrate(integrand_fock, singularities[1], (*ptr_fermi_wavevector));
-            }
-            else {
-                result += ptr_momentumRanges->integrate(integrand_fock, singularities[0], (*ptr_fermi_wavevector));
-            }
-        }
-        else {
-            result = ptr_momentumRanges->integrate(integrand_fock, ptr_momentumRanges->K_MIN, (*ptr_fermi_wavevector));
-        }
+        const c_float M_SQUARED = (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
+        const c_float factor = M_SQUARED / (2. * PI * PI);
+        const auto singularities = get_singularities(k);
+
+        auto integrand_fock_alpha = [this, &k, &expecs](c_float q) -> c_float {
+            return expecs(q) * q * q / std::copysign(std::abs(alpha_CUT(q, k)) + CUT_REGULARIZATION, alpha_CUT(q, k));
+		};
+        auto integrand_fock_beta = [this, &k, &expecs](c_float q) -> c_float {
+            return expecs(q) * q * q / std::copysign(std::abs(beta_CUT(q, k)) + CUT_REGULARIZATION, beta_CUT(q, k));
+		};
+        
+        decltype(std::declval<ExpectationValues>()(c_float{})) result = factor *
+            ( ptr_momentumRanges->cpv_integrate(integrand_fock_alpha, singularities[0])
+            + ptr_momentumRanges->cpv_integrate(integrand_fock_beta,  singularities[1]) );
         return result;
 #endif
     }

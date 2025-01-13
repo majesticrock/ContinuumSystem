@@ -193,9 +193,9 @@ namespace Continuum {
 
 	c_complex ModeHelper::compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const
 	{
-		const int q_dependend = term.whichOperatorDependsOn('q');
+		const int q_dependend = term.which_operator_depends_on('q');
 		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
-		mrock::symbolic_operators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+		mrock::symbolic_operators::WickOperator const* const other_op = term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
 		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
 			value = model->phononInteraction.sc_channel_integral(model->occupation, k);
@@ -215,9 +215,9 @@ namespace Continuum {
 
 	c_complex ModeHelper::compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const
 	{
-		const int q_dependend = term.whichOperatorDependsOn('q');
+		const int q_dependend = term.which_operator_depends_on('q');
 		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
-		mrock::symbolic_operators::WickOperator const* const other_op = term.isBilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+		mrock::symbolic_operators::WickOperator const* const other_op = term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
 		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
 			value = -(model->fock_coulomb(k) + model->interpolate_delta_n(k));
