@@ -186,8 +186,16 @@ namespace Continuum {
     {
         assert(parent != nullptr);
         // TODO: Think about the factor of 2
-        const c_float factor = (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
-        return factor * ( std::copysign(std::abs(beta_CUT(k, k_prime))  + CUT_REGULARIZATION, beta_CUT(k, k_prime))
-                        - std::copysign(std::abs(alpha_CUT(k, k_prime)) + CUT_REGULARIZATION, alpha_CUT(k, k_prime)) );
+
+        auto __inverse = [this](c_float val) {
+            if (std::abs(val) < (CUT_REGULARIZATION * *ptr_omega_debye))
+                return c_float{};
+            else
+                return 1. / val;
+        };
+
+        const c_float factor = 0.5 * (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
+        return factor * (__inverse(beta_CUT(k, k_prime))
+                        - __inverse(alpha_CUT(k, k_prime)) );
     }
 }

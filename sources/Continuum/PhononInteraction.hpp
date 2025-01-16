@@ -73,6 +73,9 @@ namespace Continuum {
     template<class ExpectationValues>
 	decltype(std::declval<ExpectationValues>()(c_float{})) PhononInteraction::fock_channel_integral(ExpectationValues const& expecs, c_float k) const
     {
+#ifdef NO_FOCK_PHONON
+       assert(false);
+#endif
 #ifdef PHONON_SC_CHANNEL_ONLY
         return decltype(std::declval<ExpectationValues>()(c_float{})){};
 #else

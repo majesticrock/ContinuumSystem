@@ -47,7 +47,7 @@ namespace Continuum {
 	constexpr c_float SQRT_PRECISION = 2.384185791015625e-07;
 	constexpr c_float PRECISION = 5.684341886080802e-14; // 0 | 01111010011 | 0000000000000000000000000000000000000000000000000000
 
-	constexpr c_float CUT_REGULARIZATION = 1e-8;
+	constexpr c_float CUT_REGULARIZATION = 1e-2;
 	constexpr c_float SINGULARITY_OFFSET = 1e-2;
 
 	/* This function abuses the structure of our desired precision:

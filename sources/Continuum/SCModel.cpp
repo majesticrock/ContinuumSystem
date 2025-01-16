@@ -215,7 +215,7 @@ namespace Continuum {
 #ifdef PHONON_SC_CHANNEL_ONLY
 			return c_float{};
 #else
-			return phononInteraction.fock_channel(first, second);
+			return 0.5 * (phononInteraction.fock_channel(first, second) + phononInteraction.fock_channel(second, first));
 #endif
 		}
 		else if (coeff.name == "G") {
@@ -223,7 +223,7 @@ namespace Continuum {
 			return c_float{};
 #else
 // TODO: Think about the factor of 2, minus is handlded in the commutation program
-			return -phonon_coupling / rho_F;
+			return phonon_coupling / rho_F;
 #endif
 		}
 		else
