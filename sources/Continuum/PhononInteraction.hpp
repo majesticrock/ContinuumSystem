@@ -28,6 +28,8 @@ namespace Continuum {
         c_float renormalization_flow(c_float k) const;
         c_float fock_correction(c_float k) const;
 
+        c_float fock_channel(c_float k, c_float k_prime) const;
+
         /*template<class ExpectationValues>
          void update_fock_correction(ExpectationValues const & delta_n) { 
             for (MomentumIterator it(& momentumRanges); it < MomentumIterator::max_idx(); ++it) {

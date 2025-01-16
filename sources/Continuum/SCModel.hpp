@@ -15,7 +15,6 @@
 #include <boost/math/quadrature/gauss.hpp>
 #include <mrock/utility/ConstexprPower.hpp>
 #include "PhononInteraction.hpp"
-//#include "SharedAttributes.hpp"
 
 namespace Continuum {
 	class SCModel {
@@ -48,10 +47,10 @@ namespace Continuum {
 		c_complex k_zero_integral() const;
 
 		void iteration_step(const ParameterVector& initial_values, ParameterVector& result);
-		inline c_float computeCoefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first) const {
-			return computeCoefficient(coeff, first, fermi_wavevector);
+		inline c_float compute_coefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first) const {
+			return compute_coefficient(coeff, first, fermi_wavevector);
 		}
-		c_float computeCoefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first, c_float second) const;
+		c_float compute_coefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first, c_float second) const;
 
 		std::string info() const;
 		std::string to_folder() const;
@@ -102,7 +101,7 @@ namespace Continuum {
 
 		// Calls the publically available fock_coulomb() if we consider the full Coulomb interaction and returns 0 otherwise
 		inline c_float __fock_coulomb(c_float k) const {
-#ifdef COULOMB_SC_CHANNEL_ONLY
+#if defined(COULOMB_SC_CHANNEL_ONLY) || defined(NO_FOCK_COULOMB)
 			return c_float{};
 #else
 			return this->fock_coulomb(k);
@@ -111,7 +110,7 @@ namespace Continuum {
 
 		// Calls the publically available interpolate_delta_n() if we consider the full Coulomb interaction and returns 0 otherwise
 		inline c_float __interpolate_delta_n(c_float k) const {
-#ifdef COULOMB_SC_CHANNEL_ONLY
+#if defined(COULOMB_SC_CHANNEL_ONLY) || defined(NO_FOCK_COULOMB)
 			return c_float{};
 #else
 			return this->interpolate_delta_n(k);
@@ -166,28 +165,40 @@ namespace Continuum {
 
     c_float SCModel::renormalized_dispersion(c_float k) const
     {
-        return  bare_dispersion(k) + phononInteraction.renormalization_flow(k) - fermi_energy ;
-    }
+#ifdef NO_FOCK_PHONON
+		return bare_dispersion(k) - fermi_energy;
+#else
+        return bare_dispersion(k) + phononInteraction.renormalization_flow(k) - fermi_energy;
+#endif
+	}
+
     c_float SCModel::dispersion_to_fermi_level(c_float k) const
     {
+#ifdef NO_FOCK_COULOMB
+		return renormalized_dispersion(k);
+#else
         return renormalized_dispersion(k) + __fock_coulomb(k) + __interpolate_delta_n(k) + phononInteraction.fock_correction(k);
+#endif
     }
     c_float SCModel::dispersion_to_fermi_level_index(int k) const {
-#ifdef COULOMB_SC_CHANNEL_ONLY
+#if defined(COULOMB_SC_CHANNEL_ONLY) || defined(NO_FOCK_COULOMB)
 		return renormalized_dispersion(momentumRanges.index_to_momentum(k));
 #else
 		return renormalized_dispersion(momentumRanges.index_to_momentum(k)) + __fock_coulomb(momentumRanges.index_to_momentum(k)) 
 			+ phononInteraction.renormalization_cache[k][1] + std::real(Delta[k + DISCRETIZATION]);
 #endif
 	}
+
 	c_float SCModel::energy(c_float k) const {
 		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
 	}
+
 	c_float SCModel::energy_index(int k) const {
 		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level_index(k)) + std::norm(Delta[k]));
 	}
+
 	c_float SCModel::delta_epsilon(c_float k, c_float k_prime) const {
-#ifdef CUT_DISPERSION_NO_COULOMB
+#if defined(COULOMB_SC_CHANNEL_ONLY) || defined(NO_FOCK_COULOMB)
 		return bare_dispersion(k) - bare_dispersion(k_prime);
 #else
 		return bare_dispersion(k) - bare_dispersion(k_prime) + __fock_coulomb(k) - __fock_coulomb(k_prime);

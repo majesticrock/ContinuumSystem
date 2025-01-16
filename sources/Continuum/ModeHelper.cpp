@@ -22,19 +22,19 @@ namespace Continuum {
 	c_float ModeHelper::compute_momentum(mrock::symbolic_operators::Momentum const& momentum, c_float k, c_float l, c_float q /*=0*/) const
 	{
 		c_float momentum_value{};
-		for (const auto& momentum_pair : momentum.momentum_list) {
-			switch (momentum_pair.second) {
+		for (const auto& momentum_symbol : momentum.momentum_list) {
+			switch (static_cast<char>(momentum_symbol.name)) {
 			case 'k':
-				momentum_value += momentum_pair.first * k;
+				momentum_value += momentum_symbol.factor * k;
 				break;
 			case 'l':
-				momentum_value += momentum_pair.first * l;
+				momentum_value += momentum_symbol.factor * l;
 				break;
 			case 'q':
-				momentum_value += momentum_pair.first * q;
+				momentum_value += momentum_symbol.factor * q;
 				break;
 			default:
-				throw std::runtime_error("Momentum not recognized! " + momentum_pair.second);
+				throw std::runtime_error("Momentum not recognized! " + momentum_symbol.name);
 			}
 		}
 		return momentum_value;
@@ -243,10 +243,10 @@ namespace Continuum {
 			if (!term.coefficients.empty()) {
 				const mrock::symbolic_operators::Coefficient* coeff_ptr = &term.coefficients.front();
 				if (coeff_ptr->momenta.size() == 2U) {
-					value *= model->computeCoefficient(*coeff_ptr, compute_momentum(coeff_ptr->momenta[0], k, l), compute_momentum(coeff_ptr->momenta[1], k, l));
+					value *= model->compute_coefficient(*coeff_ptr, compute_momentum(coeff_ptr->momenta[0], k, l), compute_momentum(coeff_ptr->momenta[1], k, l));
 				}
-				else if (coeff_ptr->momenta.size() == 1U) {
-					value *= model->computeCoefficient(*coeff_ptr, k, l);
+				else if (coeff_ptr->momenta.size() == 1U || coeff_ptr->momenta.empty()) {
+					value *= model->compute_coefficient(*coeff_ptr, k, l);
 				}
 				else {
 					throw std::runtime_error("Number of momenta of coefficient is not handled! "

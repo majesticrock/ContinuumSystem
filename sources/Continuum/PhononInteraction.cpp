@@ -10,13 +10,13 @@ namespace Continuum {
         assert(parent != nullptr);
         renormalization_cache.resize(parent->momentumRanges.size(), std::array<c_float, 2>{ c_float{}, c_float{} });
 
-#ifdef PHONON_SC_CHANNEL_ONLY
+#ifdef NO_FOCK_PHONON
         return;
 #else
-#ifdef CUT_DISPERSION_NO_COULOMB
         // Typically around 1e-3
         const c_float M_SQUARED = (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
         const c_float factor = M_SQUARED / (2. * PI * PI);
+#ifdef CUT_DISPERSION_NO_COULOMB
         // TODO: Stimmt das Vorzeichen?!
         for (MomentumIterator it(& parent->momentumRanges); it < MomentumIterator::max_idx(); ++it) {
             // Fock correction is initially 0
@@ -170,6 +170,7 @@ namespace Continuum {
         return mrock::utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 renormalization_cache[index][0], renormalization_cache[index + 1][0]);
     }
+
     c_float PhononInteraction::fock_correction(c_float k) const
     {
         assert(parent != nullptr);
@@ -179,5 +180,14 @@ namespace Continuum {
         }
         return mrock::utility::Numerics::linearly_interpolate(k, parent->momentumRanges[index], parent->momentumRanges[index + 1], 
                                 renormalization_cache[index][1], renormalization_cache[index + 1][1]);
+    }
+
+    c_float PhononInteraction::fock_channel(c_float k, c_float k_prime) const
+    {
+        assert(parent != nullptr);
+        // TODO: Think about the factor of 2
+        const c_float factor = (*ptr_phonon_coupling) * (*ptr_omega_debye) / (*ptr_rho_F);
+        return factor * ( std::copysign(std::abs(beta_CUT(k, k_prime))  + CUT_REGULARIZATION, beta_CUT(k, k_prime))
+                        - std::copysign(std::abs(alpha_CUT(k, k_prime)) + CUT_REGULARIZATION, alpha_CUT(k, k_prime)) );
     }
 }

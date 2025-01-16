@@ -153,21 +153,27 @@ namespace Continuum {
 		this->occupation.set_new_ys(_expecs[mrock::symbolic_operators::Number_Type]);
 		this->sc_expectation_value.set_new_ys(_expecs[mrock::symbolic_operators::SC_Type]);
 
+#if !defined(NO_FOCK_COULOMB) || !defined(NO_FOCK_PHONON) 
 		auto delta_n_wrapper = [this](c_float q) {
 			return this->delta_n(q);
 			};
+#endif
 		//#pragma omp parallel for
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
 			result(it.idx) = integral_screening(sc_expectation_value, it.k);
+#ifndef NO_FOCK_COULOMB
 			result(it.idx + DISCRETIZATION) = integral_screening(delta_n_wrapper, it.k);
+#endif
 #ifdef approximate_theta
 			// approximate theta(omega - 0.5*|l^2 - k^2|) as theta(omega - eps_k)theta(omega - eps_l)
 			if (std::abs(phonon_boundary_a(it.k) - 2. * fermi_energy) > 2.0 * omega_debye) {
 				continue;
 			}
 #endif
-			result(it.idx + DISCRETIZATION) -= phononInteraction.fock_channel_integral(delta_n_wrapper, it.k);
 			result(it.idx) -= phononInteraction.sc_channel_integral(sc_expectation_value, it.k);
+#ifndef NO_FOCK_PHONON
+			result(it.idx + DISCRETIZATION) -= phononInteraction.fock_channel_integral(delta_n_wrapper, it.k);
+#endif
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
 
@@ -177,7 +183,7 @@ namespace Continuum {
 		++step_num;
 	}
 
-	c_float SCModel::computeCoefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first, c_float second) const
+	c_float SCModel::compute_coefficient(mrock::symbolic_operators::Coefficient const& coeff, c_float first, c_float second) const
 	{
 		if (coeff.name == "\\epsilon_0")
 		{
@@ -191,8 +197,8 @@ namespace Continuum {
 #else
 			if (2. * omega_debye >= std::abs(phonon_boundary_a(first) - phonon_boundary_a(second)))
 #endif
-			{
-				return this->phonon_coupling / this->rho_F;
+			{ // TODO: Think about the factor of 2, minus is handlded in the commutation program
+				return phonon_coupling / rho_F;
 			}
 			else
 			{
@@ -205,6 +211,21 @@ namespace Continuum {
 				return (coulomb_scaling / PhysicalConstants::vacuum_permitivity) / (screening * screening);
 			return coulomb_scaling / (2 * first * second * PhysicalConstants::vacuum_permitivity) * log_expression(first + second, first - second);
 		}
+		else if (coeff.name == "\\tilde{g}") {
+#ifdef PHONON_SC_CHANNEL_ONLY
+			return c_float{};
+#else
+			return phononInteraction.fock_channel(first, second);
+#endif
+		}
+		else if (coeff.name == "G") {
+#ifdef PHONON_SC_CHANNEL_ONLY
+			return c_float{};
+#else
+// TODO: Think about the factor of 2, minus is handlded in the commutation program
+			return -phonon_coupling / rho_F;
+#endif
+		}
 		else
 		{
 			throw std::invalid_argument("Coefficient not recognized! " + coeff.name);
@@ -212,8 +233,8 @@ namespace Continuum {
 	}
 
 	c_float SCModel::phonon_boundary_a(const c_float k) const {
-#ifdef CUT_DISPERSION_NO_COULOMB
-		return 2. * bare_dispersion(k);// + 2. * __fock_coulomb(k);
+#if defined(CUT_DISPERSION_NO_COULOMB) || defined(NO_FOCK_COULOMB)
+		return 2. * bare_dispersion(k);
 #else
 		return 2. * bare_dispersion(k) + 2. * __fock_coulomb(k);
 #endif

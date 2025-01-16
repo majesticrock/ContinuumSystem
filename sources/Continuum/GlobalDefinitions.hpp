@@ -18,8 +18,21 @@
 
 #define _iterative_selfconsistency
 //#define COULOMB_SC_CHANNEL_ONLY
-#define PHONON_SC_CHANNEL_ONLY
+//#define PHONON_SC_CHANNEL_ONLY
 //#define CUT_DISPERSION_NO_COULOMB
+#define NO_SINGLE_PARTICLE_RENORMALIZATION
+
+#if defined(NO_SINGLE_PARTICLE_RENORMALIZATION) || defined(PHONON_SC_CHANNEL_ONLY)
+#define NO_FOCK_PHONON
+#endif
+
+#if defined(NO_SINGLE_PARTICLE_RENORMALIZATION) || defined(COULOMB_SC_CHANNEL_ONLY)
+#define NO_FOCK_COULOMB
+#endif
+
+#if !defined(CUT_DISPERSION_NO_COULOMB) && defined(NO_FOCK_COULOMB)
+#define CUT_DISPERSION_NO_COULOMB
+#endif
 
 namespace Continuum {
 	using c_float = double;
