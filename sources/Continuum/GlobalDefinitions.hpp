@@ -17,7 +17,7 @@
 //#define _complex
 
 #define _iterative_selfconsistency
-//#define COULOMB_SC_CHANNEL_ONLY
+#define COULOMB_SC_CHANNEL_ONLY
 #define PHONON_SC_CHANNEL_ONLY
 //#define CUT_DISPERSION_NO_COULOMB
 //#define NO_SINGLE_PARTICLE_RENORMALIZATION

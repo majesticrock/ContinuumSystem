@@ -20,7 +20,7 @@ namespace Continuum {
 		fermi_wavevector{ parameters.fermi_wavevector }, rho_F{ parameters.rho_F },
 		momentumRanges(&fermi_wavevector, omega_debye, parameters.x_cut)
 	{
-		phononInteraction.set_parent(this);
+		phonon_interaction.set_parent(this);
 		std::cout << "Fock(k_F) = " << __fock_coulomb(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
 		Delta = decltype(Delta)::FromAllocator([&](size_t i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
@@ -170,9 +170,9 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			result(it.idx) -= phononInteraction.sc_channel_integral(sc_expectation_value, it.k);
+			result(it.idx) -= phonon_interaction.sc_channel_integral(sc_expectation_value, it.k);
 #ifndef NO_FOCK_PHONON
-			result(it.idx + DISCRETIZATION) -= phononInteraction.fock_channel_integral(delta_n_wrapper, it.k);
+			result(it.idx + DISCRETIZATION) -= phonon_interaction.fock_channel_integral(delta_n_wrapper, it.k);
 #endif
 		}
 		result(2 * DISCRETIZATION) = k_infinity_integral();
@@ -187,13 +187,13 @@ namespace Continuum {
 	{
 		if (coeff.name == "\\epsilon_0")
 		{
-			return renormalized_dispersion(first);
+			return dispersion_to_fermi_level(first);
 		}
 		else if (coeff.name == "g")
 		{
 #ifdef approximate_theta
-			if (omega_debye >= std::abs(renormalized_dispersion(first) + __fock_coulomb(first))
-				&& omega_debye >= std::abs(renormalized_dispersion(second) + __fock_coulomb(second)))
+			if (omega_debye >= std::abs(dispersion_to_fermi_level(first) + __fock_coulomb(first))
+				&& omega_debye >= std::abs(dispersion_to_fermi_level(second) + __fock_coulomb(second)))
 #else
 			if (2. * omega_debye >= std::abs(phonon_boundary_a(first) - phonon_boundary_a(second)))
 #endif
@@ -215,7 +215,7 @@ namespace Continuum {
 #ifdef PHONON_SC_CHANNEL_ONLY
 			return c_float{};
 #else
-			return 0.5 * (phononInteraction.fock_channel(first, second) + phononInteraction.fock_channel(second, first));
+			return 0.5 * (phonon_interaction.fock_channel(first, second) + phonon_interaction.fock_channel(second, first));
 #endif
 		}
 		else if (coeff.name == "G") {
@@ -331,7 +331,7 @@ namespace Continuum {
 				continue;
 			}
 #endif
-			ret[it.idx] = -phononInteraction.sc_channel_integral(sc_expectation_value, it.k);
+			ret[it.idx] = -phonon_interaction.sc_channel_integral(sc_expectation_value, it.k);
 		}
 		return ret;
 	}
@@ -358,7 +358,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = renormalized_dispersion(it.k) + __fock_coulomb(fermi_wavevector);
+			ret[it.idx] = dispersion_to_fermi_level(it.k) + __fock_coulomb(fermi_wavevector);
 		}
 		return ret;
 	}

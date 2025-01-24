@@ -198,10 +198,10 @@ namespace Continuum {
 		mrock::symbolic_operators::WickOperator const* const other_op = term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
 		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
-			value = model->phononInteraction.sc_channel_integral(model->occupation, k);
+			value = model->phonon_interaction.sc_channel_integral(model->occupation, k);
 		}
 		else {
-			value = model->phononInteraction.sc_channel_integral(model->sc_expectation_value, k);
+			value = model->phonon_interaction.sc_channel_integral(model->sc_expectation_value, k);
 #ifdef _complex
 			if (summed_op.is_daggered) value = std::conj(value);
 #endif

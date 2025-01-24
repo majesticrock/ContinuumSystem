@@ -22,8 +22,6 @@ namespace Continuum {
 		c_complex interpolate_delta(c_float k) const;
 		c_float interpolate_delta_n(c_float k) const;
 
-		// epsilon_infinity (k)
-		inline c_float renormalized_dispersion(c_float k) const;
 		// epsilon_0 + epsilon_fock^Coulomb
 		inline c_float dispersion_to_fermi_level(c_float k) const;
 		inline c_float dispersion_to_fermi_level_index(int k) const;
@@ -135,7 +133,7 @@ namespace Continuum {
 		c_float rho_F{};
 
 		MomentumRanges momentumRanges;
-		PhononInteraction phononInteraction;
+		PhononInteraction phonon_interaction;
 
 	private:
 		mutable std::map<mrock::symbolic_operators::OperatorType, std::vector<c_complex>> _expecs;
@@ -163,30 +161,23 @@ namespace Continuum {
 		return -occupation_index(k);
 	}
 
-    c_float SCModel::renormalized_dispersion(c_float k) const
-    {
-#ifdef NO_FOCK_PHONON
-		return bare_dispersion(k) - fermi_energy;
-#else
-        return bare_dispersion(k) + phononInteraction.renormalization_flow(k) - fermi_energy;
-#endif
-	}
-
     c_float SCModel::dispersion_to_fermi_level(c_float k) const
     {
-#ifdef NO_FOCK_COULOMB
-		return renormalized_dispersion(k);
-#else
-        return renormalized_dispersion(k) + __fock_coulomb(k) + __interpolate_delta_n(k) + phononInteraction.fock_correction(k);
+		return bare_dispersion(k) - fermi_energy
+#ifndef NO_FOCK_COULOMB
+       		+ __fock_coulomb(k) + __interpolate_delta_n(k)
 #endif
+#ifndef NO_FOCK_PHONON
+			+ phonon_interaction.fock_correction(k)
+#endif
+			;
     }
     c_float SCModel::dispersion_to_fermi_level_index(int k) const {
-#if defined(COULOMB_SC_CHANNEL_ONLY) || defined(NO_FOCK_COULOMB)
-		return renormalized_dispersion(momentumRanges.index_to_momentum(k));
-#else
-		return renormalized_dispersion(momentumRanges.index_to_momentum(k)) + __fock_coulomb(momentumRanges.index_to_momentum(k)) 
-			+ phononInteraction.renormalization_cache[k][1] + std::real(Delta[k + DISCRETIZATION]);
+		return dispersion_to_fermi_level(momentumRanges.index_to_momentum(k));
+#ifndef NO_FOCK_PHONON
+			+ phonon_interaction.renormalization_cache[k][1] + std::real(Delta[k + DISCRETIZATION])
 #endif
+		;
 	}
 
 	c_float SCModel::energy(c_float k) const {
