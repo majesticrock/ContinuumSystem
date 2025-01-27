@@ -19,5 +19,6 @@ $(CLUSTER_BUILD_DIR)/Makefile: CMakeLists.txt
 
 clean:
 	@rm -rf $(BUILD_DIR) $(CLUSTER_BUILD_DIR)
+	@rm -rf auto_generated*
 
 .PHONY: all clean cluster
