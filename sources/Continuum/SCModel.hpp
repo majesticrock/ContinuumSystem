@@ -20,7 +20,7 @@ namespace Continuum {
 	class SCModel {
 	public:
 		c_complex interpolate_delta(c_float k) const;
-		c_float interpolate_delta_n(c_float k) const;
+		c_float interpolate_fock_correction(c_float k) const;
 
 		// epsilon_0 + epsilon_fock^Coulomb
 		inline c_float dispersion_to_fermi_level(c_float k) const;
@@ -106,12 +106,12 @@ namespace Continuum {
 #endif
 		}
 
-		// Calls the publically available interpolate_delta_n() if we consider the full Coulomb interaction and returns 0 otherwise
-		inline c_float __interpolate_delta_n(c_float k) const {
+		// Calls the publically available interpolate_fock_correction() if we consider the full Coulomb interaction and returns 0 otherwise
+		inline c_float __interpolate_fock_correction(c_float k) const {
 #if defined(COULOMB_SC_CHANNEL_ONLY) || defined(NO_FOCK_COULOMB)
 			return c_float{};
 #else
-			return this->interpolate_delta_n(k);
+			return this->interpolate_fock_correction(k);
 #endif
 		}
 
@@ -165,7 +165,7 @@ namespace Continuum {
     {
 		return bare_dispersion(k) - fermi_energy
 #ifndef NO_FOCK_COULOMB
-       		+ __fock_coulomb(k) + __interpolate_delta_n(k)
+       		+ __fock_coulomb(k) + __interpolate_fock_correction(k)
 #endif
 #ifndef NO_FOCK_PHONON
 			+ phonon_interaction.fock_correction(k)
@@ -175,7 +175,7 @@ namespace Continuum {
     c_float SCModel::dispersion_to_fermi_level_index(int k) const {
 		return dispersion_to_fermi_level(momentumRanges.index_to_momentum(k));
 #ifndef NO_FOCK_PHONON
-			+ phonon_interaction.renormalization_cache[k][1] + std::real(Delta[k + DISCRETIZATION])
+			+ phonon_interaction.renormalization_cache[k][1]
 #endif
 		;
 	}

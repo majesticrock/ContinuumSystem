@@ -220,7 +220,7 @@ namespace Continuum {
 		mrock::symbolic_operators::WickOperator const* const other_op = term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
 		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
-			value = -(model->fock_coulomb(k) + model->interpolate_delta_n(k));
+			value = -(model->fock_coulomb(k) + model->interpolate_fock_correction(k));
 		}
 		else {
 			value = model->integral_screening(model->sc_expectation_value, k);

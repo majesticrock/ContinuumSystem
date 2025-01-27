@@ -187,7 +187,7 @@ namespace Continuum {
 	{
 		if (coeff.name == "\\epsilon_0")
 		{
-			return dispersion_to_fermi_level(first);
+			return bare_dispersion(first) - fermi_energy;
 		}
 		else if (coeff.name == "g")
 		{
@@ -263,7 +263,7 @@ namespace Continuum {
 		return mrock::utility::Numerics::interpolate_from_vector<n_interpolate>(k, momentumRanges, Delta, shifted_index(index));
 	}
 
-	c_float SCModel::interpolate_delta_n(c_float k) const {
+	c_float SCModel::interpolate_fock_correction(c_float k) const {
 		const int index = momentumRanges.momentum_to_floor_index(k);
 		if (index >= DISCRETIZATION - 1) // Assuming Delta(k) = 0 for k -> infinity
 			return (index >= DISCRETIZATION ? c_float{} : std::real(Delta[2 * DISCRETIZATION - 1]));
