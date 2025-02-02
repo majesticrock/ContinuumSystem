@@ -29,7 +29,7 @@ namespace Continuum {
 		inline c_float energy(c_float k) const;
 		inline c_float energy_index(int k) const;
 		// epsilon(k) - epsilon(k'), where epsilon(k) refers to the unrenormalized single particle dispersion
-		 inline c_float delta_epsilon(c_float k, c_float k_prime) const;
+		inline c_float delta_epsilon(c_float k, c_float k_prime) const;
 		// Fock energy originating from the Coulomb interaction
 		c_float fock_coulomb(c_float k) const;
 
