@@ -358,7 +358,7 @@ namespace Continuum {
 	{
 		std::vector<c_float> ret(DISCRETIZATION);
 		for (MomentumIterator it(&momentumRanges); it < DISCRETIZATION; ++it) {
-			ret[it.idx] = dispersion_to_fermi_level(it.k);
+			ret[it.idx] = bare_dispersion(it.k) - fermi_energy + __fock_coulomb(it.k);
 		}
 		return ret;
 	}
