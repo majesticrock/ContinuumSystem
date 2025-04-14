@@ -22,7 +22,7 @@
 #include "Continuum/ModeHelper.hpp"
 #include "Continuum/Incrementer.hpp"
 // File is generated on build by cmake
-#include "../build/info.h"
+#include "../build_header/info.h"
 
 using namespace Continuum;
 const std::string BASE_FOLDER = "../../data/continuum/";
