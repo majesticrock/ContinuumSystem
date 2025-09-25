@@ -122,7 +122,7 @@ namespace Continuum {
 	{
         assert(parent != nullptr);
 #ifdef approximate_theta
-		const c_float ALPHA = 2. * parent->fermi_energy - 2. * omega_debye;
+		const c_float ALPHA = 2. * parent->fermi_energy - 2. * parent->omega_debye;
 #else
 		const c_float ALPHA = parent->phonon_boundary_a(k) - 2. * parent->omega_debye;
 #endif
@@ -130,7 +130,7 @@ namespace Continuum {
 			return parent->phonon_boundary_b(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return mrock::utility::Numerics::Roots::bisection(func, parent->momentumRanges.K_MIN, fermi_wavevector, PRECISION, 200);
+		return mrock::utility::Numerics::Roots::bisection(func, parent->momentumRanges.K_MIN, parent->fermi_wavevector, PRECISION, 200);
 #else
 		const auto lb = func(parent->momentumRanges.K_MIN);
 		const auto ub = func(k);
@@ -143,7 +143,7 @@ namespace Continuum {
 	{
         assert(parent != nullptr);
 #ifdef approximate_theta
-		const c_float ALPHA = 2. * parent->fermi_energy + 2. * omega_debye;
+		const c_float ALPHA = 2. * parent->fermi_energy + 2. * parent->omega_debye;
 #else
 		const c_float ALPHA = parent->phonon_boundary_a(k) + 2. * parent->omega_debye;
 #endif
@@ -151,7 +151,7 @@ namespace Continuum {
 			return parent->phonon_boundary_b(l, ALPHA);
 			};
 #ifdef approximate_theta
-		return mrock::utility::Numerics::Roots::bisection(func, fermi_wavevector, parent->momentumRanges.K_MAX, PRECISION, 200);
+		return mrock::utility::Numerics::Roots::bisection(func, parent->fermi_wavevector, parent->momentumRanges.K_MAX, PRECISION, 200);
 #else
 		const auto lb = func(k);
 		const auto ub = func(parent->momentumRanges.K_MAX);

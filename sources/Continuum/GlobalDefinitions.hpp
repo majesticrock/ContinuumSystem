@@ -13,7 +13,7 @@
 #include <mrock/utility/UnderlyingFloatingPoint.hpp>
 #include <iostream>
 
-//#define approximate_theta
+#define approximate_theta
 //#define _complex
 
 #define _iterative_selfconsistency
