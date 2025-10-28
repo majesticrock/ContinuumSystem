@@ -8,6 +8,7 @@ function(SET_COMPILER_FLAGS TARGET)
 
         target_compile_options(${TARGET} PRIVATE -Wall -Wno-sign-compare -fopenmp -march=icelake-server -O3 -ffast-math)
         target_compile_definitions(${TARGET} PRIVATE NDEBUG MROCK_CL1)
+        SET_MKL_FLAGS(${TARGET})
     else()
         message(FATAL_ERROR "Unsupported compiler ${CMAKE_CXX_COMPILER_ID}. Only GCC is supported.")
     endif()
