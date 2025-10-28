@@ -50,7 +50,7 @@ for NEW_VALUE in "${NEW_VALUES[@]}"; do
   cp slurm/ul_modes.slurm auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.slurm
   sed -i "s|#SBATCH --job-name=modes|#SBATCH --job-name=${CURRENT_TIME}_$NEW_NAME|" auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.slurm
   sed -i "s|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/modes_output.txt|#SBATCH --output=/home/althueser/phd/cpp/ContinuumSystem/ul_${CURRENT_TIME}_output_$NEW_NAME.txt|" auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.slurm
-  sed -i "s|mpirun ./build_cluster/ContinuumSystem params/ul_cluster.config|mpirun ./build_cluster/ContinuumSystem auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.config|" auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.slurm
+  sed -i "s|mpirun ./build_CascadeLake/ContinuumSystem params/ul_cluster.config|mpirun ./build_CascadeLake/ContinuumSystem auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.config|" auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.slurm
 
   # Execute the program
   sbatch auto_generated_ul_${CURRENT_TIME}/$NEW_NAME.slurm
