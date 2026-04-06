@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
 		mrock::utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
 		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;
 
-		if (false) { // compute and save the expectation values
+		/* { // compute and save the expectation values
 			auto expecs = modes.getModel().get_expectation_values();
 			auto ks = modes.getModel().momentumRanges.get_k_points();
 
@@ -227,9 +227,10 @@ int main(int argc, char** argv) {
 			jExpecs.merge_patch(generate_comments());
 			mrock::utility::saveString(jExpecs.dump(4), BASE_FOLDER + output_folder + "expecs.json.gz");
 			std::cout << "Expectation values have been saved!" << std::endl;
-		}
+		} */
 
-		if (true) {
+#ifndef CONTINUUM_FULL_DIAG
+		{
 			auto resolvents = modes.compute_collective_modes(150);
 			if (!resolvents.empty()) {
 				nlohmann::json jResolvents = {
@@ -240,6 +241,18 @@ int main(int argc, char** argv) {
 				mrock::utility::saveString(jResolvents.dump(4), BASE_FOLDER + output_folder + "resolvents.json.gz");
 			}
 		}
+#else // CONTINUUM_FULL_DIAG
+		{
+			auto full_diag_data = modes.full_diagonalization();
+			nlohmann::json jFullDiag = {
+				{ "phase", full_diag_data.first },
+				{ "amplitude", full_diag_data.second },
+				{ "continuum_boundaries", modes.continuum_boundaries() }
+			};
+			jFullDiag.merge_patch(generate_comments());
+			mrock::utility::saveString(jFullDiag.dump(4), BASE_FOLDER + output_folder + "full_diagonalization.json.gz");
+		}
+#endif // CONTINUUM_FULL_DIAG
 
 		if (incrementer && i < n_iter - 1) {
 			incrementer->increment(init);

@@ -61,3 +61,8 @@ if(ENABLE_DEBUG)
     target_compile_definitions(ContinuumSystem PRIVATE DEBUG)
     target_compile_options(ContinuumSystem PRIVATE -g)
 endif()
+
+option(CONTINUUM_FULL_DIAG "Fully diagonalize the transformed dynamical matrix." OFF)
+if (CONTINUUM_FULL_DIAG)
+    target_compile_definitions(ContinuumSystem PRIVATE CONTINUUM_FULL_DIAG)
+endif()

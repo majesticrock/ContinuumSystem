@@ -16,7 +16,7 @@
 #define __ieom_algorithm mrock::utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_complex>
 #else
 #include <mrock/utility/Numerics/iEoM/XPResolvent.hpp>
-#define __ieom_algorithm mrock::utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float>
+#define __ieom_algorithm mrock::utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float, 10, false>
 #endif
 
 namespace Continuum {
