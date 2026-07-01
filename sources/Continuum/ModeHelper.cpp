@@ -5,12 +5,12 @@
 #include <mrock/utility/Numerics/Integration/TrapezoidalRule.hpp>
 #include <mrock/utility/Selfconsistency/IterativeSolver.hpp>
 #include <mrock/utility/Selfconsistency/BroydenSolver.hpp>
-#include <mrock/utility/ConstexprPower.hpp>
+#include <mrock/utility/constexpr_power.hpp>
 #include <mrock/utility/Numerics/Minimization/Bisection.hpp>
 #include <boost/math/quadrature/gauss.hpp>
 
-#define ieom_diag(k) k * k * (DISCRETIZATION * it.parent_step() / (2 * PI * PI))
-#define ieom_offdiag(k, l) k * k * l * l * (DISCRETIZATION * it.parent_step() * jt.parent_step() / (4 * PI * PI * PI * PI))
+#define iEoM_diag(k) k * k * (DISCRETIZATION * it.parent_step() / (2 * PI * PI))
+#define iEoM_offdiag(k, l) k * k * l * l * (DISCRETIZATION * it.parent_step() * jt.parent_step() / (4 * PI * PI * PI * PI))
 
 #ifdef _complex
 #define __conj(z) std::conj(z)
@@ -157,16 +157,16 @@ namespace Continuum {
 						}
 					}
 					diag_buffer += computeTerm(term, it.k, it.k);
-					//M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) += ieom_diag(it.k) * computeTerm(term, it.k, it.k);
+					//M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) += iEoM_diag(it.k) * computeTerm(term, it.k, it.k);
 				}
 				else {
 					for (m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx(); ++jt) {
 						if (is_zero(jt.k)) continue;
-						M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+						M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += iEoM_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 					}
 				}
 			}
-			M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) += ieom_diag(it.k) * diag_buffer;
+			M(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) += iEoM_diag(it.k) * diag_buffer;
 		}
 	}
 
@@ -182,12 +182,12 @@ namespace Continuum {
 				else {
 					throw std::runtime_error("Offdiagonal term in N!");
 					/* for (m_iterator jt(&model->momentumRanges); jt < m_iterator::max_idx(); ++jt) {
-						N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += ieom_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
+						N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + jt.idx) += iEoM_offdiag(it.k, jt.k) * computeTerm(term, it.k, jt.k);
 						if(is_zero(jt.k)) continue;
 					} */
 				}
 			}
-			N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) *= ieom_diag(it.k);
+			N(i * m_iterator::max_idx() + it.idx, j * m_iterator::max_idx() + it.idx) *= iEoM_diag(it.k);
 		}
 	}
 

@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
-#include <mrock/utility/UnderlyingFloatingPoint.hpp>
+#include <mrock/utility/UnderlyingRealType.hpp>
 #include <iostream>
 
 //#define approximate_theta

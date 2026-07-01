@@ -13,7 +13,7 @@
 #include <mrock/utility/InputFileReader.hpp>
 #include <mrock/utility/Numerics/Interpolation.hpp>
 #include <boost/math/quadrature/gauss.hpp>
-#include <mrock/utility/ConstexprPower.hpp>
+#include <mrock/utility/constexpr_power.hpp>
 #include "PhononInteraction.hpp"
 
 namespace Continuum {

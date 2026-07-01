@@ -1,6 +1,6 @@
 #include "ModelInitializer.hpp"
 #include <mrock/utility/Numerics/Roots/Bisection.hpp>
-#include <mrock/utility/ConstexprPower.hpp>
+#include <mrock/utility/constexpr_power.hpp>
 
 namespace Continuum {
 	ModelInitializer::ModelInitializer(mrock::utility::InputFileReader& input)

@@ -1,9 +1,9 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
+#include "SCModel.hpp"
 #include <mrock/symbolic_operators/TermLoader.hpp>
 #include <mrock/symbolic_operators/WickTerm.hpp>
 #include <mrock/utility/better_to_string.hpp>
-#include "SCModel.hpp"
 #include <memory>
 #include <map>
 
@@ -12,19 +12,19 @@
 #endif
 
 #ifndef _XP
-#include <mrock/utility/Numerics/iEoM/GeneralResolvent.hpp>
-#define __ieom_algorithm mrock::utility::Numerics::iEoM::GeneralResolvent<ModeHelper, c_complex>
+#include <mrock/iEoM/GeneralResolvent.hpp>
+#define __iEoM_algorithm mrock::iEoM::GeneralResolvent<ModeHelper, c_complex>
 #else
-#include <mrock/utility/Numerics/iEoM/XPResolvent.hpp>
-#define __ieom_algorithm mrock::utility::Numerics::iEoM::XPResolvent<ModeHelper, c_float, 10, false>
+#include <mrock/iEoM/XPResolvent.hpp>
+#define __iEoM_algorithm mrock::iEoM::XPResolvent<ModeHelper, c_float, 10, false>
 #endif
 
 namespace Continuum {
-	class ModeHelper : public __ieom_algorithm
+	class ModeHelper : public __iEoM_algorithm
 	{
 	private:
-		friend struct __ieom_algorithm;
-		using _parent = __ieom_algorithm;
+		friend struct __iEoM_algorithm;
+		using _parent = __iEoM_algorithm;
 		using m_iterator = InnerIterator;
 
 		c_float compute_momentum(mrock::symbolic_operators::Momentum const& momentum, c_float k, c_float l, c_float q = 0) const;
@@ -66,4 +66,4 @@ namespace Continuum {
 	};
 }
 
-#undef __ieom_algorithm
+#undef __iEoM_algorithm
