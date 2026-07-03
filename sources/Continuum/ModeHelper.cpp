@@ -42,10 +42,10 @@ namespace Continuum {
 
 	c_complex ModeHelper::get_expectation_value(mrock::symbolic_operators::WickOperator const& op, c_float momentum) const
 	{
-		if (op.type == mrock::symbolic_operators::Number_Type) {
+		if (op.type == mrock::symbolic_operators::OperatorType::Number) {
 			return model->occupation(momentum);
 		}
-		else if (op.type == mrock::symbolic_operators::SC_Type) {
+		else if (op.type == mrock::symbolic_operators::OperatorType::SC) {
 			if (op.is_daggered) {
 				return __conj(model->sc_expectation_value(momentum));
 			}
@@ -197,7 +197,7 @@ namespace Continuum {
 		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
 		mrock::symbolic_operators::WickOperator const* const other_op = term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
-		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
+		if (summed_op->type == mrock::symbolic_operators::OperatorType::Number) {
 			value = model->phonon_interaction.sc_channel_integral(model->occupation, k);
 		}
 		else {
@@ -219,7 +219,7 @@ namespace Continuum {
 		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
 		mrock::symbolic_operators::WickOperator const* const other_op = term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
 		c_complex value{};
-		if (summed_op->type == mrock::symbolic_operators::Number_Type) {
+		if (summed_op->type == mrock::symbolic_operators::OperatorType::Number) {
 			value = -(model->fock_coulomb(k) + model->interpolate_fock_correction(k));
 		}
 		else {

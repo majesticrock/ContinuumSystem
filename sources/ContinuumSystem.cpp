@@ -205,29 +205,7 @@ int main(int argc, char** argv) {
 			}
 			});
 		mrock::utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
-		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;
-
-		/* { // compute and save the expectation values
-			auto expecs = modes.getModel().get_expectation_values();
-			auto ks = modes.getModel().momentumRanges.get_k_points();
-
-			std::vector<c_float> occupations, pairs;
-			occupations.reserve(ks.size());
-			pairs.reserve(ks.size());
-			for (const auto& x : expecs[mrock::symbolic_operators::Number_Type]) {
-				occupations.push_back(std::real(x));
-			}
-			for (const auto& x : expecs[mrock::symbolic_operators::SC_Type]) {
-				pairs.push_back(std::real(x));
-			}
-
-			nlohmann::json jExpecs = {
-				{"ks", ks}, {"n_k", occupations}, {"f_k", pairs}
-			};
-			jExpecs.merge_patch(generate_comments());
-			mrock::utility::saveString(jExpecs.dump(4), BASE_FOLDER + output_folder + "expecs.json.gz");
-			std::cout << "Expectation values have been saved!" << std::endl;
-		} */
+		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;´
 
 #ifndef CONTINUUM_FULL_DIAG
 		{

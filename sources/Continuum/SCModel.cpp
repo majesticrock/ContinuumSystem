@@ -150,8 +150,8 @@ namespace Continuum {
 		result.setZero();
 		this->Delta.fill_with(initial_values);
 		this->get_expectation_values();
-		this->occupation.set_new_ys(_expecs[mrock::symbolic_operators::Number_Type]);
-		this->sc_expectation_value.set_new_ys(_expecs[mrock::symbolic_operators::SC_Type]);
+		this->occupation.set_new_ys(_expecs[mrock::symbolic_operators::OperatorType::Number]);
+		this->sc_expectation_value.set_new_ys(_expecs[mrock::symbolic_operators::OperatorType::SC]);
 
 #if !defined(NO_FOCK_COULOMB) || !defined(NO_FOCK_PHONON) 
 		auto delta_n_wrapper = [this](c_float q) {
@@ -243,12 +243,12 @@ namespace Continuum {
 	const std::map<mrock::symbolic_operators::OperatorType, std::vector<c_complex>>& SCModel::get_expectation_values() const
 	{
 		if (_expecs.empty()) {
-			_expecs.emplace(mrock::symbolic_operators::Number_Type, std::vector<c_complex>(DISCRETIZATION));
-			_expecs.emplace(mrock::symbolic_operators::SC_Type, std::vector<c_complex>(DISCRETIZATION));
+			_expecs.emplace(mrock::symbolic_operators::OperatorType::Number, std::vector<c_complex>(DISCRETIZATION));
+			_expecs.emplace(mrock::symbolic_operators::OperatorType::SC, std::vector<c_complex>(DISCRETIZATION));
 		}
 		for (int k = 0; k < DISCRETIZATION; ++k) {
-			_expecs.at(mrock::symbolic_operators::Number_Type)[k] = this->occupation_index(k);
-			_expecs.at(mrock::symbolic_operators::SC_Type)[k] = this->sc_expectation_value_index(k);
+			_expecs.at(mrock::symbolic_operators::OperatorType::Number)[k] = this->occupation_index(k);
+			_expecs.at(mrock::symbolic_operators::OperatorType::SC)[k] = this->sc_expectation_value_index(k);
 		}
 
 		return _expecs;
@@ -366,10 +366,10 @@ namespace Continuum {
 	void SCModel::set_splines()
 	{
 		this->get_expectation_values();
-		this->occupation = SplineContainer(_expecs[mrock::symbolic_operators::Number_Type], momentumRanges.K_MIN,
+		this->occupation = SplineContainer(_expecs[mrock::symbolic_operators::OperatorType::Number], momentumRanges.K_MIN,
 			momentumRanges.LOWER_STEP, momentumRanges.INNER_STEP, momentumRanges.UPPER_STEP,
 			_OUTER_DISC, _INNER_DISC);
-		this->sc_expectation_value = SplineContainer(_expecs[mrock::symbolic_operators::SC_Type], momentumRanges.K_MIN,
+		this->sc_expectation_value = SplineContainer(_expecs[mrock::symbolic_operators::OperatorType::SC], momentumRanges.K_MIN,
 			momentumRanges.LOWER_STEP, momentumRanges.INNER_STEP, momentumRanges.UPPER_STEP,
 			_OUTER_DISC, _INNER_DISC);
 	}
