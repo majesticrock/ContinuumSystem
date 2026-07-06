@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
 			}
 			});
 		mrock::utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
-		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;´
+		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;
 
 #ifndef CONTINUUM_FULL_DIAG
 		{
