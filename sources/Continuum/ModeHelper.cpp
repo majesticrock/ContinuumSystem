@@ -1,12 +1,14 @@
 #include "ModeHelper.hpp"
 #include <memory>
 #include <cassert>
+
 #include <mrock/utility/Numerics/Interpolation.hpp>
 #include <mrock/utility/Numerics/Integration/TrapezoidalRule.hpp>
 #include <mrock/utility/Selfconsistency/IterativeSolver.hpp>
 #include <mrock/utility/Selfconsistency/BroydenSolver.hpp>
 #include <mrock/utility/constexpr_power.hpp>
 #include <mrock/utility/Numerics/Minimization/Bisection.hpp>
+
 #include <boost/math/quadrature/gauss.hpp>
 
 #define iEoM_diag(k) k * k * (DISCRETIZATION * it.parent_step() / (2 * PI * PI))
@@ -54,14 +56,14 @@ namespace Continuum {
 		throw std::runtime_error("Expectation value not recognized!");
 	}
 
-	void ModeHelper::createStartingStates()
+	void ModeHelper::create_starting_states()
 	{
 #ifndef _XP
-		starting_states.resize(2, _parent::Vector::Zero(total_matrix_size));
+		starting_states.resize(2, iEoM_algorithm::Vector::Zero(total_matrix_size));
 		std::fill(starting_states[0].begin(), starting_states[0].begin() + m_iterator::max_idx(), sqrt(model->momentumRanges.INNER_STEP));
 		std::fill(starting_states[1].begin() + 3 * m_iterator::max_idx(), starting_states[1].end(), sqrt(model->momentumRanges.INNER_STEP));
 #else
-		starting_states.push_back({ _parent::Vector::Zero(antihermitian_discretization), _parent::Vector::Zero(hermitian_discretization), "SC" });
+		starting_states.push_back({ iEoM_algorithm::Vector::Zero(antihermitian_discretization), iEoM_algorithm::Vector::Zero(hermitian_discretization), "SC" });
 		for (m_iterator it(&model->momentumRanges); it < m_iterator::max_idx(); ++it) {
 			starting_states[0][0](it.idx) = 1. / sqrt((c_float)DISCRETIZATION);
 			starting_states[0][1](it.idx) = 1. / sqrt((c_float)DISCRETIZATION);
@@ -69,7 +71,7 @@ namespace Continuum {
 #endif
 	}
 
-	void ModeHelper::fillMatrices()
+	void ModeHelper::fill_matrices()
 	{
 #ifndef _XP
 		M.setZero(total_matrix_size, total_matrix_size);
@@ -297,7 +299,7 @@ namespace Continuum {
 	int ModeHelper::total_matrix_size = 0;
 
 	ModeHelper::ModeHelper(ModelInitializer const& init)
-		: _parent(this, SQRT_PRECISION,
+		: iEoM_algorithm(SQRT_PRECISION,
 #ifdef _XP
 			m_iterator::max_idx()* hermitian_size, m_iterator::max_idx()* antihermitian_size, false,
 #endif
