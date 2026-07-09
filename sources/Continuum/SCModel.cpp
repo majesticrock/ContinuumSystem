@@ -8,7 +8,7 @@
 #include <mrock/utility/better_to_string.hpp>
 #include <limits>
 
-using mrock::utility::constexprPower;
+using mrock::utility::constexpr_power;
 
 namespace Continuum {
 	SCModel::SCModel(ModelInitializer const& parameters)
@@ -277,13 +277,13 @@ namespace Continuum {
 		if (!is_zero(Delta[DISCRETIZATION / 2])) {
 			// Order: -62.0978727910253 eV
 			auto procedure = [this](c_float k) -> c_float {
-				return -k * k * energy(k) / constexprPower<3>(momentumRanges.K_MAX);
+				return -k * k * energy(k) / constexpr_power<3>(momentumRanges.K_MAX);
 				};
 			return momentumRanges.integrate(procedure);
 		}
 		// No order: -2.25329965038867 eV * 2 because of the spin
 		auto procedure = [this](c_float k) -> c_float {
-			return k * k * dispersion_to_fermi_level(k) / constexprPower<3>(momentumRanges.K_MAX);
+			return k * k * dispersion_to_fermi_level(k) / constexpr_power<3>(momentumRanges.K_MAX);
 			};
 		return 2. * momentumRanges.integrate(procedure, momentumRanges.K_MIN, fermi_wavevector);
 	}
