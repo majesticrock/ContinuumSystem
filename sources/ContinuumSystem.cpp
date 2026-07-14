@@ -48,7 +48,7 @@ template<typename number>
 	requires std::floating_point<number>
 std::vector<number> as_meV(std::vector<std::complex<number>> const& in_eV) {
 	std::vector<number> ret(in_eV.size());
-	for (size_t i = 0U; i < in_eV.size(); ++i) {
+	for (std::size_t i = 0U; i < in_eV.size(); ++i) {
 		ret[i] = 1e3 * std::real(in_eV[i]);
 	}
 	return ret;
@@ -57,7 +57,7 @@ template<typename number>
 	requires std::floating_point<number>
 std::vector<number> imag_as_meV(std::vector<std::complex<number>> const& in_eV) {
 	std::vector<number> ret(in_eV.size());
-	for (size_t i = 0U; i < in_eV.size(); ++i) {
+	for (std::size_t i = 0U; i < in_eV.size(); ++i) {
 		ret[i] = 1e3 * std::imag(in_eV[i]);
 	}
 	return ret;
