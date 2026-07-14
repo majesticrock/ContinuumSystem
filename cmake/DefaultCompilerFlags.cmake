@@ -7,10 +7,10 @@ function(SET_COMPILER_FLAGS TARGET)
         endif()
 
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            target_compile_options(${TARGET} PRIVATE -Wall -Wno-sign-compare -fopenmp -march=native -O0 -g)# -fsanitize=undefined,address
+            target_compile_options(${TARGET} PRIVATE -Wall -Wno-sign-compare  -march=native -O0 -g)# -fsanitize=undefined,address
             #target_link_options(${TARGET} PRIVATE -fsanitize=undefined,address)
         else()
-            target_compile_options(${TARGET} PRIVATE -Wall -Wno-sign-compare -fopenmp -march=native -O3 -ffast-math)
+            target_compile_options(${TARGET} PRIVATE -Wall -Wno-sign-compare  -march=native -O3 -ffast-math)
             if(CMAKE_BUILD_TYPE STREQUAL "NDEBUG")
                 target_compile_definitions(${TARGET} PRIVATE NDEBUG)
             endif()

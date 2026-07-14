@@ -1,10 +1,8 @@
 #include "SCModel.hpp"
-#include <mrock/utility/Numerics/Minimization/Bisection.hpp>
 #include <mrock/utility/Selfconsistency/BroydenSolver.hpp>
 #include <algorithm>
 #include <numeric>
 #include <complex>
-#include <mrock/utility/Numerics/Roots/Bisection.hpp>
 #include <mrock/utility/better_to_string.hpp>
 #include <limits>
 

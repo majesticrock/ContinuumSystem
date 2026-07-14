@@ -14,7 +14,6 @@ all: $(BUILD_DIR)/Makefile
 $(BUILD_DIR)/Makefile: CMakeLists.txt
 	@mkdir -p $(BUILD_DIR)
 	@cd $(BUILD_DIR) && cmake \
-		-DCMAKE_C_COMPILER=gcc \
 		-DCMAKE_CXX_COMPILER=g++ \
 		-DCONTINUUM_FULL_DIAG=$(FULL_DIAG) \
 		..
@@ -25,7 +24,6 @@ cascadelake: $(CASCADELAKE_BUILD_DIR)/Makefile
 $(CASCADELAKE_BUILD_DIR)/Makefile: CMakeLists.txt
 	@mkdir -p $(CASCADELAKE_BUILD_DIR)
 	@cd $(CASCADELAKE_BUILD_DIR) && cmake \
-		-DCMAKE_C_COMPILER=gcc \
 		-DCMAKE_CXX_COMPILER=g++ \
  		-DCLUSTER_BUILD=cascadelake \
 		-DCONTINUUM_FULL_DIAG=$(FULL_DIAG) \
@@ -37,7 +35,6 @@ icelake: $(ICELAKE_BUILD_DIR)/Makefile
 $(ICELAKE_BUILD_DIR)/Makefile: CMakeLists.txt
 	@mkdir -p $(ICELAKE_BUILD_DIR)
 	@cd $(ICELAKE_BUILD_DIR) && cmake \
-		-DCMAKE_C_COMPILER=gcc \
 		-DCMAKE_CXX_COMPILER=g++ \
  		-DCLUSTER_BUILD=icelake \
 		-DCONTINUUM_FULL_DIAG=$(FULL_DIAG) \
@@ -49,7 +46,6 @@ debug: $(DEBUG_BUILD_DIR)/Makefile
 $(DEBUG_BUILD_DIR)/Makefile: CMakeLists.txt
 	@mkdir -p $(DEBUG_BUILD_DIR)
 	@cd $(DEBUG_BUILD_DIR) && cmake \
-		-DCMAKE_C_COMPILER=gcc \
 		-DCMAKE_CXX_COMPILER=g++ \
  		-DCMAKE_BUILD_TYPE=Debug \
 		-DCONTINUUM_FULL_DIAG=$(FULL_DIAG) \

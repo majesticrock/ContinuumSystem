@@ -1,5 +1,4 @@
 #include "ModelInitializer.hpp"
-#include <mrock/utility/Numerics/Roots/Bisection.hpp>
 #include <mrock/utility/constexpr_power.hpp>
 
 namespace Continuum {

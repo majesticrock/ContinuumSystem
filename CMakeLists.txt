@@ -26,10 +26,6 @@ include(${CMAKE_SOURCE_DIR}/cmake/SelectClusterBuildOptions.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../PhdUtility/cmake/mrock-information.cmake)
 
-include_directories(
-    $ENV{HOME}/usr/local/include
-)
-
 add_executable(ContinuumSystem 
     sources/ContinuumSystem.cpp
 )
@@ -48,10 +44,15 @@ SET_COMPILER_FLAGS(ContinuumSystem)
 
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)
-find_package(mrock REQUIRED)
+find_package(mrock 
+    REQUIRED 
+    COMPONENTS 
+        symbolic_operators 
+        iEoM 
+        utility
+)
 
 target_link_libraries(ContinuumSystem PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX ${mrock_LIBRARIES})
-target_include_directories(ContinuumSystem PRIVATE ${mrock_INCLUDE_DIRS})
 
 # Add debug option
 option(ENABLE_DEBUG "Enable debugging" OFF)

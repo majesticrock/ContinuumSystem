@@ -3,11 +3,9 @@
 #include <cassert>
 
 #include <mrock/utility/Numerics/Interpolation.hpp>
-#include <mrock/utility/Numerics/Integration/TrapezoidalRule.hpp>
 #include <mrock/utility/Selfconsistency/IterativeSolver.hpp>
 #include <mrock/utility/Selfconsistency/BroydenSolver.hpp>
 #include <mrock/utility/constexpr_power.hpp>
-#include <mrock/utility/Numerics/Minimization/Bisection.hpp>
 
 #include <boost/math/quadrature/gauss.hpp>
 
