@@ -29,7 +29,7 @@ date
 echo "--- START ---"
 
 ## execute binary using mpirun on the allocated computation resource; the number of cores is $
-./build_cluster/ContinuumSystem params/cluster.config
+./build/cascadelake/ContinuumSystem params/cluster.config
 
 echo "--- END ---"
 date

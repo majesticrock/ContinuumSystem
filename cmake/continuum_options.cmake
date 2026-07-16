@@ -20,6 +20,7 @@ if(TARGET_ARCH)
     target_compile_options(continuum_options INTERFACE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-march=${TARGET_ARCH}>
     )
+    message(STATUS "Building for architecture ${TARGET_ARCH}!")
 endif()
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -28,7 +29,6 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     )
 else()
     target_compile_definitions(continuum_options INTERFACE DEBUG)
-    target_compile_options(continuum_options INTERFACE -g)
 endif()
 
 #

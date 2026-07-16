@@ -1,0 +1,119 @@
+{
+  "version": 3,
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++",
+        "CONTINUUM_FULL_DIAG": "OFF"
+      }
+    },
+
+    {
+      "name": "default",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/default"
+    },
+
+    {
+      "name": "cascadelake",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/cascadelake",
+      "cacheVariables": {
+        "TARGET_ARCH": "cascadelake"
+      }
+    },
+
+    {
+      "name": "icelake",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/icelake",
+      "cacheVariables": {
+        "TARGET_ARCH": "icelake"
+      }
+    },
+
+    {
+      "name": "debug",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+
+    {
+      "name": "default_ed",
+      "inherits": "default",
+      "binaryDir": "${sourceDir}/build/default_ed",
+      "cacheVariables": {
+        "CONTINUUM_FULL_DIAG": "ON"
+      }
+    },
+
+    {
+      "name": "cascadelake_ed",
+      "inherits": "cascadelake",
+      "binaryDir": "${sourceDir}/build/cascadelake_ed",
+      "cacheVariables": {
+        "CONTINUUM_FULL_DIAG": "ON"
+      }
+    },
+
+    {
+      "name": "icelake_ed",
+      "inherits": "icelake",
+      "binaryDir": "${sourceDir}/build/icelake_ed",
+      "cacheVariables": {
+        "CONTINUUM_FULL_DIAG": "ON"
+      }
+    },
+
+    {
+      "name": "debug_ed",
+      "inherits": "debug",
+      "binaryDir": "${sourceDir}/build/debug_ed",
+      "cacheVariables": {
+        "CONTINUUM_FULL_DIAG": "ON"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "cascadelake",
+      "configurePreset": "cascadelake"
+    },
+    {
+      "name": "icelake",
+      "configurePreset": "icelake"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "default_ed",
+      "configurePreset": "default_ed"
+    },
+    {
+      "name": "cascadelake_ed",
+      "configurePreset": "cascadelake_ed"
+    },
+    {
+      "name": "icelake_ed",
+      "configurePreset": "icelake_ed"
+    },
+    {
+      "name": "debug_ed",
+      "configurePreset": "debug_ed"
+    }
+  ]
+}
