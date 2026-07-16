@@ -191,7 +191,7 @@ namespace Continuum {
 		}
 	}
 
-	c_complex ModeHelper::compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const
+	c_complex ModeHelper::compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k) const
 	{
 		const int q_dependend = term.which_operator_depends_on('q');
 		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
@@ -213,7 +213,7 @@ namespace Continuum {
 		return value;
 	}
 
-	c_complex ModeHelper::compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const
+	c_complex ModeHelper::compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k) const
 	{
 		const int q_dependend = term.which_operator_depends_on('q');
 		mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
@@ -264,10 +264,10 @@ namespace Continuum {
 
 		if (term.coefficients.front().name == "g")
 		{
-			return compute_phonon_sum(term, k, l);
+			return compute_phonon_sum(term, k);
 		}
 		else if (term.coefficients.front().name == "V") {
-			return compute_em_sum(term, k, l);
+			return compute_em_sum(term, k);
 		}
 		throw std::runtime_error("Something went wrong while computing terms...");
 	}

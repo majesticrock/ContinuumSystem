@@ -136,8 +136,8 @@ namespace Continuum {
 		}
 		template<class Vector>
 		inline void fill_with(const Vector& vector, RealType weight) {
-			assert(this->size() == vector.size());
-			for (std::size_t i = 0U; i < this->size(); ++i) {
+			assert(std::ssize(*this) == std::ssize(vector));
+			for (auto i = 0; i < std::ssize(*this); ++i) {
 				this->selfconsistency_values[i] = (1. - weight) * this->selfconsistency_values[i] + weight * vector[i];
 			}
 		}

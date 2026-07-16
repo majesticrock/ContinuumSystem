@@ -11,18 +11,11 @@
 #include <algorithm>
 #include <concepts>
 
-#ifndef _NO_MPI
-#include <mpi.h>
-#define EXIT MPI_Finalize()
-#else
-#define EXIT 0
-#endif
-
 #include "Continuum/SCModel.hpp"
 #include "Continuum/ModeHelper.hpp"
 #include "Continuum/Incrementer.hpp"
 // File is generated on build by cmake
-#include "../build_header/info.h"
+#include <continuum/info.h>
 
 using namespace Continuum;
 const std::string BASE_FOLDER = "../../data/continuum/";
@@ -84,33 +77,21 @@ void compute_small_U_gap() {
 	mrock::utility::save_data(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
 }
 
-#define RANK_RANGES(x)  const double rank_range = (std::stod(argv[3]) - init.x) / n_ranks; \
-						init.x += rank * rank_range; init.recompute_dependencies();
+#define RANK_RANGES(x)  const double rank_range = (std::stod(argv[3]) - init.x); \
+						init.recompute_dependencies();
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
-		std::cerr << "Invalid number of arguments: Use mpirun -n <threads> <path_to_executable> <configfile>" << std::endl;
+		std::cerr << "Invalid number of arguments: Use ./path/to/executable <configfile>" << std::endl;
 		return -1;
 	}
-#ifndef _NO_MPI
-	// First call MPI_Init
-	MPI_Init(&argc, &argv);
-
-	// Get my rank and the number of ranks
-	int rank, n_ranks;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &n_ranks);
-#else
-	int rank = 0;
-	int n_ranks = 1;
-#endif
 
 	mrock::utility::InputFileReader input(argv[1]);
 	Continuum::set_discretization(input.getInt("discretization_points"));
 
 	if (false) { // compute gap in a range for small g
 		compute_small_U_gap();
-		return EXIT;
+		return 0;
 	}
 
 	/*
@@ -118,7 +99,8 @@ int main(int argc, char** argv) {
 	*/
 	ModelInitializer init(input);
 
-	int n_iter = argc > 4 ? std::stoi(argv[4]) : 0;
+	// +1 to also include the last data point
+	int n_iter = (argc > 4 ? std::stoi(argv[4]) : 0) + 1;
 	std::unique_ptr<Base_Incrementer> incrementer;
 	if (argc > 4) {
 		const std::string inc_type = argv[2];
@@ -134,8 +116,7 @@ int main(int argc, char** argv) {
 		}
 		else if (inc_type == "omega_D" || inc_type == "omega_debye")
 		{
-			const double rank_range = 1e-3 * (std::stod(argv[3]) - init.omega_debye) / n_ranks;
-			init.omega_debye += rank * rank_range;
+			const double rank_range = 1e-3 * (std::stod(argv[3]) - init.omega_debye);
 			incrementer = std::make_unique<DebyeFrequency_Incrementer>(rank_range / n_iter);
 		}
 		else if (inc_type == "k_F" || inc_type == "fermi_wavevector")
@@ -150,10 +131,8 @@ int main(int argc, char** argv) {
 		}
 		else throw std::invalid_argument("Failed incrementer parsing. Syntax: mpirun -n <threads> <executable> <parameter_file> <incrementer_type> <end_increment> <n_increments>");
 	}
-	//std::cout << "Rank #" << rank << ": " << init << std::endl;
+
 	ModeHelper modes(init);
-	// We also want the last data point
-	if (rank == n_ranks - 1) ++n_iter;
 	for (int i = 0; i < n_iter; ++i)
 	{
 		/*
@@ -238,5 +217,5 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	return EXIT;
+	return 0;
 }

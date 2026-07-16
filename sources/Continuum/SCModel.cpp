@@ -20,7 +20,7 @@ namespace Continuum {
 	{
 		phonon_interaction.set_parent(this);
 		std::cout << "Fock(k_F) = " << __fock_coulomb(fermi_wavevector) << "  xi(k_F) = " << dispersion_to_fermi_level(fermi_wavevector) << std::endl;
-		Delta = decltype(Delta)::FromAllocator([&](std::size_t i) -> c_complex {
+		Delta = decltype(Delta)::FromAllocator([&](int i) -> c_complex {
 			const c_float k = momentumRanges.index_to_momentum(i);
 			const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
 			if (i < DISCRETIZATION) {
@@ -55,7 +55,7 @@ namespace Continuum {
 			throw;
 		}
 		if (is_zero(Delta[DISCRETIZATION / 2])) {
-			Delta = decltype(Delta)::FromAllocator([&](std::size_t i) -> c_complex {
+			Delta = decltype(Delta)::FromAllocator([&](int i) -> c_complex {
 				const c_float k = momentumRanges.index_to_momentum(i);
 				const c_float magnitude = (k < sqrt(2. * (fermi_energy - omega_debye)) || k > sqrt(2. * (fermi_energy + omega_debye))) ? 0.01 : 0.1;
 				if (i < DISCRETIZATION) {

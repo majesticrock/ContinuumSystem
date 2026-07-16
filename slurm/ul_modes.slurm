@@ -23,15 +23,13 @@
 #SBATCH --hint=nomultithread    ## deactivate Hyperthreading (recommended); for Hyperthreading comment out this line
 #SBATCH --constraint=CascadeLake       ## chose a specific feature, e.g., only nodes with Haswell-architecture
                                 ## Feature-Output by "cat /etc/slurm/slurm.conf | grep Feature"
-module purge
-module load mpi
 cd /home/althueser/phd/cpp/ContinuumSystem/        ## go to working directory
 
 date
 echo "--- START ---"
 
 ## execute binary using mpirun on the allocated computation resource; the number of cores is $
-mpirun ./build_CascadeLake/ContinuumSystem params/ul_cluster.config
+./build_CascadeLake/ContinuumSystem params/ul_cluster.config
 
 echo "--- END ---"
 date

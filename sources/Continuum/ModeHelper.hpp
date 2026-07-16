@@ -32,8 +32,8 @@ namespace Continuum {
 		c_float compute_momentum(mrock::symbolic_operators::Momentum const& momentum, c_float k, c_float l, c_float q = 0) const;
 		c_complex get_expectation_value(mrock::symbolic_operators::WickOperator const& op, c_float momentum) const;
 
-		c_complex compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const;
-		c_complex compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k, c_float l) const;
+		c_complex compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k) const;
+		c_complex compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k) const;
 	protected:
 		constexpr static int hermitian_size = 2;
 		constexpr static int antihermitian_size = 1;
