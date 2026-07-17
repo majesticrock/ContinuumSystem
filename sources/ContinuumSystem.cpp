@@ -17,8 +17,11 @@
 // File is generated on build by cmake
 #include <continuum/info.h>
 
+#ifndef OUTPUT_DATA_DIR
+#define OUTPUT_DATA_DIR "../../data/continuum/"
+#endif
+
 using namespace Continuum;
-const std::string BASE_FOLDER = "../../data/continuum/";
 
 int Continuum::DISCRETIZATION = 1000;
 c_float Continuum::INV_N = 1. / Continuum::DISCRETIZATION;
@@ -74,7 +77,7 @@ void compute_small_U_gap() {
 		const auto buffer = model.Delta.abs().as_vector();
 		gap_data[U] = { entry, *std::max_element(buffer.begin(), buffer.end()) };
 	}
-	mrock::utility::save_data(gap_data, BASE_FOLDER + "test/small_U_gap.dat.gz");
+	mrock::utility::save_data(gap_data, std::string(OUTPUT_DATA_DIR) + "test/small_U_gap.dat.gz");
 }
 
 #define RANK_RANGES(x)  const double rank_range = (std::stod(argv[3]) - init.x); \
@@ -140,7 +143,7 @@ int main(int argc, char** argv) {
 		*/
 		auto delta_result = modes.getModel().Delta.real().as_vector();
 		const std::string output_folder = input.getString("output_folder") + "/" + "N_k=" + std::to_string(DISCRETIZATION) + "/" + modes.getModel().to_folder();
-		std::filesystem::create_directories(BASE_FOLDER + output_folder);
+		std::filesystem::create_directories(std::string(OUTPUT_DATA_DIR) + output_folder);
 		auto generate_comments = [&]() {
 			return nlohmann::json{
 				{ "time", 				mrock::utility::time_stamp() },
@@ -163,7 +166,7 @@ int main(int argc, char** argv) {
 		// Generate metadata
 		nlohmann::json info_json = mrock::utility::generate_json<ContinuumSystem::info>("continuum_");
 		info_json.update(mrock::utility::generate_json<mrock::info>("mrock_"));
-		mrock::utility::saveString(info_json.dump(4), BASE_FOLDER + output_folder + "metadata.json.gz");
+		mrock::utility::save_string(info_json.dump(4), std::string(OUTPUT_DATA_DIR) + output_folder + "metadata.json.gz");
 
 		/*
 		* Compute and output gap data
@@ -183,7 +186,7 @@ int main(int argc, char** argv) {
 				}
 			}
 			});
-		mrock::utility::saveString(jDelta.dump(4), BASE_FOLDER + output_folder + "gap.json.gz");
+		mrock::utility::save_string(jDelta.dump(4), std::string(OUTPUT_DATA_DIR) + output_folder + "gap.json.gz");
 		std::cout << "Gap data have been saved! Delta_max = " << jDelta["Delta_max"] << std::endl;
 
 #ifndef CONTINUUM_FULL_DIAG
@@ -195,7 +198,7 @@ int main(int argc, char** argv) {
 					{ "continuum_boundaries", modes.continuum_boundaries() }
 				};
 				jResolvents.merge_patch(generate_comments());
-				mrock::utility::saveString(jResolvents.dump(4), BASE_FOLDER + output_folder + "resolvents.json.gz");
+				mrock::utility::save_string(jResolvents.dump(4), std::string(OUTPUT_DATA_DIR) + output_folder + "resolvents.json.gz");
 			}
 		}
 #else // CONTINUUM_FULL_DIAG
@@ -207,7 +210,7 @@ int main(int argc, char** argv) {
 				{ "continuum_boundaries", modes.continuum_boundaries() }
 			};
 			jFullDiag.merge_patch(generate_comments());
-			mrock::utility::saveString(jFullDiag.dump(4), BASE_FOLDER + output_folder + "full_diagonalization.json.gz");
+			mrock::utility::save_string(jFullDiag.dump(4), std::string(OUTPUT_DATA_DIR) + output_folder + "full_diagonalization.json.gz");
 		}
 #endif // CONTINUUM_FULL_DIAG
 

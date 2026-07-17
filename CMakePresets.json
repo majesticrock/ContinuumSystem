@@ -1,13 +1,12 @@
 {
   "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 30, "patch": 0 },
 
   "configurePresets": [
     {
       "name": "base",
       "hidden": true,
-      "generator": "Unix Makefiles",
       "cacheVariables": {
-        "CMAKE_CXX_COMPILER": "g++",
         "CONTINUUM_FULL_DIAG": "OFF"
       }
     },
@@ -16,6 +15,14 @@
       "name": "default",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/default"
+    },
+
+    {
+      "name": "test",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON"
+      }
     },
 
     {
@@ -88,6 +95,10 @@
       "configurePreset": "default"
     },
     {
+      "name": "test",
+      "configurePreset": "test"
+    },
+    {
       "name": "cascadelake",
       "configurePreset": "cascadelake"
     },
@@ -114,6 +125,22 @@
     {
       "name": "debug_ed",
       "configurePreset": "debug_ed"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test",
+      "configurePreset": "test",
+      "environment": {
+        "PYTHONUNBUFFERED": "1"
+      },
+      "output": {
+        "verbosity": "verbose",
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
     }
   ]
 }

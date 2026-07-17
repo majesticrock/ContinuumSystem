@@ -31,6 +31,52 @@ else()
     target_compile_definitions(continuum_options INTERFACE DEBUG)
 endif()
 
+
+
+#
+# Tell the program where to find the commutator files
+#
+set(_APPEND_DIR "continuum")
+
+set(COMMUTATOR_DIR
+    "${PROJECT_SOURCE_DIR}/../commutators/"
+    CACHE PATH
+    "Location where the result of the FermionCommute program is saved. The subdir name is added automatically and does not need to be specified."
+)
+cmake_path(
+    APPEND COMMUTATOR_DIR "${_APPEND_DIR}"
+    OUTPUT_VARIABLE COMMUTATOR_CONTINUUM_DIR
+)
+# Ensure the path ends in exactly one "/"
+string(REGEX REPLACE "/+$" "" COMMUTATOR_CONTINUUM_DIR "${COMMUTATOR_CONTINUUM_DIR}")
+string(APPEND COMMUTATOR_CONTINUUM_DIR "/")
+
+message(STATUS "${PROJECT_NAME} will look for the commutator files in ${COMMUTATOR_CONTINUUM_DIR}")
+target_compile_definitions(continuum_options INTERFACE COMMUTATOR_DIR="${COMMUTATOR_CONTINUUM_DIR}")
+
+#
+# Tell the program where to place the data files
+#
+set(OUTPUT_DATA_DIR
+    "${PROJECT_SOURCE_DIR}/../../data/"
+    CACHE PATH
+    "Location where the result of the simulation should be saved. The subdir name is added automatically and does not need to be specified."
+)
+cmake_path(
+    APPEND OUTPUT_DATA_DIR "${_APPEND_DIR}"
+    OUTPUT_VARIABLE OUTPUT_DATA_CONTINUUM_DIR
+)
+# Ensure the path ends in exactly one "/"
+string(REGEX REPLACE "/+$" "" OUTPUT_DATA_CONTINUUM_DIR "${OUTPUT_DATA_CONTINUUM_DIR}")
+string(APPEND OUTPUT_DATA_CONTINUUM_DIR "/")
+
+message(STATUS "${PROJECT_NAME} saves its data in ${OUTPUT_DATA_CONTINUUM_DIR}")
+target_compile_definitions(continuum_options INTERFACE OUTPUT_DATA_DIR="${OUTPUT_DATA_CONTINUUM_DIR}")
+
+unset(_APPEND_DIR)
+
+
+
 #
 # Use MKL if available
 #

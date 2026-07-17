@@ -78,3 +78,11 @@ if (CONTINUUM_FULL_DIAG)
     target_compile_definitions(ContinuumSystem PRIVATE CONTINUUM_FULL_DIAG)
 endif()
 
+option(BUILD_TESTING 
+    "Build and configure the testing suit" 
+    OFF
+)
+
+if(BUILD_TESTING)
+    include(tests/test_config.cmake)
+endif()

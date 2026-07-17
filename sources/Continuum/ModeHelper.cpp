@@ -1,5 +1,6 @@
 #include "ModeHelper.hpp"
 #include <memory>
+#include <string>
 #include <cassert>
 
 #include <mrock/utility/Numerics/Interpolation.hpp>
@@ -16,6 +17,10 @@
 #define __conj(z) std::conj(z)
 #else
 #define __conj(z) z
+#endif
+
+#ifndef COMMUTATOR_DIR
+#define COMMUTATOR_DIR "../commutators/continuum/"
 #endif
 
 namespace Continuum {
@@ -309,7 +314,7 @@ namespace Continuum {
 
 		model = std::make_unique<SCModel>(init);
 		std::cout << "Working on " << model->info() << std::endl;
-		wicks.load("../commutators/continuum/", true, number_of_basis_terms, 0);
+		wicks.load(std::string(COMMUTATOR_DIR), true, number_of_basis_terms, 0);
 
 #ifdef _iterative_selfconsistency
 		auto solver = mrock::utility::Selfconsistency::make_iterative<c_complex>(model.get(), &model->Delta);
