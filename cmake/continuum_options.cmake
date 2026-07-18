@@ -31,6 +31,8 @@ else()
     target_compile_definitions(continuum_options INTERFACE DEBUG)
 endif()
 
+target_include_directories(continuum_options INTERFACE EXTRA_INCLUDE_DIRS)
+
 
 
 #

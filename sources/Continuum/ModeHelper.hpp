@@ -1,5 +1,7 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
+#include "ModelInitializer.hpp"
+#include "MomentumRanges.hpp"
 #include "SCModel.hpp"
 
 #include <mrock/symbolic_operators/TermLoader.hpp>
@@ -7,7 +9,7 @@
 #include <mrock/utility/better_to_string.hpp>
 
 #include <memory>
-#include <map>
+#include <vector>
 
 #ifndef _complex
 #define _XP

@@ -3,13 +3,13 @@ cmake_minimum_required(VERSION 3.30)
 
 project(ContinuumSystem VERSION 1.0)
 
-#
-# Set local settings and set the default build type as Release
-#
+# Set local user-specific settings
+# By default, this adds ~/usr/local/ and ../../.mrock/ to the cmake and include paths
+# If additional configurations/includes are needed, provide them in cmake/user_settings.cmake
+# Extra include dirs are stored in the cmake variable EXTRA_INCLUDE_DIRS
+include(cmake/include_settings.cmake)
 
-list(APPEND CMAKE_PREFIX_PATH "$ENV{HOME}/usr/local")
-set(Boost_DIR /usr/lib64/openmpi/lib/cmake/Boost-1.78.0)
-
+# Build type settings; defaults to Release
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
@@ -38,7 +38,7 @@ set(ADD_SOURCES
 )
 target_sources(ContinuumSystem PRIVATE ${ADD_SOURCES})
 
-find_package(OpenMP REQUIRED)
+find_package(OpenMP REQUIRED COMPONENTS CXX)
 find_package(mrock 
     REQUIRED 
     COMPONENTS 
@@ -46,6 +46,13 @@ find_package(mrock
         iEoM 
         utility
 )
+
+message(STATUS "CXX compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "CXX compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "OpenMP_CXX_FOUND: ${OpenMP_CXX_FOUND}")
+message(STATUS "OpenMP_CXX_FLAGS: ${OpenMP_CXX_FLAGS}")
+message(STATUS "OpenMP_CXX_INCLUDE_DIRS: ${OpenMP_CXX_INCLUDE_DIRS}")
+message(STATUS "OpenMP_CXX_LIBRARIES: ${OpenMP_CXX_LIBRARIES}")
 
 # provided by the mrock library
 mrock_generate_information_header(

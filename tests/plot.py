@@ -4,7 +4,6 @@ import mrock_centralized_scripts.path_appender as __ap
 __ap.append()
 from get_data import load_panda, continuum_params
 import continued_fraction_pandas as cf
-import plot_settings as ps
 import sys
     
 def load_data(name):
@@ -39,15 +38,11 @@ def create_plot(name):
     ax.set_xlabel(r"$\omega [\mathrm{meV}]$")
     ax.set_ylabel(r"$\mathcal{A} (\omega) [\mathrm{eV}^{-1}]$")
 
-    plotter = ps.CURVEFAMILY(6, axis=ax)
-    plotter.set_individual_colors("nice")
-    plotter.set_individual_linestyles(["-", "-.", "--", "-", "--", ":"])
-
     w_lin = np.linspace(-0.005 * pd_data["continuum_boundaries"][1], 1.1 * pd_data["continuum_boundaries"][1], 5000, dtype=complex)
     w_lin += 1e-4j
 
-    plotter.plot(1e3 * w_lin.real, resolvents.spectral_density(w_lin, "phase_SC",     withTerminator=True), label="Phase")
-    plotter.plot(1e3 * w_lin.real, resolvents.spectral_density(w_lin, "amplitude_SC", withTerminator=True), label="Higgs")
+    ax.plot(1e3 * w_lin.real, resolvents.spectral_density(w_lin, "phase_SC",     withTerminator=True), label="Phase")
+    ax.plot(1e3 * w_lin.real, resolvents.spectral_density(w_lin, "amplitude_SC", withTerminator=True), label="Higgs")
 
     resolvents.mark_continuum(ax, 1e3)
 

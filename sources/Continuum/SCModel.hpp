@@ -4,17 +4,23 @@
 #include "MomentumRanges.hpp"
 #include "SplineContainer.hpp"
 #include "ModelInitializer.hpp"
-#include <cmath>
-#include <limits>
-#include <utility>
-#include <map>
+#include "PhononInteraction.hpp"
+
 #include <boost/math/special_functions/pow.hpp>
+#include <boost/math/quadrature/gauss.hpp>
+
 #include <mrock/symbolic_operators/WickTerm.hpp>
 #include <mrock/utility/InputFileReader.hpp>
 #include <mrock/utility/Numerics/Interpolation.hpp>
-#include <boost/math/quadrature/gauss.hpp>
 #include <mrock/utility/constexpr_power.hpp>
-#include "PhononInteraction.hpp"
+#include <mrock/utility/UnderlyingRealType.hpp> 
+
+#include <complex> 
+#include <cmath>
+#include <utility>
+#include <string>
+#include <vector> 
+#include <map>
 
 namespace Continuum {
 	class SCModel {
@@ -181,11 +187,11 @@ namespace Continuum {
 	}
 
 	c_float SCModel::energy(c_float k) const {
-		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
+		return std::sqrt(boost::math::pow<2>(dispersion_to_fermi_level(k)) + std::norm(interpolate_delta(k)));
 	}
 
 	c_float SCModel::energy_index(int k) const {
-		return sqrt(boost::math::pow<2>(dispersion_to_fermi_level_index(k)) + std::norm(Delta[k]));
+		return std::sqrt(boost::math::pow<2>(dispersion_to_fermi_level_index(k)) + std::norm(Delta[k]));
 	}
 
 	c_float SCModel::delta_epsilon(c_float k, c_float k_prime) const {

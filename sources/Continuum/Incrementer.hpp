@@ -1,4 +1,5 @@
 #pragma once
+#include "GlobalDefinitions.hpp"
 #include "ModelInitializer.hpp"
 
 namespace Continuum {

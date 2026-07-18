@@ -1,9 +1,12 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
 #include "MomentumRanges.hpp"
+#include "SplineContainer.hpp"
+
+#include <utility>
+#include <cassert>
 #include <array>
 #include <vector>
-#include "SplineContainer.hpp"
 
 namespace Continuum {
     class SCModel;
@@ -71,7 +74,7 @@ namespace Continuum {
 	}
 
     template<class ExpectationValues>
-	decltype(std::declval<ExpectationValues>()(c_float{})) PhononInteraction::fock_channel_integral(ExpectationValues const& expecs, c_float k) const
+	decltype(std::declval<ExpectationValues>()(c_float{})) PhononInteraction::fock_channel_integral([[maybe_unused]] ExpectationValues const& expecs, [[maybe_unused]] c_float k) const
     {
 #ifdef NO_FOCK_PHONON
        assert(false);

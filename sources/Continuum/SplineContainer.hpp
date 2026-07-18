@@ -9,8 +9,12 @@
 #endif
 
 #include "GlobalDefinitions.hpp"
-#include <vector>
+
 #include <mrock/utility/ComplexNumberIterators.hpp>
+
+#include <algorithm>
+#include <complex> 
+#include <vector>
 
 namespace Continuum {
 	template <class T>

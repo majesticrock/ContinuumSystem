@@ -1,8 +1,17 @@
 #pragma once
 #include "GlobalDefinitions.hpp"
-#include <concepts>
+
 #include <boost/math/quadrature/gauss.hpp>
 #include <mrock/utility/Numerics/Integration/GeneralizedPrincipalValue.hpp>
+
+#include <concepts>
+#include <cassert>
+#include <cmath>
+#include <algorithm>
+#include <array>
+#include <functional>
+#include <stdexcept>
+#include <vector>
 
 namespace Continuum {
 	struct MomentumRanges {
