@@ -27,9 +27,6 @@ paper/plots
 !*CMakeLists.txt
 
 #ignore data that is subject to change
-**/test/
-**/test*/
-
 *.aux
 *.blg
 *.fdb_latexmk
