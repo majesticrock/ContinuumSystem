@@ -1,6 +1,9 @@
 include(CTest)
 
+find_program(PYTHON_FROM_PATH python REQUIRED)
+set(Python3_EXECUTABLE "${PYTHON_FROM_PATH}" CACHE FILEPATH "Python interpreter" FORCE)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+message(STATUS "Python3 executable: ${Python3_EXECUTABLE}")
 
 file(GLOB TEST_CONFIGS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_LIST_DIR}/*.config"
