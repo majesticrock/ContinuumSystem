@@ -13,13 +13,12 @@ https://doi.org/10.21468/SciPostPhys.19.3.067
 - C++ 20 and a functioning compiler (tested with g++ 13.3.0 on WSL and g++ 11.5.0 on Red Hat)
 - Eigen (tested with version 3.4.1) https://libeigen.gitlab.io/eigen/docs-nightly/GettingStarted.html
 - Boost (tested with version 1.78.0) https://www.boost.org/
-- OpenMPI (tested with version 4.1.1) https://www.open-mpi.org/
 - OpenMP https://www.openmp.org/
 - nlohmann/json.hpp (tested with version 3.11.3) https://github.com/nlohmann/json
 - [recommended] CMake 3.30 or newer (tested with version 3.31.8)  https://cmake.org/
 - [optional] Intel MKL for BLAS and LAPACK (tested with version 2025.2.1) https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html 
 
-- the mrock library located in `../../PhdUtility/`.
+- the mrock library located in `../../PhdUtility/` (must be installed either to a standard CMake location or to `~/usr/local/` or to `../../.mrock/include/` for plug-and-play).
 - Before executing the program, make sure to build and run `FermionCommute` in `../FermionCommute/`.
 
 

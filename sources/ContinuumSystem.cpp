@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
             incrementer = std::make_unique<CoulombScaling_Incrementer>(rank_range / n_iter);
         } else
             throw std::invalid_argument(
-                "Failed incrementer parsing. Syntax: mpirun -n <threads> <executable> <parameter_file> "
+                "Failed incrementer parsing. Syntax: <executable> <parameter_file> "
                 "<incrementer_type> <end_increment> <n_increments>");
     }
 
