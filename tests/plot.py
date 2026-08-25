@@ -227,6 +227,8 @@ def create_plot(name):
     ax.legend()
     fig.tight_layout()
     fig.savefig(f"test_result_{name}.pdf")
+    if "--show" in sys.argv[2:]:
+        plt.show()
 
 
 # Command-line interface:

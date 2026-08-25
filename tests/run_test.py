@@ -4,6 +4,11 @@ from pathlib import Path
 import sys
 import os
 
+def detached_process_options():
+    if os.name == "nt":
+        return {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
+
 if __name__ != "__main__":
     sys.exit()
 
@@ -38,13 +43,20 @@ print("Running plot script.")
 plot_cmd = [
     sys.executable,
     str(plot_script),
-    os.path.splitext(os.path.basename(str(config)))[0]
+    os.path.splitext(os.path.basename(str(config)))[0],
+    "--show"
 ]
-result = subprocess.run(plot_cmd)
-
-if result.returncode != 0:
-    print("Plot script failed.", file=sys.stderr)
-    sys.exit(result.returncode)
+try:
+    subprocess.Popen(
+        plot_cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        **detached_process_options()
+    )
+except OSError as error:
+    print(f"Could not start plot script: {error}", file=sys.stderr)
+    sys.exit(1)
 
 print("Test workflow finished.")
 sys.exit(0)
