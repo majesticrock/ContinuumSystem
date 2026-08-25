@@ -44,7 +44,7 @@ c_float ModeHelper::compute_momentum(mrock::symbolic_operators::Momentum const& 
             case 'l':
                 momentum_value += momentum_symbol.factor * l;
                 break;
-            case 'q':
+            case 'K':
                 momentum_value += momentum_symbol.factor * q;
                 break;
             default:
@@ -205,10 +205,10 @@ void ModeHelper::fill_block_N(int i, int j) {
 }
 
 c_complex ModeHelper::compute_phonon_sum(const mrock::symbolic_operators::WickTerm& term, c_float k) const {
-    const int q_dependend = term.which_operator_depends_on('q');
-    mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
+    const int K_dependend = term.which_operator_depends_on('K');
+    mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[K_dependend]);
     mrock::symbolic_operators::WickOperator const* const other_op =
-        term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+        term.is_bilinear() ? nullptr : &(term.operators[K_dependend == 0]);
     c_complex value{};
     if (summed_op->type == mrock::symbolic_operators::OperatorType::Number) {
         value = model->phonon_interaction.sc_channel_integral(model->occupation, k);
@@ -227,10 +227,10 @@ c_complex ModeHelper::compute_phonon_sum(const mrock::symbolic_operators::WickTe
 }
 
 c_complex ModeHelper::compute_em_sum(const mrock::symbolic_operators::WickTerm& term, c_float k) const {
-    const int q_dependend = term.which_operator_depends_on('q');
-    mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[q_dependend]);
+    const int K_dependend = term.which_operator_depends_on('K');
+    mrock::symbolic_operators::WickOperator const* const summed_op = &(term.operators[K_dependend]);
     mrock::symbolic_operators::WickOperator const* const other_op =
-        term.is_bilinear() ? nullptr : &(term.operators[q_dependend == 0]);
+        term.is_bilinear() ? nullptr : &(term.operators[K_dependend == 0]);
     c_complex value{};
     if (summed_op->type == mrock::symbolic_operators::OperatorType::Number) {
         value = -(model->fock_coulomb(k) + model->interpolate_fock_correction(k));
