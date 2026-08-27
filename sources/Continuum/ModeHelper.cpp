@@ -37,7 +37,7 @@ c_float ModeHelper::compute_momentum(mrock::symbolic_operators::Momentum const& 
                                      c_float q /*=0*/) const {
     c_float momentum_value{};
     for (const auto& momentum_symbol : momentum.momentum_list) {
-        switch (static_cast<char>(momentum_symbol.name)) {
+        switch (static_cast<unsigned char>(momentum_symbol.name)) {
             case 'k':
                 momentum_value += momentum_symbol.factor * k;
                 break;
